@@ -1,0 +1,14 @@
+{
+  "items": [
+    {"begin_angle": 160.0,
+      "curve": 0,
+      "duration": 500,
+      "lat": 17.3685,
+      "length": 10,
+      "lon": 8.7598,
+      "port_dev": 0.5,
+      "rudder_angle": 0,
+      "starboard_dev": 1.0}
+  ],
+  "start_time": 1000
+}

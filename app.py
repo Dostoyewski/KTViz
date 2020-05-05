@@ -39,7 +39,7 @@ class App(QMainWindow):
     def openFileNameDialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        filename, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
+        filename, _ = QFileDialog.getOpenFileName(self, "Open JSON Trajectory", "",
                                                   "All Files (*);;Python Files (*.py)", options=options)
         if filename:
             self.filename = filename

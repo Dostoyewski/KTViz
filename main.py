@@ -26,8 +26,8 @@ def plot_data(data, filename, show, ax=None):
     for item in data['items']:
         if item['curve'] == 0:
             X, Y = positions(item['begin_angle'], item['length'])
-            ax.plot([pX, pX + X], [pY, pY - Y], linewidth=3)
-            pX, pY = pX + X, pY - Y
+            ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3)
+            pX, pY = pX + X, -(pY + Y)
         else:
             if item['curve'] > 0:
                 Xc, Yc = positions(item['begin_angle'] + 90,
@@ -44,8 +44,8 @@ def plot_data(data, filename, show, ax=None):
             Y = []
             for angle in np.arange(item['begin_angle'], item['begin_angle'] + dangle, dangle / 100):
                 X.append(Rarc * cos(radians(90 - angle)) + Xc - dx)
-                Y.append(Rarc * sin(radians(90 - angle)) + Yc - dy)
-            ax.plot(X, Y, linewidth=3)
+                Y.append(-(Rarc * sin(radians(90 - angle)) + Yc - dy))
+            ax.plot(Y, X, linewidth=3)
             pX, pY = X[-1], Y[-1]
     ax.set(xlabel='x', ylabel='y',
            title='Trajectory')

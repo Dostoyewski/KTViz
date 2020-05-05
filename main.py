@@ -7,9 +7,11 @@ import os
 import argparse
 
 
-def plot_data(data, filename, show):
+def plot_data(data, filename, show, ax=None):
     """
     This function plotes arc and lines
+    :param show: show all plots in figure window
+    :param ax: axes to plot
     :param data: JSON with path
     :param filename: name of file, used to save image
     :return: void
@@ -18,7 +20,8 @@ def plot_data(data, filename, show):
         filename = "img/" + filename.split(sep='/')[1]
     except:
         pass
-    fig, ax = plt.subplots()
+    if ax is None:
+        fig, ax = plt.subplots()
     pX, pY = 0, 0
     for item in data['items']:
         if item['curve'] == 0:
@@ -36,10 +39,10 @@ def plot_data(data, filename, show):
             Rarc = 1 / item['curve']
             dx = (Rarc * cos(radians(90 - angle)) + Xc - pX)
             dy = (Rarc * sin(radians(90 - angle)) + Yc - pY)
-            dangle = degrees(item['length']*item['curve'])
+            dangle = degrees(item['length'] * item['curve'])
             X = []
             Y = []
-            for angle in np.arange(item['begin_angle'], item['begin_angle']+dangle, dangle/100):
+            for angle in np.arange(item['begin_angle'], item['begin_angle'] + dangle, dangle / 100):
                 X.append(Rarc * cos(radians(90 - angle)) + Xc - dx)
                 Y.append(Rarc * sin(radians(90 - angle)) + Yc - dy)
             ax.plot(X, Y, linewidth=3)
@@ -47,15 +50,17 @@ def plot_data(data, filename, show):
     ax.set(xlabel='x', ylabel='y',
            title='Trajectory')
     ax.grid()
-    fig.savefig(filename + ".png")
+    if ax is None:
+        fig.savefig(filename + ".png")
     if show:
         plt.show()
 
 
-def prepare_file(filename, show):
+def prepare_file(filename, show, ax=None):
     """
     Prepares route JSON for plotting,
     changes geodesic coords to relative
+    :param ax: axis to plot
     :param filename: JSON route filename
     :return: dictionary with translated route
     """
@@ -72,7 +77,7 @@ def prepare_file(filename, show):
             obj['X'], obj['Y'] = coords_relative(s_lat, s_lon, item['lat'], item['lon'])
             new_data['items'].append(obj)
         new_data['start_time'] = data['start_time']
-        plot_data(new_data, filename, show)
+        plot_data(new_data, filename, show, ax)
         return new_data
     except:
         return None

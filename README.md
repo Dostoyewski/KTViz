@@ -13,3 +13,5 @@ Clone this repository and run:
 By default, all images will be saved to ```/img```<br><br>
 <b>From GUI:</b><br>
 run ```python app.py```, then chose your json datafile.
+### Settings<br>
+Flag ```USE_CURVING``` in ```main.py``` is responsible for combining the beginning of next segment with the end of previous. Should be ```False``` for real data.

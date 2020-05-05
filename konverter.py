@@ -10,7 +10,7 @@ def positions(pos_angle, pos_dist):
     :param pos_dist: distance to target, nautical miles
     :return: relative coords X and Y
     """
-    return round(pos_dist * math.cos(math.radians(pos_angle)), 2),\
+    return round(pos_dist * math.cos(math.radians(pos_angle)), 2), \
            round(pos_dist * math.sin(math.radians(pos_angle)), 2)
 
 

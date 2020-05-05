@@ -6,6 +6,9 @@ import numpy as np
 import os
 import argparse
 
+# Disable trajectory curving
+USE_CURVING = False
+
 
 def plot_data(data, filename, show, ax=None, start_coords=None):
     """
@@ -28,6 +31,8 @@ def plot_data(data, filename, show, ax=None, start_coords=None):
     else:
         pX, pY = start_coords[0], start_coords[1]
     for item in data['items']:
+        if not USE_CURVING:
+            pX, pY = item['X'], item['Y']
         if item['curve'] == 0:
             X, Y = positions(item['begin_angle'], item['length'])
             ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3)

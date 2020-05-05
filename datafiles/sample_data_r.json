@@ -1,0 +1,38 @@
+{
+    "items": [
+        {
+            "begin_angle": 315.0,
+              "curve": 0.125,
+              "duration": 2862.339976,
+              "lat": 0,
+              "length": 28.62339976,
+              "lon": 0,
+              "port_dev": 0.5,
+              "rudder_angle": 0,
+              "starboard_dev": 0.5
+        },
+        {
+            "begin_angle": 160.0,
+              "curve": 0,
+              "duration": 500,
+              "lat": 456.87,
+              "length": 10,
+              "lon": 7.78,
+              "port_dev": 0.5,
+              "rudder_angle": 0,
+              "starboard_dev": 1.0
+        },
+        {
+            "begin_angle": 160.0,
+              "curve": -0.05555555555,
+              "duration": 1000,
+              "lat": 666.73,
+              "length": 21.9911486,
+              "lon": 23.69,
+              "port_dev": 0.5,
+              "rudder_angle": 0,
+              "starboard_dev": 1.5
+        }
+    ],
+    "start_time": 1585699200
+}

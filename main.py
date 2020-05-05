@@ -7,9 +7,10 @@ import os
 import argparse
 
 
-def plot_data(data, filename, show, ax=None):
+def plot_data(data, filename, show, ax=None, start_coords=None):
     """
     This function plotes arc and lines
+    :param start_coords: start coords for relative coords
     :param show: show all plots in figure window
     :param ax: axes to plot
     :param data: JSON with path
@@ -22,7 +23,10 @@ def plot_data(data, filename, show, ax=None):
         pass
     if ax is None:
         fig, ax = plt.subplots()
-    pX, pY = 0, 0
+    if not start_coords:
+        pX, pY = 0, 0
+    else:
+        pX, pY = start_coords[0], start_coords[1]
     for item in data['items']:
         if item['curve'] == 0:
             X, Y = positions(item['begin_angle'], item['length'])
@@ -56,10 +60,11 @@ def plot_data(data, filename, show, ax=None):
         plt.show()
 
 
-def prepare_file(filename, show, ax=None):
+def prepare_file(filename, show, ax=None, rel=False):
     """
     Prepares route JSON for plotting,
     changes geodesic coords to relative
+    :param rel: use relative coords in JSON
     :param ax: axis to plot
     :param filename: JSON route filename
     :return: dictionary with translated route
@@ -74,10 +79,19 @@ def prepare_file(filename, show, ax=None):
             for key in list(item.keys()):
                 if key != 'lat' and key != 'lon':
                     obj[key] = item[key]
-            obj['X'], obj['Y'] = coords_relative(s_lat, s_lon, item['lat'], item['lon'])
+            # Translate coordinates
+            if not rel:
+                obj['X'], obj['Y'] = coords_relative(s_lat, s_lon, item['lat'], item['lon'])
+            else:
+                # If use relative coords, fields lat and lon should contain X and Y
+                obj['X'], obj['Y'] = item['lat'], item['lon']
+            print(obj['X'], obj['Y'])
             new_data['items'].append(obj)
-        new_data['start_time'] = data['start_time']
-        plot_data(new_data, filename, show, ax)
+        # new_data['start_time'] = data['start_time']
+        if rel:
+            plot_data(new_data, filename, show, ax, [s_lat, s_lon])
+        else:
+            plot_data(new_data, filename, show, ax)
         return new_data
     except:
         return None

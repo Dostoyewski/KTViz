@@ -10,7 +10,7 @@ import argparse
 USE_CURVING = False
 
 
-def plot_data(data, filename, show, ax=None, start_coords=None):
+def plot_data(datas, filename, show, ax=None, start_coords=None):
     """
     This function plotes arc and lines
     :param start_coords: start coords for relative coords
@@ -32,35 +32,36 @@ def plot_data(data, filename, show, ax=None, start_coords=None):
         pX, pY = 0, 0
     else:
         pX, pY = start_coords[0], start_coords[1]
-    for item in data['items']:
-        if not USE_CURVING:
-            pX, pY = item['X'], item['Y']
-        if item['curve'] == 0:
-            X, Y = positions(item['begin_angle'], item['length'])
-            ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3)
-            pX, pY = pX + X, -(pY + Y)
-        else:
-            if item['curve'] > 0:
-                Xc, Yc = positions(item['begin_angle'] + 90,
-                                   1 / item['curve'])
-            else:
-                Xc, Yc = positions(item['begin_angle'] - 90,
-                                   1 / item['curve'])
-            angle = item['begin_angle']
-            Rarc = 1 / item['curve']
-            dx = (Rarc * cos(radians(90 - angle)) + Xc - pX)
+    for data in datas:
+        for item in data['items']:
             if not USE_CURVING:
-                dy = (Rarc * sin(radians(90 - angle)) + Yc + pY)
+                pX, pY = item['X'], item['Y']
+            if item['curve'] == 0:
+                X, Y = positions(item['begin_angle'], item['length'])
+                ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3)
+                pX, pY = pX + X, -(pY + Y)
             else:
-                dy = (Rarc * sin(radians(90 - angle)) + Yc - pY)
-            dangle = degrees(item['length'] * item['curve'])
-            X = []
-            Y = []
-            for angle in np.arange(item['begin_angle'], item['begin_angle'] + dangle, dangle / 100):
-                X.append(Rarc * cos(radians(90 - angle)) + Xc - dx)
-                Y.append(-(Rarc * sin(radians(90 - angle)) + Yc - dy))
-            ax.plot(Y, X, linewidth=3)
-            pX, pY = X[-1], Y[-1]
+                if item['curve'] > 0:
+                    Xc, Yc = positions(item['begin_angle'] + 90,
+                                       1 / item['curve'])
+                else:
+                    Xc, Yc = positions(item['begin_angle'] - 90,
+                                       1 / item['curve'])
+                angle = item['begin_angle']
+                Rarc = 1 / item['curve']
+                dx = (Rarc * cos(radians(90 - angle)) + Xc - pX)
+                if not USE_CURVING:
+                    dy = (Rarc * sin(radians(90 - angle)) + Yc + pY)
+                else:
+                    dy = (Rarc * sin(radians(90 - angle)) + Yc - pY)
+                dangle = degrees(item['length'] * item['curve'])
+                X = []
+                Y = []
+                for angle in np.arange(item['begin_angle'], item['begin_angle'] + dangle, dangle / 100):
+                    X.append(Rarc * cos(radians(90 - angle)) + Xc - dx)
+                    Y.append(-(Rarc * sin(radians(90 - angle)) + Yc - dy))
+                ax.plot(Y, X, linewidth=3)
+                pX, pY = X[-1], Y[-1]
     ax.set(xlabel='x', ylabel='y',
            title='Trajectory')
     ax.grid()
@@ -80,29 +81,37 @@ def prepare_file(filename, show, ax=None, rel=False):
     :return: dictionary with translated route
     """
     try:
-        new_data = {'start_time': 0, 'items': []}
+        if rel:
+            key1, key2 = 'x', 'y'
+        else:
+            key1, key2 = 'lat', 'lon'
+        data_all = []
         with open(filename) as f:
-            data = json.loads(f.read())
-        s_lat, s_lon = data['items'][0]['lat'], data['items'][0]['lon']
-        for item in data['items']:
-            obj = {}
-            for key in list(item.keys()):
-                if key != 'lat' and key != 'lon':
-                    obj[key] = item[key]
-            # Translate coordinates
-            if not rel:
-                obj['X'], obj['Y'] = coords_relative(s_lat, s_lon, item['lat'], item['lon'])
-            else:
-                # If use relative coords, fields lat and lon should contain X and Y
-                obj['X'], obj['Y'] = item['lat'], item['lon']
-            print(obj['X'], obj['Y'])
-            new_data['items'].append(obj)
+            datas = json.loads(f.read())
+        # Start coordinates
+        s_lat, s_lon = datas[0]['items'][0][key1], datas[0]['items'][0][key2]
+        for data in datas:
+            new_data = {'items': []}
+            for item in data['items']:
+                obj = {}
+                for key in list(item.keys()):
+                    if key != key1 and key != key2:
+                        obj[key] = item[key]
+                # Translate coordinates
+                if not rel:
+                    obj['X'], obj['Y'] = coords_relative(s_lat, s_lon, item[key1], item[key2])
+                else:
+                    # If use relative coords, fields lat and lon should contain X and Y
+                    obj['X'], obj['Y'] = item[key1], item[key2]
+                print(obj['X'], obj['Y'])
+                new_data['items'].append(obj)
+            data_all.append(new_data)
         # new_data['start_time'] = data['start_time']
         if rel:
-            plot_data(new_data, filename, show, ax, [s_lat, s_lon])
+            plot_data(data_all, filename, show, ax, [s_lat, s_lon])
         else:
-            plot_data(new_data, filename, show, ax)
-        return new_data
+            plot_data(data_all, filename, show, ax)
+        return data_all
     except:
         return None
 

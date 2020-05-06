@@ -38,6 +38,7 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0):
         start_time = 0
         time = p_time * data['time']
         for item in data['items']:
+            vel = item['length'] / item['duration']
             if not USE_CURVING:
                 pX, pY = item['X'], item['Y']
             if item['curve'] == 0:
@@ -70,9 +71,16 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0):
             # Plotting current targets pose
             if time - start_time < item['duration'] and time >= start_time:
                 if item['curve'] == 0:
-                    vel = item['length'] / item['duration']
                     Xt, Yt = positions(item['begin_angle'], vel*(time - start_time))
                     ax.plot(pY + Yt, pX + Xt, marker='D', color='r')
+                else:
+                    # False angular sign velocity direction
+                    ang_vel = -vel * item['curve']
+                    Xt = Rarc * cos(radians(90 - item['begin_angle']) +
+                                    ang_vel*(time - start_time)) + Xc - dx
+                    Yt = -(Rarc * sin(radians(90 - item['begin_angle']) +
+                                    ang_vel*(time - start_time)) + Yc - dy)
+                    ax.plot(Yt, Xt, marker='D', color='r')
             # Adding previous point
             if item['curve'] == 0:
                 pX, pY = pX + X, -(pY + Y)

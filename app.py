@@ -44,8 +44,8 @@ class App(QMainWindow):
 
         # Slider config
         self.sl.setMinimum(0)
-        self.sl.setMaximum(100)
-        self.sl.setValue(0)
+        self.sl.setMaximum(99)
+        self.sl.setValue(25)
         self.sl.setTickPosition(QSlider.TicksBelow)
         self.sl.setTickInterval(1)
         self.sl.setGeometry(50, 800, 1100, 100)
@@ -54,12 +54,12 @@ class App(QMainWindow):
         self.show()
 
     def value_change(self):
+        print(self.sl.value())
         if self.loaded:
             self.m.plot(self.filename, self.relative, self.sl.value())
 
     def update_state(self):
         self.relative = not self.relative
-        print(self.relative)
 
     def openFileNameDialog(self):
         options = QFileDialog.Options()
@@ -69,7 +69,6 @@ class App(QMainWindow):
         if filename:
             self.filename = filename
             self.loaded = True
-            print(self.sl.value())
             self.m.plot(self.filename, self.relative, self.sl.value())
 
 

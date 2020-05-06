@@ -1,23 +1,26 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QVBoxLayout, QSizePolicy, QMessageBox, QWidget, QPushButton
+from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from main import prepare_file
-from PyQt5.QtWidgets import QInputDialog, QFileDialog, QCheckBox
+from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider
+from PyQt5.QtCore import Qt
 
 
 class App(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.sl = QSlider(Qt.Horizontal, self)
         self.left = 10
         self.top = 10
         self.title = 'KTViz 1.0'
         self.width = 1200
-        self.height = 800
+        self.height = 900
         self.filename = ""
         self.relative = True
         self.m = PlotCanvas(self, width=12, height=8)
+        self.loaded = False
         self.initUI()
 
     def initUI(self):
@@ -34,11 +37,25 @@ class App(QMainWindow):
         button.clicked.connect(self.openFileNameDialog)
 
         # Checkbox with relative coordinates
-        cb = QCheckBox('Relative coords', self)
+        cb = QCheckBox('Relative\n coords', self)
         cb.move(20, 20)
         cb.toggle()
         cb.stateChanged.connect(self.update_state)
+
+        # Slider config
+        self.sl.setMinimum(0)
+        self.sl.setMaximum(100)
+        self.sl.setValue(0)
+        self.sl.setTickPosition(QSlider.TicksBelow)
+        self.sl.setTickInterval(1)
+        self.sl.setGeometry(50, 800, 1100, 100)
+        self.sl.valueChanged.connect(self.value_change)
+
         self.show()
+
+    def value_change(self):
+        if self.loaded:
+            self.m.plot(self.filename, self.relative, self.sl.value())
 
     def update_state(self):
         self.relative = not self.relative
@@ -48,10 +65,12 @@ class App(QMainWindow):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         filename, _ = QFileDialog.getOpenFileNames(self, "Open JSON Trajectory", "",
-                                                  "All Files (*);;Python Files (*.py)", options=options)
+                                                  "JSON Files (*.json)", options=options)
         if filename:
             self.filename = filename
-            self.m.plot(self.filename, self.relative)
+            self.loaded = True
+            print(self.sl.value())
+            self.m.plot(self.filename, self.relative, self.sl.value())
 
 
 class PlotCanvas(FigureCanvas):
@@ -68,11 +87,18 @@ class PlotCanvas(FigureCanvas):
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def plot(self, filename, rel=False):
+    def plot(self, filename, rel=False, tper=0):
+        """
+        Plot function
+        :param filename: name of file to save
+        :param rel: relative coords flag
+        :param tper: time percent
+        :return:
+        """
         ax = self.figure.add_subplot(111)
         ax.clear()
         for file in filename:
-            prepare_file(file, True, ax, rel)
+            prepare_file(file, True, ax, rel, tper/100)
             ax.set_title('Trajectory')
             ax.axis('equal')
         self.draw()

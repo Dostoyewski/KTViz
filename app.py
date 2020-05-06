@@ -11,12 +11,18 @@ class App(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        # Show dist checkbox
+        self.cb2 = QCheckBox('Show dist', self)
+        # Show text checkbox
+        self.cb1 = QCheckBox('Show vel', self)
+        # Radius selection
         self.spinBox = QDoubleSpinBox(self)
+        # Time axis
         self.sl = QSlider(Qt.Horizontal, self)
         self.left = 10
         self.top = 10
         self.title = 'KTViz 1.0'
-        self.width = 1700
+        self.width = 1800
         self.height = 900
         self.filename = ""
         self.relative = True
@@ -39,7 +45,7 @@ class App(QMainWindow):
 
         # Checkbox with relative coordinates
         cb = QCheckBox('Relative', self)
-        cb.move(1400, 32)
+        cb.move(1650, 32)
         cb.toggle()
         cb.stateChanged.connect(self.update_state)
 
@@ -57,11 +63,22 @@ class App(QMainWindow):
         self.spinBox.setValue(1)
         self.spinBox.setSingleStep(0.1)
         self.spinBox.valueChanged.connect(self.value_changed)
+
+        # Show text checkbox
+        self.cb1.move(1400, 12)
+        self.cb1.toggle()
+        self.cb1.stateChanged.connect(self.value_changed)
+
+        # Show dist checkbox
+        self.cb2.move(1400, 50)
+        self.cb2.toggle()
+        self.cb2.stateChanged.connect(self.value_changed)
         self.show()
 
     def value_changed(self):
         if self.loaded:
-            self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value())
+            self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
+                        self.cb1.isChecked(), self.cb2.isChecked())
 
     def update_state(self):
         self.relative = not self.relative
@@ -74,7 +91,8 @@ class App(QMainWindow):
         if filename:
             self.filename = filename
             self.loaded = True
-            self.m.plot(self.filename, self.relative, self.sl.value())
+            self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
+                        self.cb1.isChecked())
 
 
 class PlotCanvas(FigureCanvas):
@@ -91,9 +109,11 @@ class PlotCanvas(FigureCanvas):
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def plot(self, filename, rel=False, tper=0, radius=1):
+    def plot(self, filename, rel=False, tper=0, radius=1, text=True, show_dist=True):
         """
         Plot function
+        :param show_dist: show distances values
+        :param text: show velocities
         :param radius: Save radius
         :param filename: name of file to save
         :param rel: relative coords flag
@@ -103,7 +123,7 @@ class PlotCanvas(FigureCanvas):
         ax = self.figure.add_subplot(111)
         ax.clear()
         for file in filename:
-            prepare_file(file, True, ax, rel, tper/100, radius)
+            prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist)
             ax.set_title('Trajectory')
             ax.axis('equal')
         self.draw()

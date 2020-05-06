@@ -10,14 +10,18 @@ import argparse
 USE_CURVING = False
 
 
-def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radius=2):
+def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radius=2, text=True,
+              show_dist=True):
     """
     This function plotes arc and lines
+    :param show_dist: show critical distances
+    :param text: flag to plot text
+    :param radius: Safe radius
     :param p_time: Current time moment in percents of amount time
     :param start_coords: start coords for relative coords
     :param show: show all plots in figure window
     :param ax: axes to plot
-    :param data: JSON with path
+    :param datas: JSON with path
     :param filename: name of file, used to save image
     :return: void
     """
@@ -34,6 +38,7 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
     else:
         pX, pY = start_coords[0], start_coords[1]
     # By default, start_time is null
+    current_coords = []
     for data in datas:
         start_time = 0
         time = p_time * data['time']
@@ -76,7 +81,9 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                     # Draw "save circle"
                     danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)
-                    ax.text(pY + Yt, pX + Xt, str(round(vel*3600, 1)) + ' knt')
+                    current_coords.append([pY + Yt, pX + Xt])
+                    if text:
+                        ax.text(pY + Yt, pX + Xt, str(round(vel*3600, 1)) + ' knt')
                 else:
                     # False angular sign velocity direction
                     ang_vel = -vel * item['curve']
@@ -88,13 +95,29 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                     # Draw "save circle"
                     danger_r = plt.Circle((Yt, Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)
-                    ax.text(Yt, Xt, str(round(vel * 3600, 1)) + ' knt')
+                    current_coords.append([Yt, Xt])
+                    if text:
+                        ax.text(Yt, Xt, str(round(vel * 3600, 1)) + ' knt')
             # Adding previous point
             if item['curve'] == 0:
                 pX, pY = pX + X, -(pY + Y)
             else:
                 pX, pY = X[-1], Y[-1]
             start_time += item['duration']
+    # Check distance and plot it
+    our = current_coords[0]
+    for coords in current_coords:
+        dist = ((our[0] - coords[0])**2 + (our[1] - coords[1])**2)**0.5
+        if coords != our:
+            if 2*radius < dist < 3*radius:
+                ax.plot([our[0], coords[0]], [our[1], coords[1]], linewidth=1.5, color='y')
+                if show_dist:
+                    ax.text(0.5*(our[0] + coords[0]), 0.5*(our[1] + coords[1]), str(round(dist, 2)))
+            elif dist < 2*radius:
+                ax.plot([our[0], coords[0]], [our[1], coords[1]], linewidth=2, color='darkred')
+                if show_dist:
+                    ax.text(0.5 * (our[0] + coords[0]), 0.5 * (our[1] + coords[1]), str(round(dist, 2)),
+                            fontdict={'color': 'darkred', 'weight': 'bold'})
     ax.set(xlabel='x', ylabel='y',
            title='Trajectory')
     ax.grid()
@@ -104,10 +127,12 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
         plt.show()
 
 
-def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2):
+def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True, show_dist=True):
     """
     Prepares route JSON for plotting,
     changes geodesic coords to relative
+    :param show_dist: show dist values
+    :param text: Show velocities text
     :param radius: danger radius for ships
     :param tper: percent of amount time
     :param rel: use relative coords in JSON
@@ -145,9 +170,11 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2):
             data_all.append(new_data)
         # new_data['start_time'] = data['start_time']
         if rel:
-            plot_data(data_all, filename, show, ax, [s_lat, s_lon], p_time=tper, radius=radius)
+            plot_data(data_all, filename, show, ax, [s_lat, s_lon], p_time=tper, radius=radius, text=text,
+                      show_dist=show_dist)
         else:
-            plot_data(data_all, filename, show, ax, p_time=tper, radius=radius)
+            plot_data(data_all, filename, show, ax, p_time=tper, radius=radius, text=text,
+                      show_dist=show_dist)
         return data_all
     except:
         return None

@@ -76,6 +76,7 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                     # Draw "save circle"
                     danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)
+                    ax.text(pY + Yt, pX + Xt, str(round(vel*3600, 1)) + ' knt')
                 else:
                     # False angular sign velocity direction
                     ang_vel = -vel * item['curve']
@@ -87,6 +88,7 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                     # Draw "save circle"
                     danger_r = plt.Circle((Yt, Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)
+                    ax.text(Yt, Xt, str(round(vel * 3600, 1)) + ' knt')
             # Adding previous point
             if item['curve'] == 0:
                 pX, pY = pX + X, -(pY + Y)

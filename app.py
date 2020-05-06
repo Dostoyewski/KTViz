@@ -27,6 +27,7 @@ class App(QMainWindow):
         self.filename = ""
         self.relative = True
         self.m = PlotCanvas(self, width=12, height=8)
+        self.vel = PlotCanvas(self, width=6, height=7.1)
         self.loaded = False
         self.initUI()
 
@@ -73,12 +74,14 @@ class App(QMainWindow):
         self.cb2.move(1400, 50)
         self.cb2.toggle()
         self.cb2.stateChanged.connect(self.value_changed)
+
+        self.vel.move(1200, 90)
         self.show()
 
     def value_changed(self):
         if self.loaded:
             self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                        self.cb1.isChecked(), self.cb2.isChecked())
+                        self.cb1.isChecked(), self.cb2.isChecked(), fig=self.vel)
 
     def update_state(self):
         self.relative = not self.relative
@@ -92,7 +95,7 @@ class App(QMainWindow):
             self.filename = filename
             self.loaded = True
             self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                        self.cb1.isChecked())
+                        self.cb1.isChecked(), fig=self.vel)
 
 
 class PlotCanvas(FigureCanvas):
@@ -109,9 +112,10 @@ class PlotCanvas(FigureCanvas):
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def plot(self, filename, rel=False, tper=0, radius=1, text=True, show_dist=True):
+    def plot(self, filename, rel=False, tper=0, radius=1, text=True, show_dist=True, fig=None):
         """
         Plot function
+        :param fig: figure to plot velocities
         :param show_dist: show distances values
         :param text: show velocities
         :param radius: Save radius
@@ -123,7 +127,7 @@ class PlotCanvas(FigureCanvas):
         ax = self.figure.add_subplot(111)
         ax.clear()
         for file in filename:
-            prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist)
+            prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist, fig)
             ax.set_title('Trajectory')
             ax.axis('equal')
         self.draw()

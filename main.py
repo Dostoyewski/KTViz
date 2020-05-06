@@ -39,6 +39,7 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
         pX, pY = start_coords[0], start_coords[1]
     # By default, start_time is null
     current_coords = []
+    velocities = []
     for data in datas:
         start_time = 0
         time = p_time * data['time']
@@ -104,6 +105,8 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
             else:
                 pX, pY = X[-1], Y[-1]
             start_time += item['duration']
+            if not datas.index(data):
+                velocities.append(vel)
     # Check distance and plot it
     our = current_coords[0]
     for coords in current_coords:
@@ -125,22 +128,28 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
         fig.savefig(filename + ".png")
     if show:
         plt.show()
+    return velocities
 
 
-def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True, show_dist=True):
+def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True, show_dist=True, figure=None):
     """
     Prepares route JSON for plotting,
     changes geodesic coords to relative
+    :param figure: matplotlib figure to plot velocities
+    :type figure: matplotlib figure
     :param show_dist: show dist values
     :param text: Show velocities text
     :param radius: danger radius for ships
     :param tper: percent of amount time
     :param rel: use relative coords in JSON
     :param ax: axis to plot
+    :type ax: matplotlib axes
     :param filename: JSON route filename
     :return: dictionary with translated route
     """
     try:
+        ax1 = figure.figure.add_subplot(111)
+        ax1.clear()
         if rel:
             key1, key2 = 'x', 'y'
         else:
@@ -170,11 +179,27 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
             data_all.append(new_data)
         # new_data['start_time'] = data['start_time']
         if rel:
-            plot_data(data_all, filename, show, ax, [s_lat, s_lon], p_time=tper, radius=radius, text=text,
+            vel = plot_data(data_all, filename, show, ax, [s_lat, s_lon], p_time=tper, radius=radius, text=text,
                       show_dist=show_dist)
         else:
-            plot_data(data_all, filename, show, ax, p_time=tper, radius=radius, text=text,
+            vel = plot_data(data_all, filename, show, ax, p_time=tper, radius=radius, text=text,
                       show_dist=show_dist)
+        if ax1 is not None:
+            X = []
+            Y = []
+            n = 0
+            for v in vel:
+                X.append(n)
+                X.append(n+1)
+                Y.append(v*3600)
+                Y.append(v*3600)
+                n += 1
+                ax1.text((2*n+1)/2, v*3600, str(round(v * 3600, 1)) + ' knt')
+            ax1.plot(X, Y, linewidth=3)
+            ax1.set(xlabel='N of part', ylabel='Vel, knots',
+                    title='Velocity')
+            ax1.grid()
+            figure.draw()
         return data_all
     except:
         return None

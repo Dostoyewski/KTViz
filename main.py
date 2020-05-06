@@ -27,6 +27,8 @@ def plot_data(data, filename, show, ax=None, start_coords=None):
     if ax is None:
         fig, ax = plt.subplots()
     if not start_coords:
+        # End coordinates of previous segment,
+        # used for curving
         pX, pY = 0, 0
     else:
         pX, pY = start_coords[0], start_coords[1]
@@ -47,7 +49,10 @@ def plot_data(data, filename, show, ax=None, start_coords=None):
             angle = item['begin_angle']
             Rarc = 1 / item['curve']
             dx = (Rarc * cos(radians(90 - angle)) + Xc - pX)
-            dy = (Rarc * sin(radians(90 - angle)) + Yc - pY)
+            if not USE_CURVING:
+                dy = (Rarc * sin(radians(90 - angle)) + Yc + pY)
+            else:
+                dy = (Rarc * sin(radians(90 - angle)) + Yc - pY)
             dangle = degrees(item['length'] * item['curve'])
             X = []
             Y = []

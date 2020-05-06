@@ -17,20 +17,23 @@ class App(QMainWindow):
         self.height = 800
         self.filename = ""
         self.relative = True
+        self.m = PlotCanvas(self, width=12, height=8)
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
-        self.m = PlotCanvas(self, width=12, height=8)
+        # Initialization of canvas
         self.m.move(0, 0)
 
+        # Load button
         button = QPushButton('Load Files', self)
         button.move(1000, 20)
         button.resize(140, 50)
         button.clicked.connect(self.openFileNameDialog)
 
+        # Checkbox with relative coordinates
         cb = QCheckBox('Relative coords', self)
         cb.move(20, 20)
         cb.toggle()

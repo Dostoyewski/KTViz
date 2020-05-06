@@ -10,7 +10,7 @@ import argparse
 USE_CURVING = False
 
 
-def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0):
+def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radius=2):
     """
     This function plotes arc and lines
     :param p_time: Current time moment in percents of amount time
@@ -73,6 +73,9 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0):
                 if item['curve'] == 0:
                     Xt, Yt = positions(item['begin_angle'], vel*(time - start_time))
                     ax.plot(pY + Yt, pX + Xt, marker='D', color='r')
+                    # Draw "save circle"
+                    danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
+                    ax.add_artist(danger_r)
                 else:
                     # False angular sign velocity direction
                     ang_vel = -vel * item['curve']
@@ -81,6 +84,9 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0):
                     Yt = -(Rarc * sin(radians(90 - item['begin_angle']) +
                                     ang_vel*(time - start_time)) + Yc - dy)
                     ax.plot(Yt, Xt, marker='D', color='r')
+                    # Draw "save circle"
+                    danger_r = plt.Circle((Yt, Xt), radius, color='r', fill=False)
+                    ax.add_artist(danger_r)
             # Adding previous point
             if item['curve'] == 0:
                 pX, pY = pX + X, -(pY + Y)
@@ -96,10 +102,11 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0):
         plt.show()
 
 
-def prepare_file(filename, show, ax=None, rel=False, tper=0):
+def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2):
     """
     Prepares route JSON for plotting,
     changes geodesic coords to relative
+    :param radius: danger radius for ships
     :param tper: percent of amount time
     :param rel: use relative coords in JSON
     :param ax: axis to plot
@@ -136,9 +143,9 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0):
             data_all.append(new_data)
         # new_data['start_time'] = data['start_time']
         if rel:
-            plot_data(data_all, filename, show, ax, [s_lat, s_lon], p_time=tper)
+            plot_data(data_all, filename, show, ax, [s_lat, s_lon], p_time=tper, radius=radius)
         else:
-            plot_data(data_all, filename, show, ax, p_time=tper)
+            plot_data(data_all, filename, show, ax, p_time=tper, radius=radius)
         return data_all
     except:
         return None

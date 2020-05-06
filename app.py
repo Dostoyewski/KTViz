@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from main import prepare_file
-from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider
+from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox
 from PyQt5.QtCore import Qt
 
 
@@ -11,11 +11,12 @@ class App(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.spinBox = QDoubleSpinBox(self)
         self.sl = QSlider(Qt.Horizontal, self)
         self.left = 10
         self.top = 10
         self.title = 'KTViz 1.0'
-        self.width = 1200
+        self.width = 1700
         self.height = 900
         self.filename = ""
         self.relative = True
@@ -32,31 +33,35 @@ class App(QMainWindow):
 
         # Load button
         button = QPushButton('Load Files', self)
-        button.move(1000, 20)
+        button.move(1220, 20)
         button.resize(140, 50)
         button.clicked.connect(self.openFileNameDialog)
 
         # Checkbox with relative coordinates
-        cb = QCheckBox('Relative\n coords', self)
-        cb.move(20, 20)
+        cb = QCheckBox('Relative', self)
+        cb.move(1400, 32)
         cb.toggle()
         cb.stateChanged.connect(self.update_state)
 
         # Slider config
         self.sl.setMinimum(0)
         self.sl.setMaximum(99)
-        self.sl.setValue(25)
+        self.sl.setValue(0)
         self.sl.setTickPosition(QSlider.TicksBelow)
         self.sl.setTickInterval(1)
         self.sl.setGeometry(50, 800, 1100, 100)
-        self.sl.valueChanged.connect(self.value_change)
+        self.sl.valueChanged.connect(self.value_changed)
 
+        self.spinBox.setRange(0, 10)
+        self.spinBox.move(1530, 32)
+        self.spinBox.setValue(1)
+        self.spinBox.setSingleStep(0.1)
+        self.spinBox.valueChanged.connect(self.value_changed)
         self.show()
 
-    def value_change(self):
-        print(self.sl.value())
+    def value_changed(self):
         if self.loaded:
-            self.m.plot(self.filename, self.relative, self.sl.value())
+            self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value())
 
     def update_state(self):
         self.relative = not self.relative
@@ -86,9 +91,10 @@ class PlotCanvas(FigureCanvas):
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def plot(self, filename, rel=False, tper=0):
+    def plot(self, filename, rel=False, tper=0, radius=1):
         """
         Plot function
+        :param radius: Save radius
         :param filename: name of file to save
         :param rel: relative coords flag
         :param tper: time percent
@@ -97,7 +103,7 @@ class PlotCanvas(FigureCanvas):
         ax = self.figure.add_subplot(111)
         ax.clear()
         for file in filename:
-            prepare_file(file, True, ax, rel, tper/100)
+            prepare_file(file, True, ax, rel, tper/100, radius)
             ax.set_title('Trajectory')
             ax.axis('equal')
         self.draw()

@@ -199,6 +199,7 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
             ax1.set(xlabel='N of part', ylabel='Vel, knots',
                     title='Velocity')
             ax1.grid()
+            ax1.set_ylim([-1, 25])
             figure.draw()
         return data_all
     except:

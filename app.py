@@ -1,11 +1,14 @@
+import os
 import sys
+
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton
+from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from main import prepare_file
-from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox
-from PyQt5.QtCore import Qt
 from win32api import GetSystemMetrics
+
+from main import prepare_file
 
 
 class App(QMainWindow):

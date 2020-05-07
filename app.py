@@ -137,12 +137,17 @@ class PlotCanvas(FigureCanvas):
         """
         ax = self.figure.add_subplot(111)
         ax.clear()
+        directory = ""
         for file in filename:
             prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist, fig)
             ax.set_title('Trajectory')
             ax.axis('equal')
+            directory = os.path.dirname(file)
         self.draw()
-        self.fig.savefig("img/image.png")
+        try:
+            self.fig.savefig("img/image.png")
+        except FileNotFoundError:
+            self.fig.savefig(directory + "/image.png")
 
 
 if __name__ == '__main__':

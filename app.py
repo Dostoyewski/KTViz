@@ -5,6 +5,7 @@ from matplotlib.figure import Figure
 from main import prepare_file
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox
 from PyQt5.QtCore import Qt
+from win32api import GetSystemMetrics
 
 
 class App(QMainWindow):
@@ -22,12 +23,22 @@ class App(QMainWindow):
         self.left = 10
         self.top = 10
         self.title = 'KTViz 1.0'
-        self.width = 1800
-        self.height = 900
+        try:
+            print("Width =", GetSystemMetrics(0))
+            print("Height =", GetSystemMetrics(1))
+            self.width = GetSystemMetrics(0)
+            self.height = GetSystemMetrics(1)
+            if self.height > 1000:
+                self.height = 1000
+        except:
+            self.width = 1800
+            self.height = 900
+        self.scale_x = self.width / 1800
+        self.scale_y = self.height / 900
         self.filename = ""
         self.relative = True
-        self.m = PlotCanvas(self, width=12, height=8)
-        self.vel = PlotCanvas(self, width=6, height=7.1)
+        self.m = PlotCanvas(self, width=12 * self.scale_x, height=8 * self.scale_y)
+        self.vel = PlotCanvas(self, width=6 * self.scale_x, height=7.1 * self.scale_y)
         self.loaded = False
         self.initUI()
 
@@ -40,13 +51,13 @@ class App(QMainWindow):
 
         # Load button
         button = QPushButton('Load Files', self)
-        button.move(1220, 20)
-        button.resize(140, 50)
+        button.move(1220 * self.scale_x, 20 * self.scale_y)
+        button.resize(140 * self.scale_x, 50 * self.scale_y)
         button.clicked.connect(self.openFileNameDialog)
 
         # Checkbox with relative coordinates
         cb = QCheckBox('Relative', self)
-        cb.move(1650, 32)
+        cb.move(1650 * self.scale_x, 32 * self.scale_y)
         cb.toggle()
         cb.stateChanged.connect(self.update_state)
 
@@ -56,26 +67,26 @@ class App(QMainWindow):
         self.sl.setValue(0)
         self.sl.setTickPosition(QSlider.TicksBelow)
         self.sl.setTickInterval(1)
-        self.sl.setGeometry(50, 800, 1100, 100)
+        self.sl.setGeometry(50 * self.scale_x, 800 * self.scale_y, 1100 * self.scale_x, 100)
         self.sl.valueChanged.connect(self.value_changed)
 
         self.spinBox.setRange(0, 10)
-        self.spinBox.move(1530, 32)
+        self.spinBox.move(1530 * self.scale_x, 32 * self.scale_y)
         self.spinBox.setValue(1)
         self.spinBox.setSingleStep(0.1)
         self.spinBox.valueChanged.connect(self.value_changed)
 
         # Show text checkbox
-        self.cb1.move(1400, 12)
+        self.cb1.move(1400 * self.scale_x, 12 * self.scale_y)
         self.cb1.toggle()
         self.cb1.stateChanged.connect(self.value_changed)
 
         # Show dist checkbox
-        self.cb2.move(1400, 50)
+        self.cb2.move(1400 * self.scale_x, 50 * self.scale_y)
         self.cb2.toggle()
         self.cb2.stateChanged.connect(self.value_changed)
 
-        self.vel.move(1200, 90)
+        self.vel.move(1200 * self.scale_x, 90 * self.scale_y)
         self.show()
 
     def value_changed(self):

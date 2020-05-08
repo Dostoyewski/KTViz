@@ -8,6 +8,7 @@ import argparse
 
 # Disable trajectory curving
 USE_CURVING = False
+data_json = []
 
 
 def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radius=2, text=True,
@@ -141,10 +142,12 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
     return velocities
 
 
-def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True, show_dist=True, figure=None):
+def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True, show_dist=True, figure=None,
+                 is_loaded=False):
     """
     Prepares route JSON for plotting,
     changes geodesic coords to relative
+    :param is_loaded: Flag to update JSON file
     :param figure: matplotlib figure to plot velocities
     :type figure: matplotlib figure
     :param show_dist: show dist values
@@ -162,38 +165,47 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
         ax1.clear()
         if rel:
             key1, key2 = 'x', 'y'
+            if is_loaded:
+                key1, key2 = 'X', 'Y'
         else:
             key1, key2 = 'lat', 'lon'
         data_all = []
-        with open(filename) as f:
-            datas = json.loads(f.read())
-        # Start coordinates
-        s_lat, s_lon = datas[0]['items'][0][key1], datas[0]['items'][0][key2]
-        for data in datas:
-            new_data = {'items': []}
-            time = 0
-            for item in data['items']:
-                obj = {}
-                for key in list(item.keys()):
-                    if key != key1 and key != key2:
-                        obj[key] = item[key]
-                # Translate coordinates
-                if not rel:
-                    obj['X'], obj['Y'] = coords_relative(s_lat, s_lon, item[key1], item[key2])
-                else:
-                    # If use relative coords, fields lat and lon should contain X and Y
-                    obj['X'], obj['Y'] = item[key1], item[key2]
-                time += item['duration']
-                new_data['items'].append(obj)
-            new_data['time'] = time
-            data_all.append(new_data)
-        # new_data['start_time'] = data['start_time']
+        global data_json
+        if not is_loaded:
+            with open(filename) as f:
+                datas = json.loads(f.read())
+                # Start coordinates
+                s_lat, s_lon = datas[0]['items'][0][key1], datas[0]['items'][0][key2]
+                for data in datas:
+                    new_data = {'items': []}
+                    time = 0
+                    for item in data['items']:
+                        obj = {}
+                        for key in list(item.keys()):
+                            if key != key1 and key != key2:
+                                obj[key] = item[key]
+                        # Translate coordinates
+                        if not rel:
+                            obj['X'], obj['Y'] = coords_relative(s_lat, s_lon, item[key1], item[key2])
+                        else:
+                            # If use relative coords, fields lat and lon should contain X and Y
+                            obj['X'], obj['Y'] = item[key1], item[key2]
+                        time += item['duration']
+                        new_data['items'].append(obj)
+                    new_data['time'] = time
+                    data_all.append(new_data)
+                # new_data['start_time'] = data['start_time']
+                data_json = data_all
+        else:
+            data_all = data_json
+            s_lat, s_lon = data_all[0]['items'][0][key1], data_all[0]['items'][0][key2]
+            print('not_loaded')
         if rel:
             vel = plot_data(data_all, filename, show, ax, [s_lat, s_lon], p_time=tper, radius=radius, text=text,
-                      show_dist=show_dist)
+                            show_dist=show_dist)
         else:
             vel = plot_data(data_all, filename, show, ax, p_time=tper, radius=radius, text=text,
-                      show_dist=show_dist)
+                            show_dist=show_dist)
         if ax1 is not None:
             X = []
             Y = []

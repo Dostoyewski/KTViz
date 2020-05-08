@@ -95,7 +95,7 @@ class App(QMainWindow):
     def value_changed(self):
         if self.loaded:
             self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                        self.cb1.isChecked(), self.cb2.isChecked(), fig=self.vel)
+                        self.cb1.isChecked(), self.cb2.isChecked(), fig=self.vel, is_loaded=True)
 
     def update_state(self):
         self.relative = not self.relative
@@ -104,12 +104,12 @@ class App(QMainWindow):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         filename, _ = QFileDialog.getOpenFileNames(self, "Open JSON Trajectory", "",
-                                                  "JSON Files (*.json)", options=options)
+                                                   "JSON Files (*.json)", options=options)
         if filename:
             self.filename = filename
             self.loaded = True
             self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                        self.cb1.isChecked(), fig=self.vel)
+                        self.cb1.isChecked(), fig=self.vel, is_loaded=False)
 
 
 class PlotCanvas(FigureCanvas):
@@ -126,9 +126,11 @@ class PlotCanvas(FigureCanvas):
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def plot(self, filename, rel=False, tper=0, radius=1, text=True, show_dist=True, fig=None):
+    def plot(self, filename, rel=False, tper=0, radius=1, text=True, show_dist=True, fig=None,
+             is_loaded=False):
         """
         Plot function
+        :param is_loaded: flag if file is in memory
         :param fig: figure to plot velocities
         :param show_dist: show distances values
         :param text: show velocities
@@ -142,7 +144,7 @@ class PlotCanvas(FigureCanvas):
         ax.clear()
         directory = ""
         for file in filename:
-            prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist, fig)
+            prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist, fig, is_loaded)
             ax.set_title('Trajectory')
             ax.axis('equal')
             directory = os.path.dirname(file)

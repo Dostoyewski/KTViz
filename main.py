@@ -80,10 +80,12 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                     Xt, Yt = positions(item['begin_angle'], vel*(time - start_time))
                     if datas.index(data) == 0:
                         ax.plot(pY + Yt, pX + Xt, marker='D', color='b')
+                        # Draw "save circle"
+                        danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='b', fill=False)
                     else:
                         ax.plot(pY + Yt, pX + Xt, marker='D', color='r')
-                    # Draw "save circle"
-                    danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
+                        # Draw "save circle"
+                        danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)
                     current_coords.append([pY + Yt, pX + Xt])
                     if text:
@@ -97,10 +99,12 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                                     ang_vel*(time - start_time)) + Yc - dy)
                     if datas.index(data) == 0:
                         ax.plot(Yt, Xt, marker='D', color='b')
+                        # Draw "save circle"
+                        danger_r = plt.Circle((Yt, Xt), radius, color='b', fill=False)
                     else:
                         ax.plot(Yt, Xt, marker='D', color='r')
-                    # Draw "save circle"
-                    danger_r = plt.Circle((Yt, Xt), radius, color='r', fill=False)
+                        # Draw "save circle"
+                        danger_r = plt.Circle((Yt, Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)
                     current_coords.append([Yt, Xt])
                     if text:

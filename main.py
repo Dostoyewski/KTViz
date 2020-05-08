@@ -78,7 +78,10 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
             if time - start_time < item['duration'] and time >= start_time:
                 if item['curve'] == 0:
                     Xt, Yt = positions(item['begin_angle'], vel*(time - start_time))
-                    ax.plot(pY + Yt, pX + Xt, marker='D', color='r')
+                    if datas.index(data) == 0:
+                        ax.plot(pY + Yt, pX + Xt, marker='D', color='b')
+                    else:
+                        ax.plot(pY + Yt, pX + Xt, marker='D', color='r')
                     # Draw "save circle"
                     danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)
@@ -92,7 +95,10 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                                     ang_vel*(time - start_time)) + Xc - dx
                     Yt = -(Rarc * sin(radians(90 - item['begin_angle']) +
                                     ang_vel*(time - start_time)) + Yc - dy)
-                    ax.plot(Yt, Xt, marker='D', color='r')
+                    if datas.index(data) == 0:
+                        ax.plot(Yt, Xt, marker='D', color='b')
+                    else:
+                        ax.plot(Yt, Xt, marker='D', color='r')
                     # Draw "save circle"
                     danger_r = plt.Circle((Yt, Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)

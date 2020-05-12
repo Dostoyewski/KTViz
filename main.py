@@ -165,10 +165,10 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
         ax1.clear()
         if rel:
             key1, key2 = 'x', 'y'
-            if is_loaded:
-                key1, key2 = 'X', 'Y'
         else:
             key1, key2 = 'lat', 'lon'
+        if is_loaded:
+            key1, key2 = 'X', 'Y'
         data_all = []
         global data_json
         if not is_loaded:

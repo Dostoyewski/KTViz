@@ -75,7 +75,7 @@ class App(QMainWindow):
 
         self.spinBox.setRange(0, 10)
         self.spinBox.move(1530 * self.scale_x, 32 * self.scale_y)
-        self.spinBox.setValue(1)
+        self.spinBox.setValue(1.5)
         self.spinBox.setSingleStep(0.1)
         self.spinBox.valueChanged.connect(self.value_changed)
 

@@ -199,7 +199,7 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
         else:
             data_all = data_json
             s_lat, s_lon = data_all[0]['items'][0][key1], data_all[0]['items'][0][key2]
-            print('not_loaded')
+            # print('not_loaded')
         if rel:
             vel = plot_data(data_all, filename, show, ax, [s_lat, s_lon], p_time=tper, radius=radius, text=text,
                             show_dist=show_dist)

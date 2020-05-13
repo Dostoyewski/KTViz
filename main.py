@@ -163,10 +163,6 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
     try:
         ax1 = figure.figure.add_subplot(111)
         ax1.clear()
-        if rel:
-            key1, key2 = 'x', 'y'
-        else:
-            key1, key2 = 'lat', 'lon'
         if is_loaded:
             key1, key2 = 'X', 'Y'
         data_all = []
@@ -175,7 +171,14 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
             with open(filename) as f:
                 datas = json.loads(f.read())
                 # Start coordinates
-                s_lat, s_lon = datas[0]['items'][0][key1], datas[0]['items'][0][key2]
+                try:
+                    key1, key2 = 'x', 'y'
+                    rel = True
+                    s_lat, s_lon = datas[0]['items'][0][key1], datas[0]['items'][0][key2]
+                except KeyError:
+                    rel = False
+                    key1, key2 = 'lat', 'lon'
+                    s_lat, s_lon = datas[0]['items'][0][key1], datas[0]['items'][0][key2]
                 for data in datas:
                     new_data = {'items': []}
                     time = 0

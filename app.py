@@ -58,12 +58,6 @@ class App(QMainWindow):
         button.resize(140 * self.scale_x, 50 * self.scale_y)
         button.clicked.connect(self.openFileNameDialog)
 
-        # Checkbox with relative coordinates
-        cb = QCheckBox('Relative', self)
-        cb.move(1650 * self.scale_x, 32 * self.scale_y)
-        cb.toggle()
-        cb.stateChanged.connect(self.update_state)
-
         # Slider config
         self.sl.setMinimum(0)
         self.sl.setMaximum(99)

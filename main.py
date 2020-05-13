@@ -51,7 +51,10 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
             if item['curve'] == 0:
                 # For lines
                 X, Y = positions(item['begin_angle'], item['length'])
-                ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3)
+                if datas.index(data) != 0:
+                    ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3, color='brown')
+                else:
+                    ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3)
             else:
                 # For arcs
                 if item['curve'] > 0:
@@ -74,7 +77,10 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                 for angle in np.arange(item['begin_angle'], item['begin_angle'] + dangle, dangle / 100):
                     X.append(Rarc * cos(radians(90 - angle)) + Xc - dx)
                     Y.append(-(Rarc * sin(radians(90 - angle)) + Yc - dy))
-                ax.plot(Y, X, linewidth=3)
+                if datas.index(data) != 0:
+                    ax.plot(Y, X, linewidth=3, color='brown')
+                else:
+                    ax.plot(Y, X, linewidth=3)
             # Plotting current targets pose
             if time - start_time < item['duration'] and time >= start_time:
                 if item['curve'] == 0:
@@ -91,6 +97,8 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                     current_coords.append([pY + Yt, pX + Xt])
                     if text:
                         ax.text(pY + Yt, pX + Xt, str(round(vel*3600, 1)) + ' knt')
+                        if datas.index(data) != 0:
+                            ax.text(pY + Yt - 0.5, pX + Xt + 0.5, 'Tar ' + str(datas.index(data)))
                 else:
                     # False angular sign velocity direction
                     ang_vel = -vel * item['curve']
@@ -110,6 +118,8 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                     current_coords.append([Yt, Xt])
                     if text:
                         ax.text(Yt, Xt, str(round(vel * 3600, 1)) + ' knt')
+                        if datas.index(data) != 0:
+                            ax.text(Yt - 0.5, Xt + 0.5, 'Tar ' + str(datas.index(data)))
             # Adding previous point
             if item['curve'] == 0:
                 pX, pY = pX + X, -(pY + Y)
@@ -219,7 +229,7 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
                 Y.append(v*3600)
                 Y.append(v*3600)
                 n += 1
-                ax1.text((2*n+1)/2, v*3600, str(round(v * 3600, 1)) + ' knt')
+                # ax1.text((2*n+1)/2, v*3600, str(round(v * 3600, 1)) + ' knt')
             ax1.plot(X, Y, linewidth=3)
             ax1.set(xlabel='N of part', ylabel='Vel, knots',
                     title='Velocity')

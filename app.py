@@ -99,6 +99,8 @@ class App(QMainWindow):
 
     def update_state(self):
         self.relative = not self.relative
+        self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
+                    self.cb1.isChecked(), self.cb2.isChecked(), fig=self.vel, is_loaded=False)
 
     def openFileNameDialog(self):
         options = QFileDialog.Options()

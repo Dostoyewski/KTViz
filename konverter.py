@@ -37,4 +37,4 @@ def coords_relative(s_lat, s_lon, e_lat, e_lon):
     :return: relative coords X and Y
     """
     path = Geodesic.WGS84.Inverse(s_lat, s_lon, e_lat, e_lon)
-    return positions(math.radians(path['azi1']), path['s12'] / 1852)
+    return positions(path['azi1'], path['s12'] / 1852)

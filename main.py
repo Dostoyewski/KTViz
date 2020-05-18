@@ -45,6 +45,8 @@ def plot_data(datas, filename, show, s_lat, s_lon, ax=None, start_coords=None, p
     current_coords = []
     velocities = []
     for data in datas:
+        if isinstance(data, list):
+            break
         start_time = 0
         time = p_time * data['time']
         for item in data['items']:

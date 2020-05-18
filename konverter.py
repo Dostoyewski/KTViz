@@ -38,3 +38,18 @@ def coords_relative(s_lat, s_lon, e_lat, e_lon):
     """
     path = Geodesic.WGS84.Inverse(s_lat, s_lon, e_lat, e_lon)
     return positions(path['azi1'], path['s12'] / 1852)
+
+
+def coords_global(x, y, lat, lon):
+    """
+    Convert realtive coords to WGS84
+    :param x: relative x
+    :param y: relative Y
+    :param lat: start lat
+    :param lon: start lon
+    :return: lat&lon in WGS84
+    """
+    azi1 = math.degrees(math.atan2(y, x))
+    dist = (x ** 2 + y ** 2) ** .5
+    path = Geodesic.WGS84.Direct(lat, lon, azi1, dist * 1852)
+    return path['lat2'], path['lon2']

@@ -1,5 +1,5 @@
 import json
-from konverter import coords_relative, positions
+from konverter import coords_relative, positions, coords_global
 import matplotlib.pyplot as plt
 from math import sin, cos, radians, degrees
 import numpy as np
@@ -11,10 +11,13 @@ USE_CURVING = False
 data_json = []
 
 
-def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radius=2, text=True,
-              show_dist=True):
+def plot_data(datas, filename, show, s_lat, s_lon, ax=None, start_coords=None, p_time=0, radius=2, text=True,
+              show_dist=True, show_coords=True):
     """
     This function plotes arc and lines
+    :param show_coords: Show coords in WGS84
+    :param s_lat: start latitude
+    :param s_lon: start longitude
     :param show_dist: show critical distances
     :param text: flag to plot text
     :param radius: Safe radius
@@ -95,10 +98,18 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                         danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)
                     current_coords.append([pY + Yt, pX + Xt])
+                    if show_coords:
+                        clat, clon = coords_global(pX + Xt, pY + Yt, s_lat, s_lon)
+                        cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
+                    else:
+                        cord_str = ''
                     if text:
-                        ax.text(pY + Yt, pX + Xt, str(round(vel*3600, 1)) + ' knt')
                         if datas.index(data) != 0:
-                            ax.text(pY + Yt - 0.5, pX + Xt + 0.5, 'Tar ' + str(datas.index(data)))
+                            ax.text(pY + Yt - 0.5, pX + Xt + 0.5, 'Tar ' + str(datas.index(data)) + '\n'
+                                    + str(round(vel*3600, 1)) + ' knt' + '\n' + cord_str)
+                        else:
+                            ax.text(pY + Yt, pX + Xt, str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
+
                 else:
                     # False angular sign velocity direction
                     ang_vel = -vel * item['curve']
@@ -116,10 +127,17 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
                         danger_r = plt.Circle((Yt, Xt), radius, color='r', fill=False)
                     ax.add_artist(danger_r)
                     current_coords.append([Yt, Xt])
+                    if show_coords:
+                        clat, clon = coords_global(Xt, Yt, s_lat, s_lon)
+                        cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
+                    else:
+                        cord_str = ''
                     if text:
-                        ax.text(Yt, Xt, str(round(vel * 3600, 1)) + ' knt')
                         if datas.index(data) != 0:
-                            ax.text(Yt - 0.5, Xt + 0.5, 'Tar ' + str(datas.index(data)))
+                            ax.text(Yt - 0.5, Xt + 0.5, 'Tar ' + str(datas.index(data)) + '\n'
+                                    + str(round(vel*3600, 1)) + ' knt' + '\n' + cord_str)
+                        else:
+                            ax.text(Yt, Xt, str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
             # Adding previous point
             if item['curve'] == 0:
                 pX, pY = pX + X, -(pY + Y)
@@ -152,11 +170,12 @@ def plot_data(datas, filename, show, ax=None, start_coords=None, p_time=0, radiu
     return velocities
 
 
-def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True, show_dist=True, figure=None,
-                 is_loaded=False):
+def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True, show_dist=True,
+                 show_coords=True, figure=None, is_loaded=False):
     """
     Prepares route JSON for plotting,
     changes geodesic coords to relative
+    :param show_coords: Show coords in WGS84
     :param is_loaded: Flag to update JSON file
     :param figure: matplotlib figure to plot velocities
     :type figure: matplotlib figure
@@ -209,16 +228,17 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
                     data_all.append(new_data)
                 # new_data['start_time'] = data['start_time']
                 data_json = data_all
+                data_json.append([s_lat, s_lon])
         else:
             data_all = data_json
-            s_lat, s_lon = data_all[0]['items'][0][key1], data_all[0]['items'][0][key2]
+            s_lat, s_lon = data_all[len(data_all)-1][0], data_all[len(data_all)-1][1]
             # print('not_loaded')
         if rel:
-            vel = plot_data(data_all, filename, show, ax, [s_lat, s_lon], p_time=tper, radius=radius, text=text,
-                            show_dist=show_dist)
+            vel = plot_data(data_all, filename, show, s_lat, s_lon, ax, [s_lat, s_lon], p_time=tper, radius=radius, text=text,
+                            show_dist=show_dist, show_coords=show_coords)
         else:
-            vel = plot_data(data_all, filename, show, ax, p_time=tper, radius=radius, text=text,
-                            show_dist=show_dist)
+            vel = plot_data(data_all, filename, show, s_lat, s_lon, ax, p_time=tper, radius=radius, text=text,
+                            show_dist=show_dist, show_coords=show_coords)
         if ax1 is not None:
             X = []
             Y = []

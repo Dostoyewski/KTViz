@@ -19,6 +19,8 @@ class App(QMainWindow):
         self.cb2 = QCheckBox('Show dist', self)
         # Show text checkbox
         self.cb1 = QCheckBox('Show vel', self)
+        # Show global coords
+        self.cb3 = QCheckBox('Show GC', self)
         # Radius selection
         self.spinBox = QDoubleSpinBox(self)
         # Time axis
@@ -83,18 +85,25 @@ class App(QMainWindow):
         self.cb2.toggle()
         self.cb2.stateChanged.connect(self.value_changed)
 
+        # Show WGS checkbox
+        self.cb3.move(1650 * self.scale_x, 50 * self.scale_y)
+        self.cb3.toggle()
+        self.cb3.stateChanged.connect(self.value_changed)
+
         self.vel.move(1200 * self.scale_x, 90 * self.scale_y)
         self.show()
 
     def value_changed(self):
         if self.loaded:
             self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                        self.cb1.isChecked(), self.cb2.isChecked(), fig=self.vel, is_loaded=True)
+                        self.cb1.isChecked(), self.cb2.isChecked(), show_coords=self.cb3.isChecked(),
+                        fig=self.vel, is_loaded=True)
 
     def update_state(self):
         self.relative = not self.relative
         self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                    self.cb1.isChecked(), self.cb2.isChecked(), fig=self.vel, is_loaded=False)
+                    self.cb1.isChecked(), self.cb2.isChecked(), show_coords=self.cb3.isChecked(),
+                    fig=self.vel, is_loaded=False)
 
     def openFileNameDialog(self):
         options = QFileDialog.Options()
@@ -105,7 +114,8 @@ class App(QMainWindow):
             self.filename = filename
             self.loaded = True
             self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                        self.cb1.isChecked(), fig=self.vel, is_loaded=False)
+                        self.cb1.isChecked(), self.cb2.isChecked(), show_coords=self.cb3.isChecked(),
+                        fig=self.vel, is_loaded=False)
 
 
 class PlotCanvas(FigureCanvas):
@@ -122,10 +132,11 @@ class PlotCanvas(FigureCanvas):
                 QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def plot(self, filename, rel=False, tper=0, radius=1, text=True, show_dist=True, fig=None,
-             is_loaded=False):
+    def plot(self, filename, rel=False, tper=0, radius=1, text=True, show_dist=True, show_coords=True,
+             fig=None, is_loaded=False):
         """
         Plot function
+        :param show_coords: Show global coords in WGS84
         :param is_loaded: flag if file is in memory
         :param fig: figure to plot velocities
         :param show_dist: show distances values
@@ -140,7 +151,8 @@ class PlotCanvas(FigureCanvas):
         ax.clear()
         directory = ""
         for file in filename:
-            prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist, fig, is_loaded)
+            prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist, show_coords, fig,
+                         is_loaded)
             ax.set_title('Trajectory')
             ax.axis('equal')
             directory = os.path.dirname(file)

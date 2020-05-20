@@ -50,96 +50,15 @@ def plot_data(datas, filename, show, s_lat, s_lon, ax=None, start_coords=None, p
         start_time = 0
         time = p_time * data['time']
         for item in data['items']:
-            vel = item['length'] / item['duration']
-            if not USE_CURVING:
-                pX, pY = item['X'], item['Y']
-            if item['curve'] == 0:
-                # For lines
-                X, Y = positions(item['begin_angle'], item['length'])
-                if datas.index(data) != 0:
-                    ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3, color='brown')
-                else:
-                    ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3)
-            else:
-                # For arcs
-                if item['curve'] > 0:
-                    Xc, Yc = positions(item['begin_angle'] + 90,
-                                       1 / item['curve'])
-                else:
-                    Xc, Yc = positions(item['begin_angle'] - 90,
-                                       1 / item['curve'])
-                angle = item['begin_angle']
-                Rarc = 1 / item['curve']
-                dx = (Rarc * cos(radians(90 - angle)) + Xc - pX)
-                if not USE_CURVING:
-                    dy = (Rarc * sin(radians(90 - angle)) + Yc + pY)
-                else:
-                    # Some hotfix
-                    dy = (Rarc * sin(radians(90 - angle)) + Yc - pY)
-                dangle = degrees(item['length'] * item['curve'])
-                X = []
-                Y = []
-                for angle in np.arange(item['begin_angle'], item['begin_angle'] + dangle, dangle / 100):
-                    X.append(Rarc * cos(radians(90 - angle)) + Xc - dx)
-                    Y.append(-(Rarc * sin(radians(90 - angle)) + Yc - dy))
-                if datas.index(data) != 0:
-                    ax.plot(Y, X, linewidth=3, color='brown')
-                else:
-                    ax.plot(Y, X, linewidth=3)
+            Rarc, X, Xc, Y, Yc, dx, dy, pX, pY, vel = plot_items(ax, data, datas, item, pX, pY)
             # Plotting current targets pose
-            if time - start_time < item['duration'] and time >= start_time:
-                if item['curve'] == 0:
-                    Xt, Yt = positions(item['begin_angle'], vel*(time - start_time))
-                    if datas.index(data) == 0:
-                        ax.plot(pY + Yt, pX + Xt, marker='D', color='b')
-                        # Draw "save circle"
-                        danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='b', fill=False)
-                    else:
-                        ax.plot(pY + Yt, pX + Xt, marker='D', color='r')
-                        # Draw "save circle"
-                        danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
-                    ax.add_artist(danger_r)
-                    current_coords.append([pY + Yt, pX + Xt])
-                    if show_coords:
-                        clat, clon = coords_global(pX + Xt, pY + Yt, s_lat, s_lon)
-                        cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
-                    else:
-                        cord_str = ''
-                    if text:
-                        if datas.index(data) != 0:
-                            ax.text(pY + Yt - 0.5, pX + Xt + 0.5, 'Tar ' + str(datas.index(data)) + '\n'
-                                    + str(round(vel*3600, 1)) + ' knt' + '\n' + cord_str)
-                        else:
-                            ax.text(pY + Yt, pX + Xt, str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
-
-                else:
-                    # False angular sign velocity direction
-                    ang_vel = -vel * item['curve']
-                    Xt = Rarc * cos(radians(90 - item['begin_angle']) +
-                                    ang_vel*(time - start_time)) + Xc - dx
-                    Yt = -(Rarc * sin(radians(90 - item['begin_angle']) +
-                                    ang_vel*(time - start_time)) + Yc - dy)
-                    if datas.index(data) == 0:
-                        ax.plot(Yt, Xt, marker='D', color='b')
-                        # Draw "save circle"
-                        danger_r = plt.Circle((Yt, Xt), radius, color='b', fill=False)
-                    else:
-                        ax.plot(Yt, Xt, marker='D', color='r')
-                        # Draw "save circle"
-                        danger_r = plt.Circle((Yt, Xt), radius, color='r', fill=False)
-                    ax.add_artist(danger_r)
-                    current_coords.append([Yt, Xt])
-                    if show_coords:
-                        clat, clon = coords_global(Xt, Yt, s_lat, s_lon)
-                        cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
-                    else:
-                        cord_str = ''
-                    if text:
-                        if datas.index(data) != 0:
-                            ax.text(Yt - 0.5, Xt + 0.5, 'Tar ' + str(datas.index(data)) + '\n'
-                                    + str(round(vel*3600, 1)) + ' knt' + '\n' + cord_str)
-                        else:
-                            ax.text(Yt, Xt, str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
+            # Plot half-hour ticks
+            for tick in range(20):
+                dtime = tick * 1800
+                plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY, radius, s_lat, s_lon,
+                              show_coords, start_time, text, dtime, ticks=True)
+            plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY, radius, s_lat, s_lon,
+                          show_coords, start_time, text, time, ticks=False)
             # Adding previous point
             if item['curve'] == 0:
                 pX, pY = pX + X, -(pY + Y)
@@ -162,7 +81,7 @@ def plot_data(datas, filename, show, s_lat, s_lon, ax=None, start_coords=None, p
                 if show_dist:
                     ax.text(0.5 * (our[0] + coords[0]), 0.5 * (our[1] + coords[1]), str(round(dist, 2)),
                             fontdict={'color': 'darkred', 'weight': 'bold'})
-    ax.set(xlabel='x', ylabel='y',
+    ax.set(xlabel='Time: ' + str(round(time/3600, 2)) + ' h', ylabel='y',
            title='Trajectory')
     ax.grid()
     if ax is None:
@@ -170,6 +89,145 @@ def plot_data(datas, filename, show, s_lat, s_lon, ax=None, start_coords=None, p
     if show:
         plt.show()
     return velocities
+
+
+def plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY, radius, s_lat, s_lon,
+                  show_coords, start_time, text, time, ticks=False):
+    """
+    This method plot current positions or half-hour ticks
+    :param Xc: center x
+    :param Yc: center y
+    :param ax: axes of plot
+    :param current_coords: current coordinates
+    :param data: array with items
+    :param datas: dict with ships
+    :param dx: offset x
+    :param dy: offset y
+    :param item: current item
+    :param pX: previous x
+    :param pY: previous y
+    :param radius: danger radius
+    :param s_lat: start latitude
+    :param s_lon: start longitude
+    :param show_coords: flag to show global coords
+    :param start_time: time of beginning curve
+    :param text: flag to show text
+    :param time: current time
+    :param ticks: flag to show half-hour ticks
+    :return:
+    """
+    vel = item['length'] / item['duration']
+    if time - start_time < item['duration'] and time >= start_time:
+        if item['curve'] == 0:
+            Xt, Yt = positions(item['begin_angle'], vel * (time - start_time))
+            if not ticks:
+                if datas.index(data) == 0:
+                    ax.plot(pY + Yt, pX + Xt, marker='D', color='b')
+                    # Draw "save circle"
+                    danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='b', fill=False)
+                else:
+                    ax.plot(pY + Yt, pX + Xt, marker='D', color='r')
+                    # Draw "save circle"
+                    danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
+                ax.add_artist(danger_r)
+                current_coords.append([pY + Yt, pX + Xt])
+                if show_coords:
+                    clat, clon = coords_global(pX + Xt, pY + Yt, s_lat, s_lon)
+                    cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
+                else:
+                    cord_str = ''
+                if text:
+                    if datas.index(data) != 0:
+                        ax.text(pY + Yt - 0.5, pX + Xt + 0.5, 'Tar ' + str(datas.index(data)) + '\n'
+                                + str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
+                    else:
+                        ax.text(pY + Yt, pX + Xt, str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
+            else:
+                ax.plot(pY + Yt, pX + Xt, marker='o', color='yellow')
+        else:
+            # False angular sign velocity direction
+            Rarc = 1 / item['curve']
+            ang_vel = -vel * item['curve']
+            Xt = Rarc * cos(radians(90 - item['begin_angle']) +
+                            ang_vel * (time - start_time)) + Xc - dx
+            Yt = -(Rarc * sin(radians(90 - item['begin_angle']) +
+                              ang_vel * (time - start_time)) + Yc - dy)
+            if not ticks:
+                if datas.index(data) == 0:
+                    ax.plot(Yt, Xt, marker='D', color='b')
+                    # Draw "save circle"
+                    danger_r = plt.Circle((Yt, Xt), radius, color='b', fill=False)
+                else:
+                    ax.plot(Yt, Xt, marker='D', color='r')
+                    # Draw "save circle"
+                    danger_r = plt.Circle((Yt, Xt), radius, color='r', fill=False)
+                ax.add_artist(danger_r)
+                current_coords.append([Yt, Xt])
+                if show_coords:
+                    clat, clon = coords_global(Xt, Yt, s_lat, s_lon)
+                    cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
+                else:
+                    cord_str = ''
+                if text:
+                    if datas.index(data) != 0:
+                        ax.text(Yt - 0.5, Xt + 0.5, 'Tar ' + str(datas.index(data)) + '\n'
+                                + str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
+                    else:
+                        ax.text(Yt, Xt, str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
+            else:
+                ax.plot(Yt, Xt, marker='o', color='yellow')
+
+
+def plot_items(ax, data, datas, item, pX, pY):
+    """
+    Plot trajectory items
+    :param ax: graphics
+    :param data: current ship
+    :param datas: all ships
+    :param item: current item
+    :param pX: previous x
+    :param pY: previous y
+    :return: Curve radius, trajectory params, velocity
+    """
+    vel = item['length'] / item['duration']
+    if not USE_CURVING:
+        pX, pY = item['X'], item['Y']
+    if item['curve'] == 0:
+        # For lines
+        X, Y = positions(item['begin_angle'], item['length'])
+        if datas.index(data) != 0:
+            ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3, color='brown')
+        else:
+            ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3)
+        Rarc = 0
+        Xc, Yc, dx, dy = 0, 0, 0, 0
+    else:
+        # For arcs
+        if item['curve'] > 0:
+            Xc, Yc = positions(item['begin_angle'] + 90,
+                               1 / item['curve'])
+        else:
+            Xc, Yc = positions(item['begin_angle'] - 90,
+                               1 / item['curve'])
+        angle = item['begin_angle']
+        Rarc = 1 / item['curve']
+        dx = (Rarc * cos(radians(90 - angle)) + Xc - pX)
+        if not USE_CURVING:
+            dy = (Rarc * sin(radians(90 - angle)) + Yc + pY)
+        else:
+            # Some hotfix
+            dy = (Rarc * sin(radians(90 - angle)) + Yc - pY)
+        dangle = degrees(item['length'] * item['curve'])
+        X = []
+        Y = []
+        for angle in np.arange(item['begin_angle'], item['begin_angle'] + dangle, dangle / 100):
+            X.append(Rarc * cos(radians(90 - angle)) + Xc - dx)
+            Y.append(-(Rarc * sin(radians(90 - angle)) + Yc - dy))
+        if datas.index(data) != 0:
+            ax.plot(Y, X, linewidth=3, color='brown')
+        else:
+            ax.plot(Y, X, linewidth=3)
+    return Rarc, X, Xc, Y, Yc, dx, dy, pX, pY, vel
 
 
 def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True, show_dist=True,

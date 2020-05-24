@@ -32,10 +32,6 @@ def plot_data(datas, filename, show, s_lat, s_lon, ax=None, start_coords=None, p
     :param filename: name of file, used to save image
     :return: void
     """
-    try:
-        filename = "img/" + filename.split(sep='/')[1]
-    except:
-        pass
     if ax is None:
         fig, ax = plt.subplots()
     if not start_coords:
@@ -73,22 +69,20 @@ def plot_data(datas, filename, show, s_lat, s_lon, ax=None, start_coords=None, p
     # Check distance and plot it
     our = current_coords[0]
     for coords in current_coords:
-        dist = ((our[0] - coords[0])**2 + (our[1] - coords[1])**2)**0.5
+        dist = ((our[0] - coords[0]) ** 2 + (our[1] - coords[1]) ** 2) ** 0.5
         if coords != our:
-            if 2*radius < dist < 3*radius:
+            if 2 * radius < dist < 3 * radius:
                 ax.plot([our[0], coords[0]], [our[1], coords[1]], linewidth=1.5, color='y')
                 if show_dist:
-                    ax.text(0.5*(our[0] + coords[0]), 0.5*(our[1] + coords[1]), str(round(dist, 2)))
-            elif dist < 2*radius:
+                    ax.text(0.5 * (our[0] + coords[0]), 0.5 * (our[1] + coords[1]), str(round(dist, 2)))
+            elif dist < 2 * radius:
                 ax.plot([our[0], coords[0]], [our[1], coords[1]], linewidth=2, color='darkred')
                 if show_dist:
                     ax.text(0.5 * (our[0] + coords[0]), 0.5 * (our[1] + coords[1]), str(round(dist, 2)),
                             fontdict={'color': 'darkred', 'weight': 'bold'})
-    ax.set(xlabel='Time: ' + str(round(time/3600, 2)) + ' h', ylabel='y',
+    ax.set(xlabel='Time: ' + str(round(time / 3600, 2)) + ' h', ylabel='y',
            title='Trajectory')
     ax.grid()
-    if ax is None:
-        fig.savefig(filename + ".png")
     if show:
         plt.show()
     return velocities
@@ -120,6 +114,7 @@ def plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY,
     :param ticks: flag to show half-hour ticks
     :return:
     """
+    plt.rcParams.update({'font.size': 7})
     vel = item['length'] / item['duration']
     if time - start_time < item['duration'] and time >= start_time:
         if item['curve'] == 0:
@@ -207,9 +202,9 @@ def plot_items(ax, data, datas, item, pX, pY):
         # For lines
         X, Y = positions(item['begin_angle'], item['length'])
         if datas.index(data) != 0:
-            ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3, color='brown')
+            ax.plot([pY, pY + Y], [pX, pX + X], linewidth=2, color='brown')
         else:
-            ax.plot([pY, pY + Y], [pX, pX + X], linewidth=3)
+            ax.plot([pY, pY + Y], [pX, pX + X], linewidth=2)
         Rarc = 0
         Xc, Yc, dx, dy = 0, 0, 0, 0
     else:
@@ -235,9 +230,9 @@ def plot_items(ax, data, datas, item, pX, pY):
             X.append(Rarc * cos(radians(90 - angle)) + Xc - dx)
             Y.append(-(Rarc * sin(radians(90 - angle)) + Yc - dy))
         if datas.index(data) != 0:
-            ax.plot(Y, X, linewidth=3, color='brown')
+            ax.plot(Y, X, linewidth=2, color='brown')
         else:
-            ax.plot(Y, X, linewidth=3)
+            ax.plot(Y, X, linewidth=2)
     return Rarc, X, Xc, Y, Yc, dx, dy, pX, pY, vel
 
 
@@ -260,9 +255,8 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
     :param filename: JSON route filename
     :return: dictionary with translated route
     """
+    ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
     try:
-        ax1 = figure.figure.add_subplot(111)
-        ax1.clear()
         if is_loaded:
             key1, key2 = 'X', 'Y'
         data_all = []
@@ -305,23 +299,28 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
                 data_json.append([s_lat, s_lon])
         else:
             data_all = data_json
-            s_lat, s_lon = data_all[len(data_all)-1][0], data_all[len(data_all)-1][1]
+            s_lat, s_lon = data_all[len(data_all) - 1][0], data_all[len(data_all) - 1][1]
             # print('not_loaded')
         if rel:
-            vel = plot_data(data_all, filename, show, s_lat, s_lon, ax, [s_lat, s_lon], p_time=tper, radius=radius, text=text,
+            vel = plot_data(data_all, filename, show, s_lat, s_lon, ax, [s_lat, s_lon], p_time=tper, radius=radius,
+                            text=text,
                             show_dist=show_dist, show_coords=show_coords)
         else:
             vel = plot_data(data_all, filename, show, s_lat, s_lon, ax, p_time=tper, radius=radius, text=text,
                             show_dist=show_dist, show_coords=show_coords)
-        if ax1 is not None:
+
+        if figure is not None:
+            ax1 = figure.figure.add_subplot(111)
+            ax1.clear()
+
             X = []
             Y = []
             n = 0
             for v in vel:
                 X.append(n)
-                X.append(n+1)
-                Y.append(v*3600)
-                Y.append(v*3600)
+                X.append(n + 1)
+                Y.append(v * 3600)
+                Y.append(v * 3600)
                 n += 1
                 # ax1.text((2*n+1)/2, v*3600, str(round(v * 3600, 1)) + ' knt')
             ax1.plot(X, Y, linewidth=3)

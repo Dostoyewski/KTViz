@@ -26,24 +26,25 @@ class App(QMainWindow):
         # Time axis
         self.sl = QSlider(Qt.Horizontal, self)
         self.left = 10
-        self.top = 10
+        self.top = 50
         self.title = 'KTViz 1.0'
         try:
             print("Width =", GetSystemMetrics(0))
             print("Height =", GetSystemMetrics(1))
-            self.width = GetSystemMetrics(0)
-            self.height = GetSystemMetrics(1)
+            self.width = GetSystemMetrics(0)*0.7
+            self.height = GetSystemMetrics(1)*0.7
             if self.height > 1000:
                 self.height = 1000
         except:
-            self.width = 1800
-            self.height = 900
+            self.width = 1280
+            self.height = 720
+        self.setFixedSize(self.width, self.height)
         self.scale_x = self.width / 1800
         self.scale_y = self.height / 900
         self.filename = ""
         self.relative = True
         self.m = PlotCanvas(self, width=12 * self.scale_x, height=8 * self.scale_y)
-        self.vel = PlotCanvas(self, width=6 * self.scale_x, height=7.1 * self.scale_y)
+        self.vel = PlotCanvas(self, width=6 * self.scale_x, height=7 * self.scale_y)
         self.loaded = False
         self.initUI()
 
@@ -83,17 +84,17 @@ class App(QMainWindow):
         self.spinBox.valueChanged.connect(self.value_changed)
 
         # Show text checkbox
-        self.cb1.move(1400 * self.scale_x, 12 * self.scale_y)
+        self.cb1.move(1400 * self.scale_x, 5 * self.scale_y)
         self.cb1.toggle()
         self.cb1.stateChanged.connect(self.value_changed)
 
         # Show dist checkbox
-        self.cb2.move(1400 * self.scale_x, 50 * self.scale_y)
+        self.cb2.move(1400 * self.scale_x, 30 * self.scale_y)
         self.cb2.toggle()
         self.cb2.stateChanged.connect(self.value_changed)
 
         # Show WGS checkbox
-        self.cb3.move(1650 * self.scale_x, 50 * self.scale_y)
+        self.cb3.move(1400 * self.scale_x, 55 * self.scale_y)
         self.cb3.toggle()
         self.cb3.stateChanged.connect(self.value_changed)
 

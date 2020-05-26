@@ -5,16 +5,19 @@ from math import sin, cos, radians, degrees
 import numpy as np
 import os
 import argparse
+from matplotlib.patches import Ellipse, Polygon
 
 # Disable trajectory curving
 USE_CURVING = False
 data_json = []
+s_lat, s_lon = 0, 0
+loaded_traj = False
 
 
 def plot_data(datas, filename, show, s_lat, s_lon, ax=None, start_coords=None, p_time=0, radius=2, text=True,
               show_dist=True, show_coords=True):
     """
-    This function plotes arc and lines
+    This function plots all items in data with velocity plot and
     :param show_coords: Show coords in WGS84
     :param s_lat: start latitude
     :param s_lon: start longitude
@@ -95,6 +98,7 @@ def plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY,
                   show_coords, start_time, text, time, ticks=False):
     """
     This method plot current positions or half-hour ticks
+    It also displays info about speed and cords
     :param Xc: center x
     :param Yc: center y
     :param ax: axes of plot
@@ -262,7 +266,10 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
         if is_loaded:
             key1, key2 = 'X', 'Y'
         data_all = []
-        global data_json
+        global data_json, s_lat, s_lon
+        if check_type(filename) == 'poly':
+            plot_limits(ax, filename)
+            return
         if not is_loaded:
             with open(filename) as f:
                 datas = json.loads(f.read())
@@ -328,6 +335,93 @@ def prepare_file(filename, show, ax=None, rel=False, tper=0, radius=2, text=True
         return None
 
 
+def plot_limits(ax, filename):
+    """
+    This function plots navigation limits
+    :param ax: axes
+    :param filename: file with limitations
+    :return:
+    """
+    with open(filename) as f:
+        data = json.loads(f.read())
+        polygons = [item for item in data['features']
+                    if item['geometry']['type'] == 'Polygon']
+        points = [item for item in data['features']
+                    if item['geometry']['type'] == 'Point']
+        lines = [item for item in data['features']
+                  if item['geometry']['type'] == 'LineString']
+        plot_polygons(ax, polygons)
+        plot_points(ax, points)
+        plot_lines(ax, lines)
+
+
+def plot_lines(ax, lines):
+    """
+    Plot line_crossing_prohibition objects
+    :param ax: axes
+    :param lines: array with lines
+    :return:
+    """
+    global s_lat, s_lon
+    for obj in lines:
+        coords = obj['geometry']['coordinates']
+        coords_x = [coords_relative(s_lat, s_lon, item[0], item[1])[0] for item in coords]
+        coords_y = [coords_relative(s_lat, s_lon, item[0], item[1])[1] for item in coords]
+        ax.plot(coords_x, coords_y, marker='D', color='r')
+
+
+def plot_points(ax, points):
+    """
+    Plot point_approach_prohibition objects
+    :param ax: axes
+    :param points: array with points
+    :return:
+    """
+    global s_lat, s_lon
+    for obj in points:
+        coords = obj['geometry']['coordinates']
+        dist = obj['properties']['distance']
+        coords = coords_relative(s_lat, s_lon, coords[0], coords[1])
+        ax.plot(coords[0], coords[1], marker='*', color='r')
+        ax.add_patch(Ellipse([coords[0], coords[1]], dist, dist, fill=False,
+                             hatch='/', color='red'))
+
+
+def plot_polygons(ax, polygons):
+    """
+    Plot polygons
+    :param ax: axes
+    :param polygons: array with polygons
+    :return:
+    """
+    global s_lat, s_lon
+    for obj in polygons:
+        coords = obj['geometry']['coordinates']
+        coords = [coords_relative(s_lat, s_lon, item[0], item[1]) for item in coords[0]]
+        if obj['properties']['limitation_type'] == "zone_entering_prohibition":
+            ax.add_patch(Polygon(coords, closed=True,
+                                 fill=False, hatch='/', color='red'))
+        elif obj['properties']['limitation_type'] == "movement_parameters_limitation":
+            ax.add_patch(Polygon(coords, closed=True,
+                                 fill=False, hatch='|', color='orange'))
+
+
+def check_type(filename):
+    """
+    This function is used to detect polygonal files
+    :param filename: filename
+    :return:
+    """
+    with open(filename) as f:
+        datas = json.loads(f.read())
+        try:
+            # If file with polygons
+            if datas['type'] == "FeatureCollection":
+                return 'poly'
+        except:
+            return 'traj'
+
+
 def make_all(path, show):
     """
     Makes for all files in directory
@@ -337,7 +431,7 @@ def make_all(path, show):
     files = os.listdir(path)
     for file in files:
         if file[-4:] == 'json':
-            prepare_file(path + '/' + file, show)
+            check_type(path + '/' + file, show)
 
 
 if __name__ == "__main__":

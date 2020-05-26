@@ -8,7 +8,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from win32api import GetSystemMetrics
 
-from main import prepare_file
+from main import prepare_file, check_type
 
 
 class App(QMainWindow):
@@ -71,7 +71,7 @@ class App(QMainWindow):
 
         # Update button
         button1 = QPushButton('Update', self)
-        button1.move(1200 * self.scale_x, 825 * self.scale_y)
+        button1.move(1200 * self.scale_x, 820 * self.scale_y)
         button1.resize(140 * self.scale_x, 50 * self.scale_y)
         button1.clicked.connect(self.reload)
 
@@ -162,6 +162,9 @@ class PlotCanvas(FigureCanvas):
         ax = self.figure.add_subplot(111)
         ax.clear()
         directory = ""
+        for i in range(len(filename)):
+            if check_type(filename[i]) == 'poly':
+                filename[i], filename[-1] = filename[-1], filename[i]
         for file in filename:
             prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist, show_coords, fig,
                          is_loaded)

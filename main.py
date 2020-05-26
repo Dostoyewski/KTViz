@@ -133,7 +133,11 @@ def plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY,
                 current_coords.append([pY + Yt, pX + Xt])
                 if show_coords:
                     clat, clon = coords_global(pX + Xt, pY + Yt, s_lat, s_lon)
-                    cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
+                    if s_lat == 0 and s_lon == 0:
+                        cord_str = str(round(pX + Xt, 2)) + ' nm ' + '\n' + \
+                                   str(round(pY + Yt, 2)) + ' nm'
+                    else:
+                        cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
                 else:
                     cord_str = ''
                 if text:
@@ -165,7 +169,10 @@ def plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY,
                 current_coords.append([Yt, Xt])
                 if show_coords:
                     clat, clon = coords_global(Xt, Yt, s_lat, s_lon)
-                    cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
+                    if s_lat == 0 and s_lon == 0:
+                        cord_str = str(round(Xt, 2)) + ' nm ' + '\n' + str(round(Yt, 2)) + ' nm'
+                    else:
+                        cord_str = str(clat) + '° ' + '\n' + str(clon) + '°'
                 else:
                     cord_str = ''
                 if text:

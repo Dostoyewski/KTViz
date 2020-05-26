@@ -69,6 +69,13 @@ class App(QMainWindow):
         self.sl.setGeometry(50 * self.scale_x, 800 * self.scale_y, 1100 * self.scale_x, 100)
         self.sl.valueChanged.connect(self.value_changed)
 
+        # Update button
+        button1 = QPushButton('Update', self)
+        button1.move(1200 * self.scale_x, 825 * self.scale_y)
+        button1.resize(140 * self.scale_x, 50 * self.scale_y)
+        button1.clicked.connect(self.reload)
+
+        # Safe radius box
         self.spinBox.setRange(0, 10)
         self.spinBox.move(1530 * self.scale_x, 32 * self.scale_y)
         self.spinBox.setValue(1.5)
@@ -92,6 +99,11 @@ class App(QMainWindow):
 
         self.vel.move(1200 * self.scale_x, 90 * self.scale_y)
         self.show()
+
+    def reload(self):
+        self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
+                    self.cb1.isChecked(), self.cb2.isChecked(), show_coords=self.cb3.isChecked(),
+                    fig=self.vel, is_loaded=False)
 
     def value_changed(self):
         if self.loaded:

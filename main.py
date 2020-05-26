@@ -121,11 +121,11 @@ def plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY,
             Xt, Yt = positions(item['begin_angle'], vel * (time - start_time))
             if not ticks:
                 if datas.index(data) == 0:
-                    ax.plot(pY + Yt, pX + Xt, marker='D', color='b')
+                    ax.plot(pY + Yt, pX + Xt, marker='D', color='b', markersize=2)
                     # Draw "save circle"
                     danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='b', fill=False)
                 else:
-                    ax.plot(pY + Yt, pX + Xt, marker='D', color='r')
+                    ax.plot(pY + Yt, pX + Xt, marker='D', color='r', markersize=2)
                     # Draw "save circle"
                     danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
                 ax.add_artist(danger_r)
@@ -146,7 +146,7 @@ def plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY,
                     else:
                         ax.text(pY + Yt, pX + Xt, str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
             else:
-                ax.plot(pY + Yt, pX + Xt, marker='o', color='yellow')
+                ax.plot(pY + Yt, pX + Xt, marker='o', color='yellow', markersize=1)
         else:
             # False angular sign velocity direction
             Rarc = 1 / item['curve']
@@ -181,7 +181,7 @@ def plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY,
                     else:
                         ax.text(Yt, Xt, str(round(vel * 3600, 1)) + ' knt' + '\n' + cord_str)
             else:
-                ax.plot(Yt, Xt, marker='o', color='yellow')
+                ax.plot(Yt, Xt, marker='o', color='yellow', markersize=1)
 
 
 def plot_items(ax, data, datas, item, pX, pY):
@@ -346,9 +346,9 @@ def plot_limits(ax, filename):
         polygons = [item for item in data['features']
                     if item['geometry']['type'] == 'Polygon']
         points = [item for item in data['features']
-                    if item['geometry']['type'] == 'Point']
+                  if item['geometry']['type'] == 'Point']
         lines = [item for item in data['features']
-                  if item['geometry']['type'] == 'LineString']
+                 if item['geometry']['type'] == 'LineString']
         plot_polygons(ax, polygons)
         plot_points(ax, points)
         plot_lines(ax, lines)

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import json
 from konverter import coords_relative, positions, coords_global
 import matplotlib.pyplot as plt

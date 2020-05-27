@@ -6,7 +6,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from win32api import GetSystemMetrics
 
 from main import prepare_file, check_type
 
@@ -29,22 +28,24 @@ class App(QMainWindow):
         self.top = 50
         self.title = 'KTViz 1.0'
         try:
-            print("Width =", GetSystemMetrics(0))
-            print("Height =", GetSystemMetrics(1))
-            self.width = GetSystemMetrics(0)*0.7
-            self.height = GetSystemMetrics(1)*0.7
+            screen_resolution = app.desktop().screenGeometry()
+            width, height = screen_resolution.width(), screen_resolution.height()
+            print("Screen dimensions: ({}x{})".format(width, height))
+            self.width = round(width * 0.7)
+            self.height = round(height * 0.7)
             if self.height > 1000:
                 self.height = 1000
         except:
             self.width = 1280
             self.height = 720
         self.setFixedSize(self.width, self.height)
+        print("Window dimensions set to ({}x{})".format(self.width, self.height))
         self.scale_x = self.width / 1800
         self.scale_y = self.height / 900
         self.filename = ""
         self.relative = True
-        self.m = PlotCanvas(self, width=12 * self.scale_x, height=8 * self.scale_y)
-        self.vel = PlotCanvas(self, width=6 * self.scale_x, height=7 * self.scale_y)
+        self.m = PlotCanvas(self, width=round(12 * self.scale_x), height=round(8 * self.scale_y))
+        self.vel = PlotCanvas(self, width=round(6 * self.scale_x), height=round(7 * self.scale_y))
         self.loaded = False
         self.initUI()
 
@@ -141,8 +142,8 @@ class PlotCanvas(FigureCanvas):
         self.setParent(parent)
 
         FigureCanvas.setSizePolicy(self,
-                QSizePolicy.Expanding,
-                QSizePolicy.Expanding)
+                                   QSizePolicy.Expanding,
+                                   QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
     def plot(self, filename, rel=False, tper=0, radius=1, text=True, show_dist=True, show_coords=True,
@@ -167,8 +168,7 @@ class PlotCanvas(FigureCanvas):
             if check_type(filename[i]) == 'poly':
                 filename[i], filename[-1] = filename[-1], filename[i]
         for file in filename:
-            prepare_file(file, True, ax, rel, tper/100, radius, text, show_dist, show_coords, fig,
-                         is_loaded)
+            prepare_file(file, True, ax, rel, tper / 100, radius, text, show_dist, show_coords, fig, is_loaded)
             ax.set_title('Trajectory')
             ax.axis('equal')
             directory = os.path.dirname(file)

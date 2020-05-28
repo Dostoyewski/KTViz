@@ -41,7 +41,7 @@ class Report:
                                         "--route", "route-data.json",
                                         "--maneuver", "maneuver.json",
                                         "--analyse", "nav-report.json"],
-                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time
 
         print("{} .Return code: {}. Exec time: {} sec"

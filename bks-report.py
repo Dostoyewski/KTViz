@@ -4,6 +4,7 @@ import io
 from datetime import datetime
 import time
 import os
+import glob
 import subprocess
 import sys
 from main import prepare_file
@@ -31,6 +32,15 @@ class Report:
     def run_case(self, datadir, usv):
         working_dir = os.path.abspath(os.getcwd())
         os.chdir(datadir)
+
+        # Get a list of old results
+        file_list = glob.glob('maneuver*.json') + glob.glob('nav-report.json')
+        for filePath in file_list:
+            try:
+                os.remove(filePath)
+            except OSError:
+                pass
+
         # Print the exit code.
         exec_time = time.time()
         completedProc = subprocess.run([usv, "--targets", "target-data.json",
@@ -49,23 +59,23 @@ class Report:
         image_data = ""
         nav_report = ""
         if completedProc.returncode == 0:
-            fig, ax = plt.subplots(figsize=(10, 7.5))
-            ax.clear()
-            prepare_file("maneuver.json",
-                         show=False,
-                         ax=ax,
-                         rel=False,
-                         tper=0,
-                         radius=1.5,
-                         text=True,
-                         show_dist=True,
-                         is_loaded=False)
-            ax.axis('equal')
-            plt.draw()
-
-            f = io.BytesIO()
-            plt.savefig(f, format="svg")
-            image_data = f.getvalue()  # svg data
+            if os.path.isfile("maneuver.json"):
+                fig, ax = plt.subplots(figsize=(10, 7.5))
+                ax.clear()
+                prepare_file("maneuver.json",
+                             show=False,
+                             ax=ax,
+                             rel=False,
+                             tper=0,
+                             radius=1.5,
+                             text=True,
+                             show_dist=True,
+                             is_loaded=False)
+                ax.axis('equal')
+                plt.draw()
+                f = io.BytesIO()
+                plt.savefig(f, format="svg")
+                image_data = f.getvalue()  # svg data
 
             with open("nav-report.json", "r") as f:
                 nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)

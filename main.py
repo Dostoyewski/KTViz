@@ -122,11 +122,11 @@ def plot_position(Xc, Yc, ax, current_coords, data, datas, dx, dy, item, pX, pY,
             Xt, Yt = positions(item['begin_angle'], vel * (time - start_time))
             if not ticks:
                 if datas.index(data) == 0:
-                    ax.plot(pY + Yt, pX + Xt, marker='D', color='b', markersize=2)
+                    ax.plot(pY + Yt, pX + Xt, marker='D', color='b')
                     # Draw "save circle"
                     danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='b', fill=False)
                 else:
-                    ax.plot(pY + Yt, pX + Xt, marker='D', color='r', markersize=2)
+                    ax.plot(pY + Yt, pX + Xt, marker='D', color='r')
                     # Draw "save circle"
                     danger_r = plt.Circle((pY + Yt, pX + Xt), radius, color='r', fill=False)
                 ax.add_artist(danger_r)

@@ -75,7 +75,7 @@ class Report:
                 plt.draw()
                 f = io.BytesIO()
                 plt.savefig(f, format="svg")
-                image_data = f.getvalue()  # svg data
+                image_data = f.getvalue().decode("utf-8")  # svg data
 
             with open("nav-report.json", "r") as f:
                 nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
@@ -150,7 +150,7 @@ class Report:
 
         for case in self.cases:
             if case["proc"].returncode == 0:
-                img_tag = case["image_data"].decode("utf-8")
+                img_tag = case["image_data"]
             else:
                 img_tag = ""
 
@@ -176,8 +176,8 @@ class Report:
                              checked=" checked" if case["proc"].returncode == 0 else "")
 
         html += "</body></html>"
-        with open(filename, "w") as html_file:
-            html_file.write(html)
+        with io.open(filename, "w", encoding="utf-8") as f:
+            f.write(html)
 
 
 if __name__ == "__main__":

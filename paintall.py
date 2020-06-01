@@ -1,11 +1,55 @@
+import json
 import sys
+import time
+
+import math
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox
+
 from konverter import coords_global
-import math
-import json
+
+TIME_HORIZON = 2
+
+hmi_data = {
+    "wind_direction": 189.0,
+    "wind_speed": 1.1,
+    "tide_direction": 0,
+    "tide_speed": 0,
+    "swell": 1,
+    "visibility": 13.0
+}
+
+settings = {
+    "maneuver_calculation": {
+        "priority": 0,
+        "maneuver_way": 2,
+        "safe_diverg_dist": 3.0,
+        "minimal_speed": 3.0,
+        "maximal_speed": 30.0,
+        "max_course_delta": 70.0,
+        "time_advance": 300,
+        "can_leave_route": True,
+        "max_route_deviation": 3.3,
+        "circulation_radius": 0.4
+    },
+    "safety_control": {
+        "cpa": 2.0,
+        "tcpa": 180.0,
+        "min_detect_dist": 15.0,
+        "last_moment_dist": 2.0,
+        "safety_zone": {
+            "safety_zone_type": 0,
+            "radius": 1.5
+        }
+    }
+}
+
+constraints = {
+    "type": "FeatureCollection",
+    "features": []
+}
 
 
 class Widget(QWidget):
@@ -76,23 +120,67 @@ class Widget(QWidget):
                                    target['end'][1] - ship['end'][1],
                                    self.spinBox1.value(),
                                    self.spinBox2.value())
+            dist = ((target['start'][1] - target['end'][1]) ** 2 +
+                    (target['start'][0] - target['end'][0]) ** 2) ** 0.5 / self.scale
+            vel = dist / TIME_HORIZON
             data.append({'id': 'target',
                          'cat': 0,
                          'lat': coords[0],
                          'lon': coords[1],
-                         'SOG': 14,
+                         'SOG': vel,
                          'COG': math.degrees(math.atan2(target['start'][1] - target['end'][1],
-                                           target['start'][0] - target['end'][0])) + 90})
-        with open("targets_file.json", "w") as fp:
+                                                        target['start'][0] - target['end'][0])) + 90,
+                         "first_detect_dist": 5.0,
+                         "cross_dist": 0,
+                         "timestamp": time.time()
+                         })
+        with open("target_data.json", "w") as fp:
             json.dump(data, fp)
 
-        with open("our_file.json", "w") as fp:
+        with open("nav_data.json", "w") as fp:
+            course = math.degrees(math.atan2(ship['start'][1] - ship['end'][1],
+                                                      ship['start'][0] - ship['end'][0])) + 90
+            dist = ((ship['start'][1] - ship['end'][1])**2 +
+                    (ship['start'][0] - ship['end'][0])**2)**0.5 / self.scale
+            vel = dist / TIME_HORIZON
+            route_item = {
+                'begin_angle': course,
+                'curve': 0,
+                'duration': TIME_HORIZON*3600,
+                'lat': self.spinBox1.value(),
+                'lon': self.spinBox2.value(),
+                'length': dist,
+                "port_dev": 2,
+                "starboard_dev": 2
+            }
+
+            with open("route_data.json", "w") as fr:
+                json.dump({"items": [
+                    route_item
+                ],
+                    'start_time': time.time()}, fr)
+
             json.dump({'cat': 0,
                        'lat': self.spinBox1.value(),
                        'lon': self.spinBox2.value(),
-                       'SOG': 14,
-                       'COG': math.degrees(math.atan2(ship['start'][1] - ship['end'][1],
-                                           ship['start'][0] - ship['end'][0])) + 90}, fp)
+                       'SOG': vel,
+                       'STW': vel,
+                       'COG': course,
+                       'heading': course,
+                       "width": 16.0,
+                       "length": 100.0,
+                       "width_offset": 10.0,
+                       "length_offset": 15.0,
+                       'timestamp': time.time()}, fp)
+
+        with open("constraints.json", "w") as fp:
+            json.dump(constraints, fp)
+
+        with open("hmi_data.json", "w") as fp:
+            json.dump(hmi_data, fp)
+
+        with open("settings.json", "w") as fp:
+            json.dump(settings, fp)
 
     def closeEvent(self, event):
         print("Closed")
@@ -111,7 +199,6 @@ class Widget(QWidget):
             painter.setPen(QtCore.Qt.black)
             painter.drawLine(self.start, self.end)
             painter.drawEllipse(self.end, 10, 10)
-
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:

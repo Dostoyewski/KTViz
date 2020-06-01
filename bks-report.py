@@ -24,12 +24,12 @@ class Report:
         self.work_dir = os.path.abspath(os.getcwd())
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
 
-    def generate(self, data_directory):
+    def generate(self, data_directory, rvo=False):
         for root, dirs, files in os.walk(data_directory):
             if "nav-data.json" in files:
-                self.run_case(os.path.join(data_directory, root), executable)
+                self.run_case(os.path.join(data_directory, root), executable, rvo)
 
-    def run_case(self, datadir, usv):
+    def run_case(self, datadir, usv, rvo=False):
         working_dir = os.path.abspath(os.getcwd())
         os.chdir(datadir)
 
@@ -50,7 +50,7 @@ class Report:
                                         "--constraints", "constraints.json",
                                         "--route", "route-data.json",
                                         "--maneuver", "maneuver.json",
-                                        "--analyse", "nav-report.json"],
+                                        "--analyse", "nav-report.json", ("--rvo " if rvo else "")],
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time
 
@@ -182,9 +182,13 @@ class Report:
 
 if __name__ == "__main__":
     executable = sys.argv[1]
+    if '--rvo' in sys.argv:
+        rvo = True
+    else:
+        rvo = False
     cur_dir = os.path.abspath(os.getcwd())
     executable = os.path.join(cur_dir, executable)
     report = Report(executable)
-    report.generate(cur_dir)
+    report.generate(cur_dir, rvo=rvo)
     report.saveHTML("report.html")
     # traverse root directory, and list directories as dirs and files as files

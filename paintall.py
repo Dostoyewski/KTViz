@@ -6,7 +6,7 @@ import math
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox
+from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox, QLabel
 
 from konverter import coords_global
 
@@ -65,7 +65,7 @@ class Widget(QWidget):
         self.keepDraw = False
         self.start = QPoint()
         self.end = QPoint()
-        self.resize(600, 600)
+        self.resize(800, 600)
         self.move(100, 100)
         self.setWindowTitle("Scenario drawer")
         self.type = 'our'
@@ -101,23 +101,29 @@ class Widget(QWidget):
         button1.clicked.connect(self.convert_file)
 
         # Latitude spinbox
-        # lbe = QLabel(self)
-        # lbe.setText('Start Latitude')
-        # lbe.move(280, 0)
+        lbe = QLabel(self)
+        lbe.setText('Start Latitude:')
+        lbe.move(280, 5)
         self.spinBox1.setRange(0, 360)
-        self.spinBox1.move(280, 0)
+        self.spinBox1.move(400, 0)
         self.spinBox1.setValue(60)
         self.spinBox1.setSingleStep(0.01)
 
         # Longitude spinbox
+        lbe1 = QLabel(self)
+        lbe1.setText('Start Longitude:')
+        lbe1.move(280, 30)
         self.spinBox2.setRange(0, 360)
-        self.spinBox2.move(280, 25)
+        self.spinBox2.move(400, 25)
         self.spinBox2.setValue(30)
         self.spinBox2.setSingleStep(0.01)
 
         # Time horizont
+        lbe1 = QLabel(self)
+        lbe1.setText('Time horizon:')
+        lbe1.move(500, 20)
         self.spinBox3.setRange(0, 10)
-        self.spinBox3.move(360, 15)
+        self.spinBox3.move(610, 15)
         self.spinBox3.setValue(2)
         self.spinBox3.setSingleStep(0.1)
         self.spinBox3.valueChanged.connect(self.update_values)

@@ -213,11 +213,11 @@ class Widget(QWidget):
         for i in range(self.n_line_x+1):
             painter.drawLine(i*stepw, 0, i*stepw, self.height())
             painter.drawText(i*stepw, self.n_line_y*steph - 10,
-                             str(round(i*stepw / self.scale, 2)))
+                             str(round(i*steph / self.scale, 2)))
         for i in range(self.n_line_y + 1):
             painter.drawLine(0, i * steph, self.width(), i * steph)
             painter.drawText(self.n_line_x * stepw - 40, self.height() - i * steph,
-                             str(round(i * steph / self.scale, 2)))
+                             str(round(i * stepw / self.scale, 2)))
 
     def convert_file(self, path):
         """
@@ -324,6 +324,15 @@ class Widget(QWidget):
             painter.setPen(pen)
             painter.drawLine(self.start, self.end)
             painter.drawEllipse(self.end, 10, 10)
+            # Draw dist between target ship and our
+            pen = QPen(Qt.green, 2, Qt.SolidLine)
+            painter.setPen(pen)
+            our_pose = QPoint(self.index[0]['end'][0], self.index[0]['end'][1])
+            painter.drawLine(self.end, our_pose)
+            mid_x = (self.end.x() + our_pose.x()) / 2
+            mid_y = (self.end.y() + our_pose.y()) / 2
+            dist = ((self.end.x() - our_pose.x())**2 + (self.end.y() - our_pose.y())**2)**0.5
+            painter.drawText(mid_x, mid_y, str(dist/self.scale))
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:

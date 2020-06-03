@@ -6,7 +6,8 @@ import math
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox, QLabel
+from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox, \
+    QLabel, QFileDialog, QAbstractItemView, QTreeView, QListView
 
 from konverter import coords_global
 
@@ -78,6 +79,11 @@ class Widget(QWidget):
         self.n_line_y = 10
         # Time horizon
         self.time_horizon = 2
+        # Flag if output dir is select
+        # Default state is returned in clear_window()
+        self.dir_select = False
+        # Path to output dir
+        self.path = ''
         self.initUI()
 
     def initUI(self):
@@ -98,7 +104,7 @@ class Widget(QWidget):
         button1 = QPushButton('Convert', self)
         button1.move(140, 0)
         button1.resize(140, 50)
-        button1.clicked.connect(self.convert_file)
+        button1.clicked.connect(self.open_or_create_directory)
 
         # Latitude spinbox
         lbe = QLabel(self)
@@ -129,6 +135,29 @@ class Widget(QWidget):
         self.spinBox3.valueChanged.connect(self.update_values)
 
         self.draw_grid()
+
+    def open_or_create_directory(self):
+        """
+        Creates dialog with output directory selection
+        :return:
+        """
+        if not self.dir_select:
+            dialog = QFileDialog(self)
+            dialog.setFileMode(QFileDialog.Directory)
+            dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+
+            l = dialog.findChild(QListView, "listView")
+            if l is not None:
+                l.setSelectionMode(QAbstractItemView.MultiSelection)
+            t = dialog.findChild(QTreeView)
+            if t is not None:
+                t.setSelectionMode(QAbstractItemView.MultiSelection)
+
+            nMode = dialog.exec_()
+            self.path = dialog.selectedFiles()[0]
+            self.dir_select = True
+
+        self.convert_file(self.path)
         
     def update_values(self):
         """
@@ -155,11 +184,16 @@ class Widget(QWidget):
         self.draw_grid()
 
     def clear_window(self):
+        """
+        Cleares window and sets some flags to default
+        :return:
+        """
         self.image.fill(QtGui.qRgb(255, 255, 255))
         self.type = 'our'
         self.index = []
         self.update()
         self.draw_grid()
+        self.dir_select = False
 
     def draw_grid(self):
         """
@@ -185,9 +219,10 @@ class Widget(QWidget):
             painter.drawText(self.n_line_x * stepw - 40, self.height() - i * steph,
                              str(round(i * steph / self.scale, 2)))
 
-    def convert_file(self):
+    def convert_file(self, path):
         """
         Makes JSON scenario files
+        :param path: path to directory with out files
         :return:
         """
         try:
@@ -216,10 +251,10 @@ class Widget(QWidget):
                          "cross_dist": 0,
                          "timestamp": time.time()
                          })
-        with open("target_data.json", "w") as fp:
+        with open(path + "/target_data.json", "w") as fp:
             json.dump(data, fp)
 
-        with open("nav_data.json", "w") as fp:
+        with open(path + "/nav_data.json", "w") as fp:
             course = math.degrees(math.atan2(ship['start'][1] - ship['end'][1],
                                                       ship['start'][0] - ship['end'][0])) + 90
             dist = ((ship['start'][1] - ship['end'][1])**2 +
@@ -236,7 +271,7 @@ class Widget(QWidget):
                 "starboard_dev": 2
             }
 
-            with open("route_data.json", "w") as fr:
+            with open(path + "/route_data.json", "w") as fr:
                 json.dump({"items": [
                     route_item
                 ],
@@ -255,13 +290,13 @@ class Widget(QWidget):
                        "length_offset": 15.0,
                        'timestamp': time.time()}, fp)
 
-        with open("constraints.json", "w") as fp:
+        with open(path + "/constraints.json", "w") as fp:
             json.dump(constraints, fp)
 
-        with open("hmi_data.json", "w") as fp:
+        with open(path + "/hmi_data.json", "w") as fp:
             json.dump(hmi_data, fp)
 
-        with open("settings.json", "w") as fp:
+        with open(path + "/settings.json", "w") as fp:
             json.dump(settings, fp)
 
     def closeEvent(self, event):

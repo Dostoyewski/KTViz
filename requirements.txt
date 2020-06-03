@@ -1,13 +1,4 @@
-certifi==2020.4.5.1
-cycler==0.10.0
 geographiclib==1.50
-kiwisolver==1.2.0
-matplotlib==3.2.1
 numpy==1.18.4
-opencv-python==4.2.0.34
-pyparsing==2.4.7
-PyQt5==5.14.2
-PyQt5-sip==12.7.2
-python-dateutil==2.8.1
-six==1.14.0
-wincertstore==0.2
+matplotlib==3.2.1
+PyQt5==5.15.0

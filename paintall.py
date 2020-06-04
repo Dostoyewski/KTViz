@@ -6,8 +6,8 @@ import math
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox, \
-    QLabel, QFileDialog, QAbstractItemView, QTreeView, QListView
+from PyQt5.QtWidgets import QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox, \
+    QLabel, QFileDialog, QAbstractItemView, QTreeView, QListView, QDialog
 
 from konverter import coords_global
 
@@ -62,7 +62,7 @@ constraints = {
 }
 
 
-class DrawingApp(QWidget):
+class DrawingApp(QDialog):
     rs_signal = QtCore.pyqtSignal(QtCore.QSize)
 
     def __init__(self):

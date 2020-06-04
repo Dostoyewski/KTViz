@@ -10,6 +10,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from main import prepare_file, check_type
+from paintall import DrawingApp
 
 
 class ParamBar(QWidget):
@@ -64,6 +65,8 @@ class App(QMainWindow):
         self.params = ParamBar(self)
         # Update button
         self.button1 = QPushButton('Update', self)
+        # KTDraw button
+        self.button2 = QPushButton('KTDraw', self)
 
         try:
             screen_resolution = app.desktop().screenGeometry()
@@ -114,9 +117,12 @@ class App(QMainWindow):
         self.sl.valueChanged.connect(self.value_changed)
 
         # Update button
-        self.button1.move(1200 * self.scale_x, 820 * self.scale_y)
         self.button1.resize(120, 35)
         self.button1.clicked.connect(self.reload)
+
+        # KTDraw button
+        self.button2.resize(120, 35)
+        self.button2.clicked.connect(self.open_drawer)
 
         # Safe radius box
         self.params.spinBox.setRange(0, 10)
@@ -142,6 +148,14 @@ class App(QMainWindow):
         self.vel.move(1200 * self.scale_x, 120 * self.scale_y)
         self.show()
 
+    def open_drawer(self):
+        """
+        Open KTDraw app
+        :return:
+        """
+        dialog = DrawingApp()
+        dialog.exec_()
+
     def resize_app(self):
         """
         Scales all element positions and sizes
@@ -153,6 +167,7 @@ class App(QMainWindow):
         self.sl.setGeometry(int(0.028 * self.width()), int(0.933 * self.height()),
                             int(0.611 * self.width()), 50)
         self.button1.move(int(0.677 * self.width()), int(0.933 * self.height()))
+        self.button2.move(int(0.8 * self.width()), int(0.933 * self.height()))
         self.vel.move(int(0.667 * self.width()), int(0.132 * self.height()))
         self.vel.resize(int(0.298 * self.width()), 0.794 * self.height())
 

@@ -4,6 +4,7 @@ import sys
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox, QWidget, QVBoxLayout, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -88,6 +89,8 @@ class App(QMainWindow):
         self.m = PlotCanvas(self, width=round(12 * self.scale_x), height=round(8 * self.scale_y))
         self.vel = PlotCanvas(self, width=round(6 * self.scale_x), height=round(7 * self.scale_y))
         self.loaded = False
+        # Adding icon
+        self.setWindowIcon(QIcon('Icon.ico'))
         self.initUI()
 
     def initUI(self):

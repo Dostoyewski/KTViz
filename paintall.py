@@ -30,8 +30,19 @@ settings = {
         "max_course_delta": 70.0,
         "time_advance": 300,
         "can_leave_route": True,
-        "max_route_deviation": 3.3,
-        "circulation_radius": 0.4
+        "max_route_deviation": 1.5,
+        "forward_speed1": 3.0,
+        "forward_speed2": 9.75,
+        "forward_speed3": 16.5,
+        "forward_speed4": 23.25,
+        "forward_speed5": 30.0,
+        "reverse_speed1": 15.0,
+        "reverse_speed2": 30.0,
+        "max_circulation_radius": 0.4,
+        "min_circulation_radius": 0.4,
+        "breaking_distance": 0,
+        "run_out_distance": 0,
+        "forecast_time": 7200
     },
     "safety_control": {
         "cpa": 2.0,
@@ -51,11 +62,11 @@ constraints = {
 }
 
 
-class Widget(QWidget):
+class DrawingApp(QWidget):
     rs_signal = QtCore.pyqtSignal(QtCore.QSize)
 
     def __init__(self):
-        super(Widget, self).__init__()
+        super(DrawingApp, self).__init__()
         self.layout = QVBoxLayout()
         # Latitude selection
         self.spinBox1 = QDoubleSpinBox(self)
@@ -249,12 +260,12 @@ class Widget(QWidget):
                                                         target['start'][0] - target['end'][0])) + 90,
                          "first_detect_dist": 5.0,
                          "cross_dist": 0,
-                         "timestamp": time.time()
+                         "timestamp": int(time.time())
                          })
-        with open(path + "/target_data.json", "w") as fp:
+        with open(path + "/target-data.json", "w") as fp:
             json.dump(data, fp)
 
-        with open(path + "/nav_data.json", "w") as fp:
+        with open(path + "/nav-data.json", "w") as fp:
             course = math.degrees(math.atan2(ship['start'][1] - ship['end'][1],
                                                       ship['start'][0] - ship['end'][0])) + 90
             dist = ((ship['start'][1] - ship['end'][1])**2 +
@@ -271,7 +282,7 @@ class Widget(QWidget):
                 "starboard_dev": 2
             }
 
-            with open(path + "/route_data.json", "w") as fr:
+            with open(path + "/route-data.json", "w") as fr:
                 json.dump({"items": [
                     route_item
                 ],
@@ -288,12 +299,12 @@ class Widget(QWidget):
                        "length": 100.0,
                        "width_offset": 10.0,
                        "length_offset": 15.0,
-                       'timestamp': time.time()}, fp)
+                       'timestamp': int(time.time())}, fp)
 
         with open(path + "/constraints.json", "w") as fp:
             json.dump(constraints, fp)
 
-        with open(path + "/hmi_data.json", "w") as fp:
+        with open(path + "/hmi-data.json", "w") as fp:
             json.dump(hmi_data, fp)
 
         with open(path + "/settings.json", "w") as fp:
@@ -371,6 +382,6 @@ class Widget(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    form = Widget()
+    form = DrawingApp()
     form.show()
     app.exec_()

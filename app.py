@@ -2,47 +2,84 @@
 import os
 import sys
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton
-from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel
+from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox, QWidget, QVBoxLayout, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from main import prepare_file, check_type
 
 
+class ParamBar(QWidget):
+    
+    def __init__(self, parent=None):
+        QWidget.__init__(self, parent=parent)
+        self.setGeometry(QRect(500, 30, 311, 81))
+        self.setObjectName("horizontalWidget")
+        self.horizontalLayout = QHBoxLayout(self)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+
+        # Load Files button
+        self.pushButton = QPushButton("Load Files", self)
+        self.horizontalLayout.addWidget(self.pushButton)
+
+        self.verticalLayout = QVBoxLayout()
+        self.verticalLayout.setObjectName("verticalLayout")
+
+        # Show velocity near ships
+        self.cb1 = QCheckBox("Show vel", self)
+        self.verticalLayout.addWidget(self.cb1)
+
+        # Show dist between ships
+        self.cb2 = QCheckBox("Show dist", self)
+        self.verticalLayout.addWidget(self.cb2)
+
+        # Show Global coordinates
+        self.cb3 = QCheckBox("Show GC", self)
+        self.verticalLayout.addWidget(self.cb3)
+        self.horizontalLayout.addLayout(self.verticalLayout)
+
+        # Safe radius select
+        self.label = QLabel('Safe radius:', self)
+        self.horizontalLayout.addWidget(self.label)
+        self.spinBox = QDoubleSpinBox(self)
+        self.spinBox.setObjectName("doubleSpinBox")
+        self.horizontalLayout.addWidget(self.spinBox)
+
+
 class App(QMainWindow):
+    rs_signal = QtCore.pyqtSignal(QtCore.QSize)
 
     def __init__(self):
         super().__init__()
-        # Show dist checkbox
-        self.cb2 = QCheckBox('Show dist', self)
-        # Show text checkbox
-        self.cb1 = QCheckBox('Show vel', self)
-        # Show global coords
-        self.cb3 = QCheckBox('Show GC', self)
-        # Radius selection
-        self.spinBox = QDoubleSpinBox(self)
         # Time axis
         self.sl = QSlider(Qt.Horizontal, self)
         self.left = 10
         self.top = 50
         self.title = 'KTViz 1.0'
+        # bar with buttons and checkbox
+        self.params = ParamBar(self)
+        # Update button
+        self.button1 = QPushButton('Update', self)
+
         try:
             screen_resolution = app.desktop().screenGeometry()
             width, height = screen_resolution.width(), screen_resolution.height()
             print("Screen dimensions: ({}x{})".format(width, height))
-            self.width = round(width * 0.7)
-            self.height = round(height * 0.7)
-            if self.height > 1000:
-                self.height = 1000
+            self.widthp = round(width * 0.7)
+            self.heightp = round(height * 0.7)
+            if self.heightp > 1000:
+                self.heightp = 1000
         except:
-            self.width = 1280
-            self.height = 720
-        self.setFixedSize(self.width, self.height)
-        print("Window dimensions set to ({}x{})".format(self.width, self.height))
-        self.scale_x = self.width / 1800
-        self.scale_y = self.height / 900
+            self.widthp = 1280
+            self.heightp = 720
+
+        print("Window dimensions set to ({}x{})".format(self.widthp, self.heightp))
+        self.scale_x = self.widthp / 1800
+        self.scale_y = self.heightp / 900
         self.filename = ""
         self.relative = True
         self.m = PlotCanvas(self, width=round(12 * self.scale_x), height=round(8 * self.scale_y))
@@ -51,17 +88,20 @@ class App(QMainWindow):
         self.initUI()
 
     def initUI(self):
+        # Resize signal
+        self.rs_signal.connect(self.resize_app)
+
         self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
+        self.setGeometry(self.left, self.top, self.widthp, self.heightp)
+
+        self.params.move(int(0.677*self.width()), 0)
+        self.params.resize(int(0.298*self.width()), 0.106*self.height())
 
         # Initialization of canvas
         self.m.move(0, 0)
 
         # Load button
-        button = QPushButton('Load Files', self)
-        button.move(1220 * self.scale_x, 20 * self.scale_y)
-        button.resize(140 * self.scale_x, 50 * self.scale_y)
-        button.clicked.connect(self.openFileNameDialog)
+        self.params.pushButton.clicked.connect(self.openFileNameDialog)
 
         # Slider config
         self.sl.setMinimum(0)
@@ -69,58 +109,96 @@ class App(QMainWindow):
         self.sl.setValue(0)
         self.sl.setTickPosition(QSlider.TicksBelow)
         self.sl.setTickInterval(1)
-        self.sl.setGeometry(50 * self.scale_x, 800 * self.scale_y, 1100 * self.scale_x, 100)
+        self.sl.setGeometry(int(50 * self.scale_x), int(840 * self.scale_y),
+                            int(1100 * self.scale_x), 50)
         self.sl.valueChanged.connect(self.value_changed)
 
         # Update button
-        button1 = QPushButton('Update', self)
-        button1.move(1200 * self.scale_x, 820 * self.scale_y)
-        button1.resize(140 * self.scale_x, 50 * self.scale_y)
-        button1.clicked.connect(self.reload)
+        self.button1.move(1200 * self.scale_x, 820 * self.scale_y)
+        self.button1.resize(120, 35)
+        self.button1.clicked.connect(self.reload)
 
         # Safe radius box
-        self.spinBox.setRange(0, 10)
-        self.spinBox.move(1530 * self.scale_x, 32 * self.scale_y)
-        self.spinBox.setValue(1.5)
-        self.spinBox.setSingleStep(0.1)
-        self.spinBox.valueChanged.connect(self.value_changed)
+        self.params.spinBox.setRange(0, 10)
+        self.params.spinBox.setValue(1.5)
+        self.params.spinBox.setSingleStep(0.1)
+        self.params.spinBox.valueChanged.connect(self.value_changed)
 
         # Show text checkbox
-        self.cb1.move(1400 * self.scale_x, 5 * self.scale_y)
-        self.cb1.toggle()
-        self.cb1.stateChanged.connect(self.value_changed)
+        self.params.cb1.move(1400 * self.scale_x, 5 * self.scale_y)
+        self.params.cb1.toggle()
+        self.params.cb1.stateChanged.connect(self.value_changed)
 
         # Show dist checkbox
-        self.cb2.move(1400 * self.scale_x, 30 * self.scale_y)
-        self.cb2.toggle()
-        self.cb2.stateChanged.connect(self.value_changed)
+        self.params.cb2.move(1400 * self.scale_x, 30 * self.scale_y)
+        self.params.cb2.toggle()
+        self.params.cb2.stateChanged.connect(self.value_changed)
 
         # Show WGS checkbox
-        self.cb3.move(1400 * self.scale_x, 55 * self.scale_y)
-        self.cb3.toggle()
-        self.cb3.stateChanged.connect(self.value_changed)
+        self.params.cb3.move(1400 * self.scale_x, 55 * self.scale_y)
+        self.params.cb3.toggle()
+        self.params.cb3.stateChanged.connect(self.value_changed)
 
-        self.vel.move(1200 * self.scale_x, 90 * self.scale_y)
+        self.vel.move(1200 * self.scale_x, 120 * self.scale_y)
         self.show()
 
+    def resize_app(self):
+        """
+        Scales all element positions and sizes
+        :return:
+        """
+        self.params.move(int(0.677 * self.width()), 10)
+        self.params.resize(int(0.298 * self.width()), 0.106 * self.height())
+        self.m.resize(int(0.67 * self.width()), int(0.926 * self.height()))
+        self.sl.setGeometry(int(0.028 * self.width()), int(0.933 * self.height()),
+                            int(0.611 * self.width()), 50)
+        self.button1.move(int(0.677 * self.width()), int(0.933 * self.height()))
+        self.vel.move(int(0.667 * self.width()), int(0.132 * self.height()))
+        self.vel.resize(int(0.298 * self.width()), 0.794 * self.height())
+
+    def resizeEvent(self, event):
+        """
+        event onResize
+        :param event:
+        :return:
+        """
+        self.rs_signal.emit(self.size())
+
     def reload(self):
-        self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                    self.cb1.isChecked(), self.cb2.isChecked(), show_coords=self.cb3.isChecked(),
-                    fig=self.vel, is_loaded=False)
+        """
+        Updates current scenario without FileOpenDialog
+        :return:
+        """
+        if self.loaded:
+            self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
+                        self.params.cb1.isChecked(), self.params.cb2.isChecked(), show_coords=self.params.cb3.isChecked(),
+                        fig=self.vel, is_loaded=False)
 
     def value_changed(self):
+        """
+        Update plot onChange values
+        :return:
+        """
         if self.loaded:
-            self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                        self.cb1.isChecked(), self.cb2.isChecked(), show_coords=self.cb3.isChecked(),
+            self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
+                        self.params.cb1.isChecked(), self.params.cb2.isChecked(), show_coords=self.params.cb3.isChecked(),
                         fig=self.vel, is_loaded=True)
 
     def update_state(self):
+        """
+        Used to switch between global and relative coords
+        :return:
+        """
         self.relative = not self.relative
-        self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                    self.cb1.isChecked(), self.cb2.isChecked(), show_coords=self.cb3.isChecked(),
+        self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
+                    self.params.cb1.isChecked(), self.params.cb2.isChecked(), show_coords=self.params.cb3.isChecked(),
                     fig=self.vel, is_loaded=False)
 
     def openFileNameDialog(self):
+        """
+        Select scenario file
+        :return:
+        """
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         filename, _ = QFileDialog.getOpenFileNames(self, "Open JSON Trajectory", "",
@@ -128,8 +206,8 @@ class App(QMainWindow):
         if filename:
             self.filename = filename
             self.loaded = True
-            self.m.plot(self.filename, self.relative, self.sl.value(), self.spinBox.value(),
-                        self.cb1.isChecked(), self.cb2.isChecked(), show_coords=self.cb3.isChecked(),
+            self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
+                        self.params.cb1.isChecked(), self.params.cb2.isChecked(), show_coords=self.params.cb3.isChecked(),
                         fig=self.vel, is_loaded=False)
 
 

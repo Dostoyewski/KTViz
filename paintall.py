@@ -287,7 +287,7 @@ class DrawingApp(QDialog):
                 json.dump({"items": [
                     route_item
                 ],
-                    'start_time': time.time()}, fr)
+                    'start_time': timestamp}, fr)
 
             json.dump({'cat': 0,
                        'lat': self.spinBox1.value(),

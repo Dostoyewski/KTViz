@@ -242,18 +242,17 @@ class DrawingApp(QDialog):
         except IndexError:
             print("Add ships first!")
             return
+        timestamp = int(time.time())
         data = []
         for target in targets:
             coords = coords_global((target['end'][0] - ship['end'][0]) / self.scale,
                                    (target['end'][1] - ship['end'][1]) / self.scale,
                                    self.spinBox1.value(),
                                    self.spinBox2.value())
-            print(target['start'], target['end'])
-            print(ship['start'], ship['end'])
             dist = ((target['start'][1] - target['end'][1]) ** 2 +
                     (target['start'][0] - target['end'][0]) ** 2) ** 0.5 / self.scale
             vel = dist / self.time_horizon
-            data.append({'id': 'target',
+            data.append({'id': 'target' + str(targets.index(target)),
                          'cat': 0,
                          'lat': coords[0],
                          'lon': coords[1],
@@ -262,7 +261,7 @@ class DrawingApp(QDialog):
                                                         target['start'][0] - target['end'][0])),
                          "first_detect_dist": 5.0,
                          "cross_dist": 0,
-                         "timestamp": int(time.time())
+                         "timestamp": timestamp
                          })
         with open(path + "/target-data.json", "w") as fp:
             json.dump(data, fp)
@@ -301,7 +300,7 @@ class DrawingApp(QDialog):
                        "length": 100.0,
                        "width_offset": 10.0,
                        "length_offset": 15.0,
-                       'timestamp': int(time.time())}, fp)
+                       'timestamp': timestamp}, fp)
 
         with open(path + "/constraints.json", "w") as fp:
             json.dump(constraints, fp)

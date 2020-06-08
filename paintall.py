@@ -252,13 +252,16 @@ class DrawingApp(QDialog):
             dist = ((target['start'][1] - target['end'][1]) ** 2 +
                     (target['start'][0] - target['end'][0]) ** 2) ** 0.5 / self.scale
             vel = dist / self.time_horizon
+            angle = math.degrees(math.atan2(target['start'][1] - target['end'][1],
+                                                        target['start'][0] - target['end'][0]))
+            if angle < 0:
+                angle += 360
             data.append({'id': 'target' + str(targets.index(target)),
                          'cat': 0,
                          'lat': coords[0],
                          'lon': coords[1],
                          'SOG': vel,
-                         'COG': math.degrees(math.atan2(target['start'][1] - target['end'][1],
-                                                        target['start'][0] - target['end'][0])),
+                         'COG': angle,
                          "first_detect_dist": 5.0,
                          "cross_dist": 0,
                          "timestamp": timestamp
@@ -269,6 +272,8 @@ class DrawingApp(QDialog):
         with open(path + "/nav-data.json", "w") as fp:
             course = math.degrees(math.atan2(ship['start'][1] - ship['end'][1],
                                                       ship['start'][0] - ship['end'][0]))
+            if course < 0:
+                course += 360
             dist = ((ship['start'][1] - ship['end'][1])**2 +
                     (ship['start'][0] - ship['end'][0])**2)**0.5 / self.scale
             vel = dist / self.time_horizon

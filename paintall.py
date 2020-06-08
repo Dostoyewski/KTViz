@@ -244,8 +244,8 @@ class DrawingApp(QDialog):
             return
         data = []
         for target in targets:
-            coords = coords_global(target['end'][1] - ship['end'][1],
-                                   target['end'][0] - ship['end'][0],
+            coords = coords_global((target['end'][0] - ship['end'][0]) / self.scale,
+                                   (target['end'][1] - ship['end'][1]) / self.scale,
                                    self.spinBox1.value(),
                                    self.spinBox2.value())
             print(target['start'], target['end'])
@@ -259,7 +259,7 @@ class DrawingApp(QDialog):
                          'lon': coords[1],
                          'SOG': vel,
                          'COG': math.degrees(math.atan2(target['start'][1] - target['end'][1],
-                                                        target['start'][0] - target['end'][0])) + 90,
+                                                        target['start'][0] - target['end'][0])),
                          "first_detect_dist": 5.0,
                          "cross_dist": 0,
                          "timestamp": int(time.time())
@@ -269,7 +269,7 @@ class DrawingApp(QDialog):
 
         with open(path + "/nav-data.json", "w") as fp:
             course = math.degrees(math.atan2(ship['start'][1] - ship['end'][1],
-                                                      ship['start'][0] - ship['end'][0])) + 90
+                                                      ship['start'][0] - ship['end'][0]))
             dist = ((ship['start'][1] - ship['end'][1])**2 +
                     (ship['start'][0] - ship['end'][0])**2)**0.5 / self.scale
             vel = dist / self.time_horizon

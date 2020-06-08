@@ -244,10 +244,12 @@ class DrawingApp(QDialog):
             return
         data = []
         for target in targets:
-            coords = coords_global(target['end'][0] - ship['end'][0],
-                                   target['end'][1] - ship['end'][1],
+            coords = coords_global(target['end'][1] - ship['end'][1],
+                                   target['end'][0] - ship['end'][0],
                                    self.spinBox1.value(),
                                    self.spinBox2.value())
+            print(target['start'], target['end'])
+            print(ship['start'], ship['end'])
             dist = ((target['start'][1] - target['end'][1]) ** 2 +
                     (target['start'][0] - target['end'][0]) ** 2) ** 0.5 / self.scale
             vel = dist / self.time_horizon

@@ -24,12 +24,12 @@ class Report:
         self.work_dir = os.path.abspath(os.getcwd())
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
 
-    def generate(self, data_directory, rvo=False):
+    def generate(self, data_directory, rvo=None):
         for root, dirs, files in os.walk(data_directory):
             if "nav-data.json" in files:
                 self.run_case(os.path.join(data_directory, root), executable, rvo)
 
-    def run_case(self, datadir, usv, rvo=False):
+    def run_case(self, datadir, usv, rvo=None):
         working_dir = os.path.abspath(os.getcwd())
         os.chdir(datadir)
 
@@ -50,7 +50,8 @@ class Report:
                                         "--constraints", "constraints.json",
                                         "--route", "route-data.json",
                                         "--maneuver", "maneuver.json",
-                                        "--analyse", "nav-report.json", ("--rvo " if rvo else "")],
+                                        "--analyse", "nav-report.json",
+                                        ("--rvo" if rvo is True else "--no-rvo" if rvo is False else "")],
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time
 
@@ -182,9 +183,10 @@ class Report:
 
 if __name__ == "__main__":
     executable = sys.argv[1]
+    rvo = None
     if '--rvo' in sys.argv:
         rvo = True
-    else:
+    if '--no-rvo' in sys.argv:
         rvo = False
     cur_dir = os.path.abspath(os.getcwd())
     executable = os.path.join(cur_dir, executable)

@@ -7,7 +7,7 @@ import os
 import glob
 import subprocess
 import sys
-from main import prepare_file
+from plot import prepare_file, plot_path, prepare_path
 import matplotlib.pyplot as plt
 import json
 
@@ -63,16 +63,19 @@ class Report:
             if os.path.isfile("maneuver.json"):
                 fig, ax = plt.subplots(figsize=(10, 7.5))
                 ax.clear()
-                prepare_file("maneuver.json",
-                             show=False,
-                             ax=ax,
-                             rel=False,
-                             tper=0,
-                             radius=1.5,
-                             text=True,
-                             show_dist=True,
-                             is_loaded=False)
+                ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
+                data, frame = prepare_file("maneuver.json")
+
+                with open("route-data.json") as f:
+                    route_data = json.loads(f.read())
+                    path=prepare_path(route_data,"lat","lon",frame=frame)
+                    plot_path(path, ax, color='#fffffffa')
+
+                for i, path in enumerate(data):
+                    plot_path(path, ax, color=('brown' if i == 0 else 'blue'))
+
                 ax.axis('equal')
+                ax.grid()
                 plt.draw()
                 f = io.BytesIO()
                 plt.savefig(f, format="svg")

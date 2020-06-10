@@ -1,17 +1,10 @@
 import json
 import math
+import os
 from geographiclib.geodesic import Geodesic
-
-from konverter import coords_relative, positions, coords_global
-import matplotlib.pyplot as plt
 from math import sin, cos, radians, degrees
 import numpy as np
-import os
 import argparse
-
-# Disable trajectory curving
-USE_CURVING = False
-data_json = []
 
 
 def path_position(path, t):
@@ -44,7 +37,6 @@ def plot_path(path, ax, color):
     angle_inc = radians(10)
     xx, yy = [], []
     for item in path['items']:
-        vel = item['length'] / item['duration']
         xx.append(item['X'])
         yy.append(item['Y'])
         b_cos = cos(math.radians(item['begin_angle']))
@@ -56,10 +48,8 @@ def plot_path(path, ax, color):
             # For arcs
             r = abs(1 / item['curve'])
             dangle = abs(item['length'] * item['curve'])
-            if item['curve'] > 0:
-                sign = 1
-            else:
-                sign = -1
+
+            sign = 1 if item['curve'] > 0 else -1
             for angle in np.arange(0, dangle, angle_inc):
                 x_, y_ = sin(angle), sign * (1 - cos(angle))
                 xx.append(item['X'] + r * (x_ * b_cos - y_ * b_sin))
@@ -72,9 +62,9 @@ class Frame:
         self.lat = lat
         self.lon = lon
 
-    def fromwgs(self, lat, lon):
+    def from_wgs(self, lat, lon):
         """
-
+        Converts WGS coords to local
         :param lat:
         :param lon:
         :return: x, y, distance, bearing
@@ -85,9 +75,9 @@ class Frame:
         dist = path['s12'] / 1852
         return dist * cos(angle), dist * sin(angle), dist, angle
 
-    def towgs(self, x, y):
+    def to_wgs(self, x, y):
         """
-
+        Converts local coords to WGS
         :param x:
         :param y:
         :return: lat, lon
@@ -105,7 +95,8 @@ class Data:
         self.route = route
 
 
-def prepare_path(data, key1, key2, frame=None):
+def prepare_path(data, frame=None):
+    key1, key2 = 'lat', 'lon'
     new_data = {'items': [], 'start_time': data['start_time']}
     time = 0
     for item in data['items']:
@@ -114,11 +105,7 @@ def prepare_path(data, key1, key2, frame=None):
             if key != key1 and key != key2:
                 obj[key] = item[key]
         # Translate coordinates
-        if Frame is None:
-            # If use relative coords, fields lat and lon should contain X and Y
-            obj['X'], obj['Y'] = item[key1], item[key2]
-        else:
-            obj['X'], obj['Y'], dist, angle = frame.fromwgs(item[key1], item[key2])
+        obj['X'], obj['Y'], dist, angle = frame.from_wgs(item[key1], item[key2])
 
         time += item['duration']
         new_data['items'].append(obj)
@@ -127,25 +114,21 @@ def prepare_path(data, key1, key2, frame=None):
 
 
 def prepare_file(filename):
-    paths = []
     with open(filename) as f:
         file_data = json.loads(f.read())
-    # Figure out coords systems
-    frame = None
+    # Sample initial position to anchor Frame
     sample = file_data[0]['items'][0]
-    if 'x' in sample and 'y' in sample:
-        key1, key2 = 'x', 'y'
-    elif 'lat' in sample and 'lon' in sample:
+    if 'lat' in sample and 'lon' in sample:
         key1, key2 = 'lat', 'lon'
         frame = Frame(file_data[0]['items'][0][key1], file_data[0]['items'][0][key2])
     else:
         raise KeyError('No coords in maneuver')
 
     # Prepare data
+    paths = []
     for data in file_data:
-        new_data = prepare_path(data, key1, key2, frame=frame)
+        new_data = prepare_path(data, frame=frame)
         paths.append(new_data)
-        # new_data['start_time'] = data['start_time']
 
     return paths, frame
 
@@ -159,7 +142,7 @@ def make_all(path, show):
     files = os.listdir(path)
     for file in files:
         if file[-4:] == 'json':
-            prepare_file(path + '/' + file, show)
+            prepare_file(path + '/' + file)
 
 
 if __name__ == "__main__":
@@ -174,4 +157,4 @@ if __name__ == "__main__":
         make_all(args.casefile, args.s)
     else:
         print("Making for file: ", args.casefile)
-        prepare_file(args.casefile, args.s)
+        prepare_file(args.casefile)

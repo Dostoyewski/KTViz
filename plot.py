@@ -5,6 +5,7 @@ from geographiclib.geodesic import Geodesic
 from math import sin, cos, radians, degrees
 import numpy as np
 import argparse
+from matplotlib import pyplot as plt
 
 
 def path_position(path, t):
@@ -14,7 +15,7 @@ def path_position(path, t):
     for item in path['items']:
         if time < item['duration']:
             vel = item['length'] / item['duration']
-            length = item['length'] / item['duration'] * t
+            length = item['length'] / item['duration'] * time
             b_cos = cos(math.radians(item['begin_angle']))
             b_sin = sin(math.radians(item['begin_angle']))
             if item['curve'] == 0:
@@ -57,6 +58,13 @@ def plot_path(path, ax, color):
     ax.plot(yy, xx, color=color)
 
 
+def plot_position(x, y, ax, radius=.0, color='red'):
+    ax.scatter(y, x, color=color)
+    if radius != 0:
+        danger_r = plt.Circle((y, x), radius, color=color, fill=False)
+        ax.add_artist(danger_r)
+
+
 class Frame:
     def __init__(self, lat, lon):
         self.lat = lat
@@ -89,8 +97,8 @@ class Frame:
 
 
 class Data:
-    def __init__(self, frame=None, route=None):
-        self.maneuvers = []
+    def __init__(self, frame, route=None):
+        self.paths = []
         self.frame = frame
         self.route = route
 
@@ -133,28 +141,46 @@ def prepare_file(filename):
     return paths, frame
 
 
-def make_all(path, show):
-    """
-    Makes for all files in directory
-    :param path: directory with datafiles
-    :return: void
-    """
-    files = os.listdir(path)
-    for file in files:
-        if file[-4:] == 'json':
-            prepare_file(path + '/' + file)
+def plot_from_files(maneuvers_file, route_file=None):
+    if os.path.isfile(maneuvers_file):
+        fig = plt.figure(figsize=(10, 7.5))
+        ax = fig.add_subplot(111)
+        ax.clear()
+        ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
+
+        data, frame = prepare_file(maneuvers_file)
+
+        if route_file is not None:
+            with open(route_file) as f:
+                route_data = json.loads(f.read())
+                path = prepare_path(route_data, frame=frame)
+                plot_path(path, ax, color='#fffffffa')
+
+        for i, path in enumerate(data):
+            plot_path(path, ax, color=('brown' if i == 0 else 'blue'))
+
+        ax.axis('equal')
+        ax.grid()
+
+        start_time = data[0]['start_time']
+        ax1 = fig.add_axes(ax.get_position(), frameon=False)
+        ax1.set_ylim(ax.get_ylim())
+        ax1.set_xlim(ax.get_xlim())
+        for i, path in enumerate(data):
+            x, y, vel = path_position(path, start_time)
+            plot_position(x, y, ax1, radius=1.5, color=('blue' if i == 0 else 'red'))
+
+        return fig
+    else:
+        raise FileNotFoundError("{} not found".format(maneuvers_file))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test scenario plotter")
-    parser.add_argument("casefile", type=str, help="Name of file or folder, when -a is used")
-    parser.add_argument("-a", action="store_true", help="Makes all files")
-    parser.add_argument("-s", action="store_true", help="Show image")
+    # parser.add_argument("casefile", type=str, help="Name of file or folder, when -a is used")
+    # parser.add_argument("-a", action="store_true", help="Makes all files")
+    # parser.add_argument("-s", action="store_true", help="Show image")
     args = parser.parse_args()
-    if args.a:
-        print("Making for all files in path: ",
-              args.casefile)
-        make_all(args.casefile, args.s)
-    else:
-        print("Making for file: ", args.casefile)
-        prepare_file(args.casefile)
+
+    figure = plot_from_files("maneuver.json", route_file="route-data.json")
+    plt.show()

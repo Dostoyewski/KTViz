@@ -12,6 +12,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from matplotlib.figure import Figure
 
 from main import prepare_file, check_type
+import plot
 from paintall import DrawingApp
 
 
@@ -110,6 +111,9 @@ class App(QMainWindow):
         self.btnHome.resize(35, 35)
 
         self.loaded = False
+        self.data = []
+        self.frame = None
+        self.route_file = None
         # Adding icon
         self.setWindowIcon(QIcon('Icon.ico'))
         self.initUI()
@@ -132,7 +136,7 @@ class App(QMainWindow):
 
         # Slider config
         self.sl.setMinimum(0)
-        self.sl.setMaximum(99)
+        self.sl.setMaximum(100)
         self.sl.setValue(0)
         self.sl.setTickPosition(QSlider.TicksBelow)
         self.sl.setTickInterval(1)
@@ -223,10 +227,10 @@ class App(QMainWindow):
         :return:
         """
         if self.loaded:
-            self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
-                        self.params.cb1.isChecked(), self.params.cb2.isChecked(),
-                        show_coords=self.params.cb3.isChecked(),
-                        fig=self.vel, is_loaded=False)
+            self.m.plot_paths(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
+                              self.params.cb1.isChecked(), self.params.cb2.isChecked(),
+                              show_coords=self.params.cb3.isChecked(),
+                              fig=self.vel, is_loaded=False)
 
     def value_changed(self):
         """
@@ -234,20 +238,19 @@ class App(QMainWindow):
         :return:
         """
         if self.loaded:
-            self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
-                        self.params.cb1.isChecked(), self.params.cb2.isChecked(),
-                        show_coords=self.params.cb3.isChecked(),
-                        fig=self.vel, is_loaded=True)
+            self.update_time()
 
-    def update_state(self):
-        """
-        Used to switch between global and relative coords
-        :return:
-        """
-        self.relative = not self.relative
-        self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
-                    self.params.cb1.isChecked(), self.params.cb2.isChecked(), show_coords=self.params.cb3.isChecked(),
-                    fig=self.vel, is_loaded=False)
+    def load_data(self, filename):
+        self.loaded = True
+        self.data, self.frame = plot.prepare_file(filename)
+        self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
+
+    def update_time(self):
+        start_time = self.data[0]['start_time']
+        total_time = sum([x['duration'] for x in self.data[0]['items']])
+        time = start_time + total_time * self.sl.value() * .01
+        self.m.update_positions(self.data, time)
+        self.m.draw()
 
     def openFileNameDialog(self):
         """
@@ -259,12 +262,11 @@ class App(QMainWindow):
         filename, _ = QFileDialog.getOpenFileNames(self, "Open JSON Trajectory", "",
                                                    "JSON Files (*.json)", options=options)
         if filename:
-            self.filename = filename
+            self.filename = filename[0]
             self.loaded = True
-            self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
-                        self.params.cb1.isChecked(), self.params.cb2.isChecked(),
-                        show_coords=self.params.cb3.isChecked(),
-                        fig=self.vel, is_loaded=False)
+            self.load_data(self.filename)
+            self.m.plot_paths(self.data, self.frame, self.route_file)
+            self.update_time()
 
 
 class PlotCanvas(FigureCanvas):
@@ -280,9 +282,11 @@ class PlotCanvas(FigureCanvas):
                                    QSizePolicy.Expanding,
                                    QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
+        self.ax1 = self.figure.add_axes(self.ax.get_position(), frameon=False)
 
-    def plot(self, filename, rel=False, tper=0, radius=1, text=True, show_dist=True, show_coords=True,
-             fig=None, is_loaded=False):
+    def plot_paths(self, path_data, frame, route_file=None):
         """
         Plot function
         :param show_coords: Show global coords in WGS84
@@ -296,22 +300,22 @@ class PlotCanvas(FigureCanvas):
         :param tper: time percent
         :return:
         """
-        ax = self.figure.add_subplot(111)
-        ax.clear()
-        directory = ""
-        for i in range(len(filename)):
-            if check_type(filename[i]) == 'poly':
-                filename[i], filename[-1] = filename[-1], filename[i]
-        for file in filename:
-            prepare_file(file, True, ax, rel, tper / 100, radius, text, show_dist, show_coords, fig, is_loaded)
-            ax.set_title('Trajectory')
-            ax.axis('equal')
-            directory = os.path.dirname(file)
+        self.ax.clear()
+
+        if route_file is not None:
+            plot.plot_route(self.ax, route_file, frame)
+
+        plot.plot_maneuvers(self.ax, path_data)
+
+        self.ax.axis('equal')
+        self.ax.grid()
         self.draw()
-        try:
-            self.fig.savefig("img/image.png")
-        except FileNotFoundError:
-            self.fig.savefig(directory + "/image.png")
+
+    def update_positions(self, path_data, t):
+        self.ax1.clear()
+        plot.plot_positions(self.ax1, path_data, t)
+        self.ax1.set_ylim(self.ax.get_ylim())
+        self.ax1.set_xlim(self.ax.get_xlim())
 
 
 if __name__ == '__main__':

@@ -11,7 +11,6 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
-from main import prepare_file, check_type
 import plot
 from paintall import DrawingApp
 
@@ -33,25 +32,25 @@ class ParamBar(QWidget):
         self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
 
-        # Show velocity near ships
-        self.cb1 = QCheckBox("Show vel", self)
-        self.verticalLayout.addWidget(self.cb1)
+        # Show coords
+        self.cbCoords = QCheckBox("Show coords", self)
+        self.verticalLayout.addWidget(self.cbCoords)
 
         # Show dist between ships
-        self.cb2 = QCheckBox("Show dist", self)
-        self.verticalLayout.addWidget(self.cb2)
+        self.cbDist = QCheckBox("Show dist", self)
+        self.verticalLayout.addWidget(self.cbDist)
 
         # Show Global coordinates
-        self.cb3 = QCheckBox("Show GC", self)
-        self.verticalLayout.addWidget(self.cb3)
+        self.cbGc = QCheckBox("Show coords in WGS", self)
+        self.verticalLayout.addWidget(self.cbGc)
         self.horizontalLayout.addLayout(self.verticalLayout)
 
         # Safe radius select
         self.label = QLabel('Safe radius:', self)
         self.horizontalLayout.addWidget(self.label)
-        self.spinBox = QDoubleSpinBox(self)
-        self.spinBox.setObjectName("doubleSpinBox")
-        self.horizontalLayout.addWidget(self.spinBox)
+        self.spinBoxRadius = QDoubleSpinBox(self)
+        self.spinBoxRadius.setObjectName("doubleSpinBox")
+        self.horizontalLayout.addWidget(self.spinBoxRadius)
 
 
 class App(QMainWindow):
@@ -67,7 +66,7 @@ class App(QMainWindow):
         # bar with buttons and checkbox
         self.params = ParamBar(self)
         # Update button
-        self.btnUpdate = QPushButton('Update', self)
+        self.btnUpdate = QPushButton('Reload', self)
         # KTDraw button
         self.btnKtDraw = QPushButton('KTDraw', self)
 
@@ -153,25 +152,25 @@ class App(QMainWindow):
         self.btnKtDraw.clicked.connect(self.open_drawer)
 
         # Safe radius box
-        self.params.spinBox.setRange(0, 10)
-        self.params.spinBox.setValue(1.5)
-        self.params.spinBox.setSingleStep(0.1)
-        self.params.spinBox.valueChanged.connect(self.value_changed)
+        self.params.spinBoxRadius.setRange(0, 10)
+        self.params.spinBoxRadius.setValue(1.5)
+        self.params.spinBoxRadius.setSingleStep(0.1)
+        self.params.spinBoxRadius.valueChanged.connect(self.value_changed)
 
         # Show text checkbox
-        self.params.cb1.move(int(1400 * self.scale_x), int(5 * self.scale_y))
-        self.params.cb1.toggle()
-        self.params.cb1.stateChanged.connect(self.value_changed)
+        self.params.cbCoords.move(int(1400 * self.scale_x), int(5 * self.scale_y))
+        self.params.cbCoords.toggle()
+        self.params.cbCoords.stateChanged.connect(self.value_changed)
 
         # Show dist checkbox
-        self.params.cb2.move(int(1400 * self.scale_x), int(30 * self.scale_y))
-        self.params.cb2.toggle()
-        self.params.cb2.stateChanged.connect(self.value_changed)
+        self.params.cbDist.move(int(1400 * self.scale_x), int(30 * self.scale_y))
+        self.params.cbDist.toggle()
+        self.params.cbDist.stateChanged.connect(self.value_changed)
 
         # Show WGS checkbox
-        self.params.cb3.move(int(1400 * self.scale_x), int(55 * self.scale_y))
-        self.params.cb3.toggle()
-        self.params.cb3.stateChanged.connect(self.value_changed)
+        self.params.cbGc.move(int(1400 * self.scale_x), int(55 * self.scale_y))
+        self.params.cbGc.toggle()
+        self.params.cbGc.stateChanged.connect(self.value_changed)
 
         self.vel.move(int(1200 * self.scale_x), int(120 * self.scale_y))
         self.show()
@@ -185,7 +184,8 @@ class App(QMainWindow):
     def pan(self):
         self.toolbar.pan()
 
-    def open_drawer(self):
+    @staticmethod
+    def open_drawer():
         """
         Open KTDraw app
         :return:
@@ -226,11 +226,15 @@ class App(QMainWindow):
         Updates current scenario without FileOpenDialog
         :return:
         """
-        if self.loaded:
-            self.m.plot_paths(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
-                              self.params.cb1.isChecked(), self.params.cb2.isChecked(),
-                              show_coords=self.params.cb3.isChecked(),
-                              fig=self.vel, is_loaded=False)
+        if len(self.filename) == 0:
+            self.openFileNameDialog()
+        else:
+            self.load()
+
+    def load(self):
+        self.load_data(self.filename)
+        self.m.plot_paths(self.data, self.frame, self.route_file)
+        self.update_time()
 
     def value_changed(self):
         """
@@ -249,7 +253,9 @@ class App(QMainWindow):
         start_time = self.data[0]['start_time']
         total_time = sum([x['duration'] for x in self.data[0]['items']])
         time = start_time + total_time * self.sl.value() * .01
-        self.m.update_positions(self.data, time)
+        self.m.update_positions(self.data, time, radius=self.params.spinBoxRadius.value(),
+                                coords=self.params.cbCoords.isChecked(),
+                                frame=self.frame if self.params.cbGc.isChecked() else None)
         self.m.draw()
 
     def openFileNameDialog(self):
@@ -263,17 +269,14 @@ class App(QMainWindow):
                                                    "JSON Files (*.json)", options=options)
         if filename:
             self.filename = filename[0]
-            self.loaded = True
-            self.load_data(self.filename)
-            self.m.plot_paths(self.data, self.frame, self.route_file)
-            self.update_time()
+            self.loaded = False
+            self.reload()
 
 
 class PlotCanvas(FigureCanvas):
 
     def __init__(self, parent=None, width=50, height=50, dpi=100):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = self.fig.add_subplot(111)
 
         FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
@@ -288,17 +291,10 @@ class PlotCanvas(FigureCanvas):
 
     def plot_paths(self, path_data, frame, route_file=None):
         """
-        Plot function
-        :param show_coords: Show global coords in WGS84
-        :param is_loaded: flag if file is in memory
-        :param fig: figure to plot velocities
-        :param show_dist: show distances values
-        :param text: show velocities
-        :param radius: Save radius
-        :param filename: name of file to save
-        :param rel: relative coords flag
-        :param tper: time percent
-        :return:
+        Plots paths
+        :param path_data: Loaded data
+        :param frame: Frame for coordinates conversion
+        :param route_file: Name of file with route
         """
         self.ax.clear()
 
@@ -311,9 +307,11 @@ class PlotCanvas(FigureCanvas):
         self.ax.grid()
         self.draw()
 
-    def update_positions(self, path_data, t):
+    def update_positions(self, path_data, t, radius=1.5, coords=False, frame=None):
         self.ax1.clear()
-        plot.plot_positions(self.ax1, path_data, t)
+        positions = plot.get_positions(path_data, t)
+        plot.plot_positions(self.ax1, positions, coords=coords, frame=frame, radius=radius)
+        self.ax1.legend()
         self.ax1.set_ylim(self.ax.get_ylim())
         self.ax1.set_xlim(self.ax.get_xlim())
 

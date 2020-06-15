@@ -8,34 +8,35 @@ import argparse
 from matplotlib import pyplot as plt
 
 
+def item_position(item, time):
+    vel = item['length'] / item['duration']
+    length = vel * time
+    b_cos = cos(math.radians(item['begin_angle']))
+    b_sin = sin(math.radians(item['begin_angle']))
+    if item['curve'] == 0:
+        return item['X'] + round(length * b_cos, 2), item['Y'] + round(length * b_sin, 2), vel
+    else:
+        # For arcs
+        r = abs(1 / item['curve'])
+        dangle = abs(length * item['curve'])
+        sign = 1 if item['curve'] > 0 else -1
+        x_, y_ = sin(dangle), sign * (1 - cos(dangle))
+        return item['X'] + r * (x_ * b_cos - y_ * b_sin), item['Y'] + r * (x_ * b_sin + y_ * b_cos),vel
+
+
 def path_position(path, t):
     time = t - path['start_time']
     if time < 0:
         raise KeyError('Time lower than path start time')
     for item in path['items']:
         if time < item['duration']:
-            vel = item['length'] / item['duration']
-            length = item['length'] / item['duration'] * time
-            b_cos = cos(math.radians(item['begin_angle']))
-            b_sin = sin(math.radians(item['begin_angle']))
-            if item['curve'] == 0:
-                return item['X'] + round(length * b_cos, 2), item['Y'] + round(length * b_sin, 2), vel
-            else:
-                # For arcs
-                r = abs(1 / item['curve'])
-                angle = abs(length * item['curve'])
-                if item['curve'] > 0:
-                    sign = 1
-                else:
-                    sign = -1
-                x_, y_ = -sign * (1 - cos(angle)), sin(angle)
-                return item['X'] + r * x_ * b_cos - y_ * b_sin, item['Y'] + r * x_ * b_sin + y_ * b_cos, vel
+            return item_position(item, time)
         time -= item['duration']
     raise KeyError('Time exceeds path duration')
 
 
 def plot_path(path, ax, color):
-    angle_inc = radians(10)
+    angle_inc = radians(1)
     xx, yy = [], []
     for item in path['items']:
         xx.append(item['X'])
@@ -141,6 +142,27 @@ def prepare_file(filename):
     return paths, frame
 
 
+def plot_maneuvers(ax, data):
+    for i, path in enumerate(data):
+        plot_path(path, ax, color=('brown' if i == 0 else 'blue'))
+
+
+def plot_route(ax, file, frame):
+    with open(file) as f:
+        route_data = json.loads(f.read())
+        path = prepare_path(route_data, frame=frame)
+        plot_path(path, ax, color='#fffffffa')
+
+
+def plot_positions(ax, data, t):
+    for i, path in enumerate(data):
+        try:
+            x, y, vel = path_position(path, t)
+            plot_position(x, y, ax, radius=1.5, color=('blue' if i == 0 else 'red'))
+        except KeyError:
+            pass
+
+
 def plot_from_files(maneuvers_file, route_file=None):
     if os.path.isfile(maneuvers_file):
         fig = plt.figure(figsize=(10, 7.5))
@@ -151,24 +173,15 @@ def plot_from_files(maneuvers_file, route_file=None):
         data, frame = prepare_file(maneuvers_file)
 
         if route_file is not None:
-            with open(route_file) as f:
-                route_data = json.loads(f.read())
-                path = prepare_path(route_data, frame=frame)
-                plot_path(path, ax, color='#fffffffa')
+            plot_route(ax, route_file, frame)
 
-        for i, path in enumerate(data):
-            plot_path(path, ax, color=('brown' if i == 0 else 'blue'))
+        plot_maneuvers(ax, data)
 
         ax.axis('equal')
         ax.grid()
 
         start_time = data[0]['start_time']
-        ax1 = fig.add_axes(ax.get_position(), frameon=False)
-        ax1.set_ylim(ax.get_ylim())
-        ax1.set_xlim(ax.get_xlim())
-        for i, path in enumerate(data):
-            x, y, vel = path_position(path, start_time)
-            plot_position(x, y, ax1, radius=1.5, color=('blue' if i == 0 else 'red'))
+        plot_positions(ax, data, start_time)
 
         return fig
     else:

@@ -14,14 +14,15 @@ def item_position(item, time):
     b_cos = cos(math.radians(item['begin_angle']))
     b_sin = sin(math.radians(item['begin_angle']))
     if item['curve'] == 0:
-        return item['X'] + round(length * b_cos, 2), item['Y'] + round(length * b_sin, 2), vel
+        return item['X'] + round(length * b_cos, 2), item['Y'] + round(length * b_sin, 2), vel, item['begin_angle']
     else:
         # For arcs
         r = abs(1 / item['curve'])
         dangle = abs(length * item['curve'])
         sign = 1 if item['curve'] > 0 else -1
         x_, y_ = sin(dangle), sign * (1 - cos(dangle))
-        return item['X'] + r * (x_ * b_cos - y_ * b_sin), item['Y'] + r * (x_ * b_sin + y_ * b_cos),vel
+        return item['X'] + r * (x_ * b_cos - y_ * b_sin), item['Y'] + r * (x_ * b_sin + y_ * b_cos), \
+               vel, item['begin_angle'] + sign * degrees(dangle)
 
 
 def path_position(path, t):
@@ -59,8 +60,8 @@ def plot_path(path, ax, color):
     ax.plot(yy, xx, color=color)
 
 
-def plot_position(x, y, ax, radius=.0, color='red'):
-    ax.scatter(y, x, color=color)
+def plot_position(x, y, course, ax, radius=.0, color='red'):
+    ax.scatter(y, x, color=color, marker=(3, 0, -course))
     if radius != 0:
         danger_r = plt.Circle((y, x), radius, color=color, fill=False)
         ax.add_artist(danger_r)
@@ -157,8 +158,8 @@ def plot_route(ax, file, frame):
 def plot_positions(ax, data, t):
     for i, path in enumerate(data):
         try:
-            x, y, vel = path_position(path, t)
-            plot_position(x, y, ax, radius=1.5, color=('blue' if i == 0 else 'red'))
+            x, y, vel, course = path_position(path, t)
+            plot_position(x, y, course, ax, radius=1.5, color=('red' if i == 0 else 'blue'))
         except KeyError:
             pass
 

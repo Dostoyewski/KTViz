@@ -1,4 +1,4 @@
 geographiclib==1.50
-numpy==1.18.4
+numpy>=1.18.4
 matplotlib==3.2.1
 PyQt5==5.15.0

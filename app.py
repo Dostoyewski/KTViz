@@ -336,7 +336,7 @@ class PlotCanvas(FigureCanvas):
         self.ax1.set_ylim(self.ax.get_ylim())
         self.ax1.set_xlim(self.ax.get_xlim())
         local_time = t - path_data[0]['start_time']
-        h, m, s = math.floor(local_time / 3600), local_time % 3600 / 60, local_time % 60
+        h, m, s = math.floor(local_time / 3600), math.floor(local_time % 3600 / 60), local_time % 60
         self.ax1.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s))
 
 

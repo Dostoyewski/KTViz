@@ -8,6 +8,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox, QWidget, QVBoxLayout, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
 from main import prepare_file, check_type
@@ -15,7 +16,7 @@ from paintall import DrawingApp
 
 
 class ParamBar(QWidget):
-    
+
     def __init__(self, parent=None):
         QWidget.__init__(self, parent=parent)
         self.setGeometry(QRect(500, 30, 311, 81))
@@ -65,9 +66,9 @@ class App(QMainWindow):
         # bar with buttons and checkbox
         self.params = ParamBar(self)
         # Update button
-        self.button1 = QPushButton('Update', self)
+        self.btnUpdate = QPushButton('Update', self)
         # KTDraw button
-        self.button2 = QPushButton('KTDraw', self)
+        self.btnKtDraw = QPushButton('KTDraw', self)
 
         try:
             screen_resolution = app.desktop().screenGeometry()
@@ -88,6 +89,26 @@ class App(QMainWindow):
         self.relative = True
         self.m = PlotCanvas(self, width=round(12 * self.scale_x), height=round(8 * self.scale_y))
         self.vel = PlotCanvas(self, width=round(6 * self.scale_x), height=round(7 * self.scale_y))
+
+        self.toolbar = NavigationToolbar(self.m, self)
+        self.toolbar.hide()
+
+        # Just some button
+        self.btnZoom = QPushButton('🔍︎', self)
+        self.btnZoom.setToolTip('Zoom')
+        self.btnZoom.clicked.connect(self.zoom)
+        self.btnZoom.resize(35, 35)
+
+        self.btnPan = QPushButton('🖐️︎', self)
+        self.btnPan.setToolTip('Pan')
+        self.btnPan.clicked.connect(self.pan)
+        self.btnPan.resize(35, 35)
+
+        self.btnHome = QPushButton('🏠︎', self)
+        self.btnHome.setToolTip('Home')
+        self.btnHome.clicked.connect(self.home)
+        self.btnHome.resize(35, 35)
+
         self.loaded = False
         # Adding icon
         self.setWindowIcon(QIcon('Icon.ico'))
@@ -100,8 +121,8 @@ class App(QMainWindow):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.widthp, self.heightp)
 
-        self.params.move(int(0.677*self.width()), 0)
-        self.params.resize(int(0.298*self.width()), 0.106*self.height())
+        self.params.move(int(0.677 * self.width()), 0)
+        self.params.resize(int(0.298 * self.width()), int(0.106 * self.height()))
 
         # Initialization of canvas
         self.m.move(0, 0)
@@ -120,12 +141,12 @@ class App(QMainWindow):
         self.sl.valueChanged.connect(self.value_changed)
 
         # Update button
-        self.button1.resize(120, 35)
-        self.button1.clicked.connect(self.reload)
+        self.btnUpdate.resize(120, 35)
+        self.btnUpdate.clicked.connect(self.reload)
 
         # KTDraw button
-        self.button2.resize(120, 35)
-        self.button2.clicked.connect(self.open_drawer)
+        self.btnKtDraw.resize(80, 35)
+        self.btnKtDraw.clicked.connect(self.open_drawer)
 
         # Safe radius box
         self.params.spinBox.setRange(0, 10)
@@ -134,22 +155,31 @@ class App(QMainWindow):
         self.params.spinBox.valueChanged.connect(self.value_changed)
 
         # Show text checkbox
-        self.params.cb1.move(1400 * self.scale_x, 5 * self.scale_y)
+        self.params.cb1.move(int(1400 * self.scale_x), int(5 * self.scale_y))
         self.params.cb1.toggle()
         self.params.cb1.stateChanged.connect(self.value_changed)
 
         # Show dist checkbox
-        self.params.cb2.move(1400 * self.scale_x, 30 * self.scale_y)
+        self.params.cb2.move(int(1400 * self.scale_x), int(30 * self.scale_y))
         self.params.cb2.toggle()
         self.params.cb2.stateChanged.connect(self.value_changed)
 
         # Show WGS checkbox
-        self.params.cb3.move(1400 * self.scale_x, 55 * self.scale_y)
+        self.params.cb3.move(int(1400 * self.scale_x), int(55 * self.scale_y))
         self.params.cb3.toggle()
         self.params.cb3.stateChanged.connect(self.value_changed)
 
-        self.vel.move(1200 * self.scale_x, 120 * self.scale_y)
+        self.vel.move(int(1200 * self.scale_x), int(120 * self.scale_y))
         self.show()
+
+    def home(self):
+        self.toolbar.home()
+
+    def zoom(self):
+        self.toolbar.zoom()
+
+    def pan(self):
+        self.toolbar.pan()
 
     def open_drawer(self):
         """
@@ -165,12 +195,17 @@ class App(QMainWindow):
         :return:
         """
         self.params.move(int(0.677 * self.width()), 10)
-        self.params.resize(int(0.298 * self.width()), 0.106 * self.height())
+        self.params.resize(int(0.298 * self.width()), int(0.106 * self.height()))
         self.m.resize(int(0.67 * self.width()), int(0.926 * self.height()))
         self.sl.setGeometry(int(0.028 * self.width()), int(0.933 * self.height()),
                             int(0.611 * self.width()), 50)
-        self.button1.move(int(0.677 * self.width()), int(0.933 * self.height()))
-        self.button2.move(int(0.8 * self.width()), int(0.933 * self.height()))
+        self.btnUpdate.move(int(0.677 * self.width() + 120), int(0.933 * self.height()))
+        self.btnKtDraw.move(int(self.width() - 100), int(0.933 * self.height()))
+
+        self.btnHome.move(int(0.677 * self.width()), int(0.933 * self.height()))
+        self.btnPan.move(int(0.677 * self.width() + 40), int(0.933 * self.height()))
+        self.btnZoom.move(int(0.677 * self.width() + 80), int(0.933 * self.height()))
+
         self.vel.move(int(0.667 * self.width()), int(0.132 * self.height()))
         self.vel.resize(int(0.298 * self.width()), 0.794 * self.height())
 
@@ -189,7 +224,8 @@ class App(QMainWindow):
         """
         if self.loaded:
             self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
-                        self.params.cb1.isChecked(), self.params.cb2.isChecked(), show_coords=self.params.cb3.isChecked(),
+                        self.params.cb1.isChecked(), self.params.cb2.isChecked(),
+                        show_coords=self.params.cb3.isChecked(),
                         fig=self.vel, is_loaded=False)
 
     def value_changed(self):
@@ -199,7 +235,8 @@ class App(QMainWindow):
         """
         if self.loaded:
             self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
-                        self.params.cb1.isChecked(), self.params.cb2.isChecked(), show_coords=self.params.cb3.isChecked(),
+                        self.params.cb1.isChecked(), self.params.cb2.isChecked(),
+                        show_coords=self.params.cb3.isChecked(),
                         fig=self.vel, is_loaded=True)
 
     def update_state(self):
@@ -225,7 +262,8 @@ class App(QMainWindow):
             self.filename = filename
             self.loaded = True
             self.m.plot(self.filename, self.relative, self.sl.value(), self.params.spinBox.value(),
-                        self.params.cb1.isChecked(), self.params.cb2.isChecked(), show_coords=self.params.cb3.isChecked(),
+                        self.params.cb1.isChecked(), self.params.cb2.isChecked(),
+                        show_coords=self.params.cb3.isChecked(),
                         fig=self.vel, is_loaded=False)
 
 

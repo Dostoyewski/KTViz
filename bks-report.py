@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 import ctypes
-import io
-from datetime import datetime
-import time
-import os
 import glob
-import subprocess
-import sys
-from plot import plot_from_files
-import matplotlib.pyplot as plt
+import io
 import json
+import os
+import subprocess
+import time
+from datetime import datetime
+
+import mpld3
+from mpld3 import plugins
+
+from plot import plot_from_files
 
 
 def fix_returncode(code):
@@ -18,8 +20,9 @@ def fix_returncode(code):
 
 class Report:
 
-    def __init__(self, executable):
+    def __init__(self, executable, interactive=False):
         self.exe = executable
+        self.interactive = interactive
         self.cases = []
         self.work_dir = os.path.abspath(os.getcwd())
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
@@ -27,7 +30,7 @@ class Report:
     def generate(self, data_directory, rvo=None):
         for root, dirs, files in os.walk(data_directory):
             if "nav-data.json" in files:
-                self.run_case(os.path.join(data_directory, root), executable, rvo)
+                self.run_case(os.path.join(data_directory, root), self.exe, rvo)
 
     def run_case(self, datadir, usv, rvo=None):
         working_dir = os.path.abspath(os.getcwd())
@@ -62,9 +65,14 @@ class Report:
         if completedProc.returncode == 0:
             if os.path.isfile("maneuver.json"):
                 fig = plot_from_files("maneuver.json", route_file="route-data.json")
-                f = io.BytesIO()
-                fig.savefig(f, format="svg")
-                image_data = f.getvalue().decode("utf-8")  # svg data
+                if self.interactive:
+                    plugins.clear(fig)  # clear all plugins from the figure
+                    plugins.connect(fig, plugins.Reset(), plugins.Zoom())
+                    image_data = mpld3.fig_to_html(fig)
+                else:
+                    f = io.BytesIO()
+                    fig.savefig(f, format="svg")
+                    image_data = f.getvalue().decode("utf-8")  # svg data
 
             with open("nav-report.json", "r") as f:
                 nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
@@ -133,6 +141,8 @@ class Report:
 <meta charset="utf-8">
 <title>Results from {datetime}</title>
 <style>{styles}</style>
+<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+<script type="text/javascript" src="http://mpld3.github.io/js/mpld3.v0.3.js"></script>
 </head>
 <body>
 <h1>Report from {datetime}</h1>""".format(datetime=datetime.now(), styles=css)
@@ -170,15 +180,23 @@ class Report:
 
 
 if __name__ == "__main__":
-    executable = sys.argv[1]
-    rvo = None
-    if '--rvo' in sys.argv:
-        rvo = True
-    if '--no-rvo' in sys.argv:
-        rvo = False
+    import argparse
+
+    parser = argparse.ArgumentParser(description="BKS report generator")
+    parser.add_argument("executable", type=str, help="Path to USV executable")
+    parser.add_argument("--rvo", action="store_true", help="Run USV with --rvo")
+    parser.add_argument("--no-rvo", action="store_true", help="Run USV with --no-rvo")
+    parser.add_argument("--interactive", action="store_true", help="Make interactive plots (can be heavy)")
+    args = parser.parse_args()
+
+    use_rvo = None
+    if args.rvo:
+        use_rvo = True
+    if args.no_rvo:
+        use_rvo = False
+
     cur_dir = os.path.abspath(os.getcwd())
-    executable = os.path.join(cur_dir, executable)
-    report = Report(executable)
-    report.generate(cur_dir, rvo=rvo)
+    usv_executable = os.path.join(cur_dir, args.executable)
+    report = Report(usv_executable, interactive=args.interactive)
+    report.generate(cur_dir, rvo=use_rvo)
     report.saveHTML("report.html")
-    # traverse root directory, and list directories as dirs and files as files

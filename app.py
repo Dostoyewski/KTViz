@@ -46,11 +46,18 @@ class ParamBar(QWidget):
         self.horizontalLayout.addLayout(self.verticalLayout)
 
         # Safe radius select
-        self.label = QLabel('Safe radius:', self)
-        self.horizontalLayout.addWidget(self.label)
+        self.labelRadius = QLabel('Safe radius:', self)
+        self.horizontalLayout.addWidget(self.labelRadius)
         self.spinBoxRadius = QDoubleSpinBox(self)
         self.spinBoxRadius.setObjectName("doubleSpinBox")
         self.horizontalLayout.addWidget(self.spinBoxRadius)
+
+        # Safe radius select
+        self.labelDistance = QLabel('Safe radius:', self)
+        self.horizontalLayout.addWidget(self.labelRadius)
+        self.spinBoxDist = QDoubleSpinBox(self)
+        self.spinBoxDist.setObjectName("doubleSpinBox")
+        self.horizontalLayout.addWidget(self.spinBoxDist)
 
 
 class App(QMainWindow):
@@ -157,6 +164,12 @@ class App(QMainWindow):
         self.params.spinBoxRadius.setSingleStep(0.1)
         self.params.spinBoxRadius.valueChanged.connect(self.value_changed)
 
+        # Safe radius box
+        self.params.spinBoxDist.setRange(0, 10)
+        self.params.spinBoxDist.setValue(5)
+        self.params.spinBoxDist.setSingleStep(0.1)
+        self.params.spinBoxDist.valueChanged.connect(self.value_changed)
+
         # Show text checkbox
         self.params.cbCoords.move(int(1400 * self.scale_x), int(5 * self.scale_y))
         self.params.cbCoords.toggle()
@@ -253,7 +266,8 @@ class App(QMainWindow):
         start_time = self.data[0]['start_time']
         total_time = sum([x['duration'] for x in self.data[0]['items']])
         time = start_time + total_time * self.sl.value() * .01
-        self.m.update_positions(self.data, time, radius=self.params.spinBoxRadius.value(),
+        self.m.update_positions(self.data, time, distance=self.params.spinBoxDist.value(),
+                                radius=self.params.spinBoxRadius.value(),
                                 coords=self.params.cbCoords.isChecked(),
                                 frame=self.frame if self.params.cbGc.isChecked() else None)
         self.m.draw()
@@ -307,10 +321,11 @@ class PlotCanvas(FigureCanvas):
         self.ax.grid()
         self.draw()
 
-    def update_positions(self, path_data, t, radius=1.5, coords=False, frame=None):
+    def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None):
         self.ax1.clear()
         positions = plot.get_positions(path_data, t)
         plot.plot_positions(self.ax1, positions, coords=coords, frame=frame, radius=radius)
+        plot.plot_distances(self.ax1, positions, distance)
         self.ax1.legend()
         self.ax1.set_ylim(self.ax.get_ylim())
         self.ax1.set_xlim(self.ax.get_xlim())

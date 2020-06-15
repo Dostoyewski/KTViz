@@ -181,6 +181,21 @@ def plot_positions(ax, positions, radius=1.5, coords=False, frame=None):
             ax.text(position.y, position.x, '#{}'.format(i), size=8)
 
 
+def plot_distances(ax, positions, distance=5.):
+    max_dist_sq = distance ** 2
+    x, y = positions[0].x, positions[0].y
+    for i in range(1, len(positions)):
+        dist = (positions[i].x - x) ** 2 + (positions[i].y - y) ** 2
+        if dist < max_dist_sq:
+            h = ax.plot((y, positions[i].y), (x, positions[i].x), color='red')
+            # Location to plot text
+            text_x, text_y = (positions[i].x + x) * .5, (positions[i].y + y) * .5
+            # Rotate angle
+            angle = (degrees(math.atan2(positions[i].x - x, positions[i].y - y)) - 90) % 180 - 90
+            # Plot text
+            ax.text(text_y, text_x, '{:.1f}'.format(dist ** .5), fontsize=8, rotation=angle, rotation_mode='anchor')
+
+
 def plot_captions(ax, positions):
     for i, position in positions:
         plot_position(position.x, position.y, position.course, ax, radius=1.5, color=('red' if i == 0 else 'blue'))

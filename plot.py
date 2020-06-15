@@ -172,7 +172,7 @@ def plot_positions(ax, positions, radius=1.5, coords=False, frame=None):
             if coords:
                 if frame is not None:
                     lat, lon = frame.to_wgs(position.x, position.y)
-                    label_text += '\n{:.4f}, {:.4f}'.format(lat, lon)
+                    label_text += '\n{:.4f}°, {:.4f}°'.format(lat, lon)
                 else:
                     label_text += '\n{:.4f}, {:.4f}'.format(position.x, position.y)
             plot_position(position.x, position.y, position.course, ax, radius=radius,

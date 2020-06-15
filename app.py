@@ -224,8 +224,8 @@ class App(QMainWindow):
         self.btnPan.move(int(0.677 * self.width() + 40), int(0.933 * self.height()))
         self.btnZoom.move(int(0.677 * self.width() + 80), int(0.933 * self.height()))
 
-        self.vel.move(int(0.67 * self.width())+5, int(0.132 * self.height()))
-        self.vel.resize(int(0.330 * self.width())-5, 0.794 * self.height())
+        self.vel.move(int(0.67 * self.width()) + 5, int(0.132 * self.height()))
+        self.vel.resize(int(0.330 * self.width()) - 5, 0.794 * self.height())
 
     def resizeEvent(self, event):
         """
@@ -272,7 +272,8 @@ class App(QMainWindow):
         start_time = self.data[0]['start_time']
         total_time = sum([x['duration'] for x in self.data[0]['items']])
         time = start_time + total_time * self.sl.value() * .01
-        self.m.update_positions(self.data, time, distance=self.params.spinBoxDist.value(),
+        self.m.update_positions(self.data, time,
+                                distance=self.params.spinBoxDist.value() if self.params.cbDist.isChecked() else 0,
                                 radius=self.params.spinBoxRadius.value(),
                                 coords=self.params.cbCoords.isChecked(),
                                 frame=self.frame if self.params.cbGc.isChecked() else None)
@@ -331,7 +332,8 @@ class PlotCanvas(FigureCanvas):
         self.ax1.clear()
         positions = plot.get_positions(path_data, t)
         plot.plot_positions(self.ax1, positions, coords=coords, frame=frame, radius=radius)
-        plot.plot_distances(self.ax1, positions, distance)
+        if distance > 0:
+            plot.plot_distances(self.ax1, positions, distance)
         self.ax1.legend()
         self.ax1.set_ylim(self.ax.get_ylim())
         self.ax1.set_xlim(self.ax.get_xlim())

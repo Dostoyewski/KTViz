@@ -1,11 +1,15 @@
 import json
 import math
 import os
+from collections import namedtuple
+
 from geographiclib.geodesic import Geodesic
 from math import sin, cos, radians, degrees
 import numpy as np
 import argparse
 from matplotlib import pyplot as plt
+
+Position = namedtuple('Position', ['x', 'y', 'course', 'vel'])
 
 
 def item_position(item, time):
@@ -14,15 +18,16 @@ def item_position(item, time):
     b_cos = cos(math.radians(item['begin_angle']))
     b_sin = sin(math.radians(item['begin_angle']))
     if item['curve'] == 0:
-        return item['X'] + round(length * b_cos, 2), item['Y'] + round(length * b_sin, 2), vel, item['begin_angle']
+        return Position(item['X'] + round(length * b_cos, 2), item['Y'] + round(length * b_sin, 2), item['begin_angle'],
+                        vel)
     else:
         # For arcs
         r = abs(1 / item['curve'])
         dangle = abs(length * item['curve'])
         sign = 1 if item['curve'] > 0 else -1
         x_, y_ = sin(dangle), sign * (1 - cos(dangle))
-        return item['X'] + r * (x_ * b_cos - y_ * b_sin), item['Y'] + r * (x_ * b_sin + y_ * b_cos), \
-               vel, item['begin_angle'] + sign * degrees(dangle)
+        return Position(item['X'] + r * (x_ * b_cos - y_ * b_sin), item['Y'] + r * (x_ * b_sin + y_ * b_cos),
+                        item['begin_angle'] + sign * degrees(dangle), vel)
 
 
 def path_position(path, t):
@@ -33,7 +38,7 @@ def path_position(path, t):
         if time < item['duration']:
             return item_position(item, time)
         time -= item['duration']
-    raise KeyError('Time exceeds path duration')
+    return Position(None, None, None, None)
 
 
 def plot_path(path, ax, color):
@@ -60,11 +65,12 @@ def plot_path(path, ax, color):
     ax.plot(yy, xx, color=color)
 
 
-def plot_position(x, y, course, ax, radius=.0, color='red'):
-    ax.scatter(y, x, color=color, marker=(3, 0, -course))
+def plot_position(x, y, course, ax, radius=.0, color='red', label=None):
+    scatter = ax.scatter(y, x, color=color, marker=(3, 0, -course), label=label)
     if radius != 0:
         danger_r = plt.Circle((y, x), radius, color=color, fill=False)
         ax.add_artist(danger_r)
+    return scatter
 
 
 class Frame:
@@ -155,13 +161,47 @@ def plot_route(ax, file, frame):
         plot_path(path, ax, color='#fffffffa')
 
 
-def plot_positions(ax, data, t):
-    for i, path in enumerate(data):
-        try:
-            x, y, vel, course = path_position(path, t)
-            plot_position(x, y, course, ax, radius=1.5, color=('red' if i == 0 else 'blue'))
-        except KeyError:
-            pass
+def get_positions(data, t):
+    return [path_position(path, t) for path in data]
+
+
+def plot_positions(ax, positions, radius=1.5, coords=False, frame=None):
+    for i, position in enumerate(positions):
+        if position.x is not None:
+            label_text = '#{}, {:.2f}knt,{:.2f}°'.format(i, position.vel * 3600, position.course)
+            if coords:
+                if frame is not None:
+                    lat, lon = frame.to_wgs(position.x, position.y)
+                    label_text += '\n{:.4f}°, {:.4f}°'.format(lat, lon)
+                else:
+                    label_text += '\n{:.4f}, {:.4f}'.format(position.x, position.y)
+            plot_position(position.x, position.y, position.course, ax, radius=radius,
+                          color=('red' if i == 0 else 'blue'),
+                          label=label_text)
+            ax.text(position.y, position.x, '#{}'.format(i), size=8)
+
+
+def plot_distances(ax, positions, distance=5.):
+    max_dist_sq = distance ** 2
+    if positions[0].x is None:
+        return
+    x, y = positions[0].x, positions[0].y
+    for i in range(1, len(positions)):
+        if positions[i].x is not None:
+            dist = (positions[i].x - x) ** 2 + (positions[i].y - y) ** 2
+            if dist < max_dist_sq:
+                h = ax.plot((y, positions[i].y), (x, positions[i].x), color='red')
+                # Location to plot text
+                text_x, text_y = (positions[i].x + x) * .5, (positions[i].y + y) * .5
+                # Rotate angle
+                angle = (degrees(math.atan2(positions[i].x - x, positions[i].y - y)) - 90) % 180 - 90
+                # Plot text
+                ax.text(text_y, text_x, '{:.1f}'.format(dist ** .5), fontsize=8, rotation=angle, rotation_mode='anchor')
+
+
+def plot_captions(ax, positions):
+    for i, position in positions:
+        plot_position(position.x, position.y, position.course, ax, radius=1.5, color=('red' if i == 0 else 'blue'))
 
 
 def plot_from_files(maneuvers_file, route_file=None):
@@ -182,7 +222,9 @@ def plot_from_files(maneuvers_file, route_file=None):
         ax.grid()
 
         start_time = data[0]['start_time']
-        plot_positions(ax, data, start_time)
+        positions = get_positions(data, start_time)
+        plot_positions(ax, positions)
+        ax.legend()
 
         return fig
     else:

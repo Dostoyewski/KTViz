@@ -11,6 +11,8 @@ from PyQt5.QtWidgets import QApplication, QVBoxLayout, QPushButton, QDoubleSpinB
 
 from konverter import coords_global
 
+DEBUG = False
+
 hmi_data = {
     "wind_direction": 189.0,
     "wind_speed": 1.1,
@@ -145,6 +147,13 @@ class DrawingApp(QDialog):
         self.spinBox3.setSingleStep(0.1)
         self.spinBox3.valueChanged.connect(self.update_values)
 
+        # save to Viz format file
+        if DEBUG:
+            self.viz = QPushButton('Save to Viz', self)
+            self.viz.move(610, 15)
+            self.viz.resize(140, 50)
+            self.viz.clicked.connect(self.save_to_viz)
+
         self.draw_grid()
 
     def open_or_create_directory(self):
@@ -224,11 +233,11 @@ class DrawingApp(QDialog):
         for i in range(self.n_line_x+1):
             painter.drawLine(i*stepw, 0, i*stepw, self.height())
             painter.drawText(i*stepw, self.n_line_y*steph - 10,
-                             str(round(i*steph / self.scale, 2)))
+                             str(round(i*stepw / self.scale, 2)))
         for i in range(self.n_line_y + 1):
             painter.drawLine(0, i * steph, self.width(), i * steph)
             painter.drawText(self.n_line_x * stepw - 40, self.height() - i * steph,
-                             str(round(i * stepw / self.scale, 2)))
+                             str(round(i * steph / self.scale, 2)))
 
     def convert_file(self, path):
         """
@@ -245,8 +254,8 @@ class DrawingApp(QDialog):
         timestamp = int(time.time())
         data = []
         for target in targets:
-            coords = coords_global((target['end'][0] - ship['end'][0]) / self.scale,
-                                   (target['end'][1] - ship['end'][1]) / self.scale,
+            coords = coords_global(-(target['end'][1] - ship['end'][1]) / self.scale,
+                                   (target['end'][0] - ship['end'][0]) / self.scale,
                                    self.spinBox1.value(),
                                    self.spinBox2.value())
             dist = ((target['start'][1] - target['end'][1]) ** 2 +
@@ -261,7 +270,7 @@ class DrawingApp(QDialog):
                          'lat': coords[0],
                          'lon': coords[1],
                          'SOG': vel,
-                         'COG': angle,
+                         'COG': angle + 90,
                          "first_detect_dist": 5.0,
                          "cross_dist": 0,
                          "timestamp": timestamp
@@ -278,7 +287,7 @@ class DrawingApp(QDialog):
                     (ship['start'][0] - ship['end'][0])**2)**0.5 / self.scale
             vel = dist / self.time_horizon
             route_item = {
-                'begin_angle': course,
+                'begin_angle': course + 90,
                 'curve': 0,
                 'duration': self.time_horizon*3600,
                 'lat': self.spinBox1.value(),
@@ -299,8 +308,8 @@ class DrawingApp(QDialog):
                        'lon': self.spinBox2.value(),
                        'SOG': vel,
                        'STW': vel,
-                       'COG': course,
-                       'heading': course,
+                       'COG': course + 90,
+                       'heading': course + 90,
                        "width": 16.0,
                        "length": 100.0,
                        "width_offset": 10.0,
@@ -315,6 +324,42 @@ class DrawingApp(QDialog):
 
         with open(path + "/settings.json", "w") as fp:
             json.dump(settings, fp)
+
+    def save_to_viz(self):
+        """
+        Saves all data to KTViz format
+        :return:
+        """
+        try:
+            ship = [item for item in self.index if item['type'] == 'our'][0]
+            targets = [item for item in self.index if item['type'] != 'our']
+        except IndexError:
+            print("Add ships first!")
+            return
+        data = []
+        for target in self.index:
+            coords = coords_global(-(target['end'][1] - ship['end'][1]) / self.scale,
+                                   (target['end'][0] - ship['end'][0]) / self.scale,
+                                   self.spinBox1.value(),
+                                   self.spinBox2.value())
+            angle = math.degrees(math.atan2(target['start'][1] - target['end'][1],
+                                            target['start'][0] - target['end'][0]))
+            if angle < 0:
+                angle += 360
+            data.append({"items": [
+                {
+                    "lat": coords[0], "lon": coords[1],
+                    "begin_angle": angle + 90,
+                    "curve": 0.0,
+                    "duration": 3140.0,
+                    "length": 13.083333333333334,
+                    "port_dev": 0.0,
+                    "starboard_dev": 0.0
+                }
+            ],
+                "start_time": 1588154400})
+        with open("temp.json", "w") as fp:
+            json.dump(data, fp)
 
     def closeEvent(self, event):
         print("Closed")

@@ -64,6 +64,45 @@ constraints = {
 }
 
 
+class Vector2(object):
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __abs__(self):
+        return (self.x**2 + self.y**2)**0.5
+
+    def __add__(self, other):
+        return Vector2(self.x + other.x, self.y + other.y)
+
+    def __mul__(self, other):
+        return self.x * other.x + self.y * other.y
+
+    def __iadd__(self, other):
+        self.x += other.x
+        self.y += other.y
+        return self
+
+    def __sub__(self, other):
+        return Vector2(self.x - other.x, self.y - other.y)
+
+    def __isub__(self, other):
+        self.x -= other.x
+        self.y -= other.y
+        return self
+
+
+def det(a, b):
+    """
+    Pseudoscalar multiply of vectors
+    :param a: 2D vector
+    :param b: 2D vector
+    :return: pseudoscalar multiply
+    """
+    return a.x * b.y - b.x * a.y
+
+
 class CreateShipDialog(QDialog):
     """
     Creating new ship dialog
@@ -146,6 +185,8 @@ class DrawingApp(QDialog):
         # Ship params from dialog
         self.vel = 0
         self.heading = 0
+        # Velocity of our ship
+        self.v0 = Vector2(0, 0)
         self.initUI()
 
     def initUI(self):
@@ -429,7 +470,22 @@ class DrawingApp(QDialog):
             mid_x = (self.end.x() + our_pose.x()) / 2
             mid_y = (self.end.y() + our_pose.y()) / 2
             dist = ((self.end.x() - our_pose.x())**2 + (self.end.y() - our_pose.y())**2)**0.5
-            painter.drawText(mid_x, mid_y, str(dist/self.scale))
+            v = Vector2(self.vel * math.cos(math.radians(self.heading)),
+                              self.vel * math.sin(math.radians(self.heading)))
+            R = Vector2(-(self.end.y() - our_pose.y()) / self.scale,
+                        (self.end.x() - our_pose.x()) / self.scale)
+            try:
+                pen = QPen(Qt.black, 2, Qt.SolidLine)
+                painter.setPen(pen)
+                cpa, tcpa = self.calc_cpa_params(v, self.v0, R)
+                painter.drawText(mid_x, mid_y, str(round(dist / self.scale, 2)))
+                painter.drawText(mid_x, mid_y + 20, 'CPA: ' + str(round(cpa, 2)))
+                if tcpa > 0:
+                    painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + str(round(tcpa, 2)))
+                else:
+                    painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + '0')
+            except ZeroDivisionError:
+                painter.drawText(mid_x, mid_y, str(dist / self.scale))
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton and self.proc_draw:
@@ -450,6 +506,8 @@ class DrawingApp(QDialog):
                                    'vel': self.vel,
                                    'heading': self.heading,
                                    'end': [self.end.x(), self.end.y()]})
+                self.v0 = Vector2(self.vel * math.cos(math.radians(self.heading)),
+                                  self.vel * math.sin(math.radians(self.heading)))
                 self.type = 'foreign'
             elif self.type == 'foreign':
                 pen = QPen(Qt.black, 2, Qt.SolidLine)
@@ -471,6 +529,20 @@ class DrawingApp(QDialog):
             self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
             self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
         self.update()
+
+    @staticmethod
+    def calc_cpa_params(v, v0, R):
+        """
+        Calculating of CPA and tCPA criterions
+        :param v: target speed, vector
+        :param v0: our speed, vector
+        :param R: relative position, vector
+        :return:
+        """
+        w = v - v0
+        cpa = abs(det(R, w) / abs(w))
+        tcpa = - (R * w) / (w * w)
+        return cpa, tcpa
 
 
 if __name__ == "__main__":

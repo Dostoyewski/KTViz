@@ -64,6 +64,50 @@ constraints = {
 }
 
 
+class CreateShipDialog(QDialog):
+    """
+    Creating new ship dialog
+    """
+    def __init__(self):
+        super(CreateShipDialog, self).__init__()
+        self.vel = QDoubleSpinBox(self)
+        self.heading = QDoubleSpinBox(self)
+        self.clsBtn = QPushButton('OK', self)
+        self.resize(325, 100)
+        self.setWindowTitle("Creating new ship")
+        self.initUI()
+
+    def initUI(self):
+        # Velocity field
+        lbe1 = QLabel(self)
+        lbe1.setText('Velocity, knt:')
+        lbe1.move(50, 5)
+        self.vel.setRange(0, 30)
+        self.vel.move(150, 0)
+        self.vel.setValue(10)
+        self.vel.setSingleStep(0.1)
+
+        # Heading field
+        lbe2 = QLabel(self)
+        lbe2.setText('Heading, dgr:')
+        lbe2.move(50, 30)
+        self.heading.setRange(0, 360)
+        self.heading.move(150, 30)
+        self.heading.setValue(0)
+        self.heading.setSingleStep(0.01)
+
+        self.clsBtn.move(50, 60)
+        self.clsBtn.clicked.connect(self.close)
+
+    def exec_(self):
+        """
+        Custom exec function with vel and heading return
+        :return:
+        """
+        super(CreateShipDialog, self).exec_()
+        return self.vel.value(), self.heading.value()
+
+
 class DrawingApp(QDialog):
     rs_signal = QtCore.pyqtSignal(QtCore.QSize)
 
@@ -97,6 +141,11 @@ class DrawingApp(QDialog):
         self.dir_select = False
         # Path to output dir
         self.path = ''
+        # Flag if new ship is entered
+        self.proc_draw = False
+        # Ship params from dialog
+        self.vel = 0
+        self.heading = 0
         self.initUI()
 
     def initUI(self):
@@ -137,16 +186,6 @@ class DrawingApp(QDialog):
         self.spinBox2.setValue(30)
         self.spinBox2.setSingleStep(0.01)
 
-        # Time horizont
-        lbe1 = QLabel(self)
-        lbe1.setText('Time horizon:')
-        lbe1.move(500, 20)
-        self.spinBox3.setRange(0, 10)
-        self.spinBox3.move(610, 15)
-        self.spinBox3.setValue(2)
-        self.spinBox3.setSingleStep(0.1)
-        self.spinBox3.valueChanged.connect(self.update_values)
-
         # save to Viz format file
         if DEBUG:
             self.viz = QPushButton('Save to Viz', self)
@@ -154,7 +193,18 @@ class DrawingApp(QDialog):
             self.viz.resize(140, 50)
             self.viz.clicked.connect(self.save_to_viz)
 
+        self.viz = QPushButton('Create new ship', self)
+        self.viz.move(500, 0)
+        self.viz.resize(140, 50)
+        self.viz.clicked.connect(self.create_ship)
+
         self.draw_grid()
+
+    def create_ship(self):
+        updateDialog = CreateShipDialog()
+        self.vel, self.heading = updateDialog.exec_()
+        self.proc_draw = True
+        self.keepDraw = True
 
     def open_or_create_directory(self):
         """
@@ -258,19 +308,12 @@ class DrawingApp(QDialog):
                                    (target['end'][0] - ship['end'][0]) / self.scale,
                                    self.spinBox1.value(),
                                    self.spinBox2.value())
-            dist = ((target['start'][1] - target['end'][1]) ** 2 +
-                    (target['start'][0] - target['end'][0]) ** 2) ** 0.5 / self.scale
-            vel = dist / self.time_horizon
-            angle = math.degrees(math.atan2(target['start'][1] - target['end'][1],
-                                                        target['start'][0] - target['end'][0]))
-            if angle < 0:
-                angle += 360
             data.append({'id': 'target' + str(targets.index(target)),
                          'cat': 0,
                          'lat': coords[0],
                          'lon': coords[1],
-                         'SOG': vel,
-                         'COG': angle + 90,
+                         'SOG': target['vel'],
+                         'COG': target['heading'],
                          "first_detect_dist": 5.0,
                          "cross_dist": 0,
                          "timestamp": timestamp
@@ -279,17 +322,11 @@ class DrawingApp(QDialog):
             json.dump(data, fp)
 
         with open(path + "/nav-data.json", "w") as fp:
-            course = math.degrees(math.atan2(ship['start'][1] - ship['end'][1],
-                                                      ship['start'][0] - ship['end'][0]))
-            if course < 0:
-                course += 360
-            dist = ((ship['start'][1] - ship['end'][1])**2 +
-                    (ship['start'][0] - ship['end'][0])**2)**0.5 / self.scale
-            vel = dist / self.time_horizon
+            dist = 10
             route_item = {
-                'begin_angle': course + 90,
+                'begin_angle': ship['heading'],
                 'curve': 0,
-                'duration': self.time_horizon*3600,
+                'duration': dist / ship['vel'],
                 'lat': self.spinBox1.value(),
                 'lon': self.spinBox2.value(),
                 'length': dist,
@@ -306,10 +343,10 @@ class DrawingApp(QDialog):
             json.dump({'cat': 0,
                        'lat': self.spinBox1.value(),
                        'lon': self.spinBox2.value(),
-                       'SOG': vel,
-                       'STW': vel,
-                       'COG': course + 90,
-                       'heading': course + 90,
+                       'SOG': ship['vel'],
+                       'STW': ship['vel'],
+                       'COG': ship['heading'],
+                       'heading': ship['heading'],
                        "width": 16.0,
                        "length": 100.0,
                        "width_offset": 10.0,
@@ -324,6 +361,8 @@ class DrawingApp(QDialog):
 
         with open(path + "/settings.json", "w") as fp:
             json.dump(settings, fp)
+
+        print('Success')
 
     def save_to_viz(self):
         """
@@ -342,14 +381,10 @@ class DrawingApp(QDialog):
                                    (target['end'][0] - ship['end'][0]) / self.scale,
                                    self.spinBox1.value(),
                                    self.spinBox2.value())
-            angle = math.degrees(math.atan2(target['start'][1] - target['end'][1],
-                                            target['start'][0] - target['end'][0]))
-            if angle < 0:
-                angle += 360
             data.append({"items": [
                 {
                     "lat": coords[0], "lon": coords[1],
-                    "begin_angle": angle + 90,
+                    "begin_angle": target['heading'],
                     "curve": 0.0,
                     "duration": 3140.0,
                     "length": 13.083333333333334,
@@ -397,9 +432,11 @@ class DrawingApp(QDialog):
             painter.drawText(mid_x, mid_y, str(dist/self.scale))
 
     def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.LeftButton:
+        if event.button() == QtCore.Qt.LeftButton and self.proc_draw:
             self.keepDraw = True
-            self.start = self.end = event.pos()
+            self.end = event.pos()
+            self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
+            self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
 
     def mouseReleaseEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton and self.keepDraw:
@@ -410,7 +447,8 @@ class DrawingApp(QDialog):
                 painter.drawLine(self.start, self.end)
                 painter.drawEllipse(self.end, 10, 10)
                 self.index.append({'type': self.type,
-                                   'start': [self.start.x(), self.start.y()],
+                                   'vel': self.vel,
+                                   'heading': self.heading,
                                    'end': [self.end.x(), self.end.y()]})
                 self.type = 'foreign'
             elif self.type == 'foreign':
@@ -419,15 +457,19 @@ class DrawingApp(QDialog):
                 painter.drawLine(self.start, self.end)
                 painter.drawEllipse(self.end, 10, 10)
                 self.index.append({'type': self.type,
-                                   'start': [self.start.x(), self.start.y()],
+                                   'vel': self.vel,
+                                   'heading': self.heading,
                                    'end': [self.end.x(), self.end.y()]})
             self.update()
             self.keepDraw = False
+            self.proc_draw = False
             # Append new obj to array
 
     def mouseMoveEvent(self, event):
-        if (event.buttons() & QtCore.Qt.LeftButton) and self.keepDraw:
+        if (event.buttons() & QtCore.Qt.LeftButton) and self.keepDraw and self.proc_draw:
             self.end = event.pos()
+            self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
+            self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
         self.update()
 
 

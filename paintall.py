@@ -77,7 +77,10 @@ class Vector2(object):
         return Vector2(self.x + other.x, self.y + other.y)
 
     def __mul__(self, other):
-        return self.x * other.x + self.y * other.y
+        if type(other) == Vector2:
+            return self.x * other.x + self.y * other.y
+        elif type(other) == int or type(other) == float:
+            return Vector2(self.x * other, self.y * other)
 
     def __iadd__(self, other):
         self.x += other.x
@@ -478,10 +481,24 @@ class DrawingApp(QDialog):
                 pen = QPen(Qt.black, 2, Qt.SolidLine)
                 painter.setPen(pen)
                 cpa, tcpa = self.calc_cpa_params(v, self.v0, R)
+                min_pose = v * tcpa
+                min_pose_o = self.v0 * tcpa
+                mpd_point = QPoint()
+                mpd_point_o = QPoint()
+                # Our min dist point
+                mpd_point.setX(self.end.x() + min_pose.y * self.scale)
+                mpd_point.setY(self.end.y() - min_pose.x * self.scale)
+                # Target min dist point
+                mpd_point_o.setX(our_pose.x() + min_pose_o.y * self.scale)
+                mpd_point_o.setY(our_pose.y() - min_pose_o.x * self.scale)
                 painter.drawText(mid_x, mid_y, str(round(dist / self.scale, 2)))
-                painter.drawText(mid_x, mid_y + 20, 'CPA: ' + str(round(cpa, 2)))
                 if tcpa > 0:
+                    painter.drawText(mid_x, mid_y + 20, 'CPA: ' + str(round(cpa, 2)))
                     painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + str(round(tcpa, 2)))
+                    pen = QPen(Qt.red, 2, Qt.SolidLine)
+                    painter.setPen(pen)
+                    painter.drawEllipse(mpd_point, 4, 4)
+                    painter.drawEllipse(mpd_point_o, 4, 4)
                 else:
                     painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + '0')
             except ZeroDivisionError:

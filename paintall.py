@@ -3,6 +3,7 @@ import sys
 import time
 
 import math
+from PIL import ImageGrab
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -255,6 +256,7 @@ class DrawingApp(QDialog):
         Creates dialog with output directory selection
         :return:
         """
+        img = ImageGrab.grab()
         if not self.dir_select:
             dialog = QFileDialog(self)
             dialog.setFileMode(QFileDialog.Directory)
@@ -271,6 +273,7 @@ class DrawingApp(QDialog):
             self.path = dialog.selectedFiles()[0]
             self.dir_select = True
 
+        img.save(self.path + "/scenario.jpeg", "JPEG")
         self.convert_file(self.path)
         
     def update_values(self):

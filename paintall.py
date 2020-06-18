@@ -125,7 +125,7 @@ class CreateShipDialog(QDialog):
         lbe1 = QLabel(self)
         lbe1.setText('Velocity, knt:')
         lbe1.move(50, 5)
-        self.vel.setRange(0, 30)
+        self.vel.setRange(0, 100)
         self.vel.move(150, 0)
         self.vel.setValue(10)
         self.vel.setSingleStep(0.1)
@@ -166,7 +166,7 @@ class DrawingApp(QDialog):
         self.keepDraw = False
         self.start = QPoint()
         self.end = QPoint()
-        self.resize(800, 600)
+        self.resize(900, 700)
         self.move(100, 100)
         self.setWindowTitle("Scenario drawer")
         self.type = 'our'
@@ -242,6 +242,15 @@ class DrawingApp(QDialog):
         self.viz.move(500, 0)
         self.viz.resize(140, 50)
         self.viz.clicked.connect(self.create_ship)
+
+        # Time horizon values
+        lbe3 = QLabel(self)
+        lbe3.setText('Time horizon:')
+        lbe3.move(650, 5)
+        self.spinBox3.setRange(0, 10)
+        self.spinBox3.move(760, 0)
+        self.spinBox3.setValue(2)
+        self.spinBox3.setSingleStep(0.01)
 
         self.draw_grid()
 
@@ -369,14 +378,13 @@ class DrawingApp(QDialog):
             json.dump(data, fp)
 
         with open(path + "/nav-data.json", "w") as fp:
-            dist = 10
             route_item = {
                 'begin_angle': ship['heading'],
                 'curve': 0,
-                'duration': dist / ship['vel'],
+                'duration': self.spinBox3.value() * 3600,
                 'lat': self.spinBox1.value(),
                 'lon': self.spinBox2.value(),
-                'length': dist,
+                'length': self.spinBox3.value() * ship['vel'],
                 "port_dev": 2,
                 "starboard_dev": 2
             }
@@ -464,7 +472,7 @@ class DrawingApp(QDialog):
             painter.drawLine(self.start, self.end)
             painter.drawEllipse(self.end, 10, 10)
         elif self.type == 'foreign':
-            pen = QPen(Qt.black, 2, Qt.SolidLine)
+            pen = QPen(Qt.blue, 2, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawLine(self.start, self.end)
             painter.drawEllipse(self.end, 10, 10)
@@ -498,9 +506,11 @@ class DrawingApp(QDialog):
                 if tcpa > 0:
                     painter.drawText(mid_x, mid_y + 20, 'CPA: ' + str(round(cpa, 2)))
                     painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + str(round(tcpa, 2)))
-                    pen = QPen(Qt.red, 2, Qt.SolidLine)
+                    pen = QPen(Qt.blue, 2, Qt.SolidLine)
                     painter.setPen(pen)
                     painter.drawEllipse(mpd_point, 4, 4)
+                    pen = QPen(Qt.red, 2, Qt.SolidLine)
+                    painter.setPen(pen)
                     painter.drawEllipse(mpd_point_o, 4, 4)
                 else:
                     painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + '0')
@@ -530,7 +540,7 @@ class DrawingApp(QDialog):
                                   self.vel * math.sin(math.radians(self.heading)))
                 self.type = 'foreign'
             elif self.type == 'foreign':
-                pen = QPen(Qt.black, 2, Qt.SolidLine)
+                pen = QPen(Qt.blue, 2, Qt.SolidLine)
                 painter.setPen(pen)
                 painter.drawLine(self.start, self.end)
                 painter.drawEllipse(self.end, 10, 10)

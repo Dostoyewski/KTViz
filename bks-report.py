@@ -62,7 +62,7 @@ class Report:
               .format(datadir, fix_returncode(completedProc.returncode), exec_time))
         image_data = ""
         nav_report = ""
-        if completedProc.returncode == 0:
+        if fix_returncode(completedProc.returncode) in (0, 1):
             if os.path.isfile("maneuver.json"):
                 fig = plot_from_files("maneuver.json", route_file="route-data.json")
                 if self.interactive:
@@ -148,7 +148,7 @@ class Report:
 <h1>Report from {datetime}</h1>""".format(datetime=datetime.now(), styles=css)
 
         for case in self.cases:
-            if case["proc"].returncode == 0:
+            if case["proc"].returncode in (0, 1):
                 img_tag = case["image_data"]
             else:
                 img_tag = ""
@@ -172,7 +172,7 @@ class Report:
                              stdout=str(case["proc"].stdout.decode("utf-8")),
                              nav_report=case["nav_report"],
                              image=img_tag,
-                             checked=" checked" if case["proc"].returncode == 0 else "")
+                             checked=" checked" if case["proc"].returncode in (0, 1) else "")
 
         html += "</body></html>"
         with io.open(filename, "w", encoding="utf-8") as f:

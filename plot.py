@@ -7,7 +7,7 @@ from geographiclib.geodesic import Geodesic
 from math import sin, cos, radians, degrees
 import numpy as np
 import argparse
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, gridspec
 
 Position = namedtuple('Position', ['x', 'y', 'course', 'vel'])
 
@@ -204,11 +204,22 @@ def plot_captions(ax, positions):
         plot_position(position.x, position.y, position.course, ax, radius=1.5, color=('red' if i == 0 else 'blue'))
 
 
+def plot_speed(ax, path):
+    velocities = [item['length'] / item['duration'] * 3600 for item in path["items"]]
+    ax.step(range(1, len(path["items"]) + 1), velocities, where='post')
+    ax.set_xlabel('Number of segment')
+    ax.set_ylabel('Speed, knt')
+    ax.grid()
+
+
 def plot_from_files(maneuvers_file, route_file=None):
     if os.path.isfile(maneuvers_file):
         fig = plt.figure(figsize=(10, 7.5))
-        ax = fig.add_subplot(111)
+        gs1 = gridspec.GridSpec(5, 1)
+        ax = fig.add_subplot(gs1[0:4, :])
         ax.clear()
+        ax_vel = fig.add_subplot(gs1[4, :])
+        ax_vel.clear()
         ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
 
         data, frame = prepare_file(maneuvers_file)
@@ -217,6 +228,7 @@ def plot_from_files(maneuvers_file, route_file=None):
             plot_route(ax, route_file, frame)
 
         plot_maneuvers(ax, data)
+        plot_speed(ax_vel, data[0])
 
         ax.axis('equal')
         ax.grid()

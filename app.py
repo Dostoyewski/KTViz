@@ -365,12 +365,7 @@ class VelocityCanvas(FigureCanvas):
         :param path_data: Loaded data
         """
         self.ax.clear()
-
-        velocities = [item['length'] / item['duration'] * 3600 for item in path_data[0]["items"]]
-        self.ax.step(range(1, len(path_data[0]["items"]) + 1), velocities, where='post')
-        self.ax.set_xlabel('Number of segment')
-        self.ax.set_ylabel('Speed, knt')
-        self.ax.grid()
+        plot.plot_speed(self.ax, path_data[0])
         self.draw()
 
     # def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None):

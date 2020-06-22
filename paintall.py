@@ -163,6 +163,8 @@ class DrawingApp(QDialog):
         self.spinBox2 = QDoubleSpinBox(self)
         # Time horizont selection
         self.spinBox3 = QDoubleSpinBox(self)
+        # Scaling spinBox
+        self.spinBox4 = QDoubleSpinBox(self)
         self.keepDraw = False
         self.start = QPoint()
         self.end = QPoint()
@@ -250,10 +252,25 @@ class DrawingApp(QDialog):
         lbe3.setText('Time horizon:')
         lbe3.move(650, 5)
         self.spinBox3.setRange(0, 10)
-        self.spinBox3.move(760, 0)
+        self.spinBox3.move(765, 0)
         self.spinBox3.setValue(2)
         self.spinBox3.setSingleStep(0.01)
 
+        # Scaling params
+        lbe4 = QLabel(self)
+        lbe4.setText('Scale, px in nm:')
+        lbe4.move(650, 30)
+        self.spinBox4.setRange(0.01, 1000)
+        self.spinBox4.move(765, 25)
+        self.spinBox4.setValue(10)
+        self.spinBox4.setSingleStep(0.1)
+        self.spinBox4.valueChanged.connect(self.update_scale)
+
+        self.draw_grid()
+
+    def update_scale(self):
+        self.scale = self.spinBox4.value()
+        self.clear_window()
         self.draw_grid()
 
     def create_ship(self):

@@ -191,6 +191,8 @@ class DrawingApp(QDialog):
         self.heading = 0
         # Velocity of our ship
         self.v0 = Vector2(0, 0)
+        # Some hotfix flag
+        self.first = True
         self.initUI()
 
     def initUI(self):
@@ -306,17 +308,20 @@ class DrawingApp(QDialog):
         re-draws grid for new size
         :return:
         """
-        self.clear_window()
+        self.clear_window(True)
         self.draw_grid()
+        self.plot_all_targets()
 
-    def clear_window(self):
+    def clear_window(self, upd=False):
         """
         Cleares window and sets some flags to default
+        :param upd: flag to recreate self.index
         :return:
         """
         self.image.fill(QtGui.qRgb(255, 255, 255))
-        self.type = 'our'
-        self.index = []
+        if not upd:
+            self.type = 'our'
+            self.index = []
         self.update()
         self.draw_grid()
         self.dir_select = False
@@ -454,6 +459,24 @@ class DrawingApp(QDialog):
     def closeEvent(self, event):
         print("Closed")
 
+    def plot_all_targets(self):
+        """
+        This function plots all obj in self.index after resize
+        :return:
+        """
+        painter = QPainter(self.image)
+        for obj in self.index:
+            if obj['type'] == 'our':
+                pen = QPen(Qt.red, 2, Qt.SolidLine)
+                painter.setPen(pen)
+            else:
+                pen = QPen(Qt.blue, 2, Qt.SolidLine)
+                painter.setPen(pen)
+            start = QPoint(obj['start'][0], obj['start'][1])
+            end = QPoint(obj['end'][0], obj['end'][1])
+            painter.drawLine(start, end)
+            painter.drawEllipse(end, 10, 10)
+
     def paintEvent(self, event, type='circle'):
         """
         Event handler for painter
@@ -466,11 +489,12 @@ class DrawingApp(QDialog):
         temp = self.image.copy(cur_size)
         painter.drawImage(event.rect(), temp)
         # painter.drawLine(self.start, self.end)
-        if self.type == 'our':
+        if self.type == 'our' or self.first:
             pen = QPen(Qt.red, 2, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawLine(self.start, self.end)
             painter.drawEllipse(self.end, 10, 10)
+            self.first = False
         elif self.type == 'foreign':
             pen = QPen(Qt.blue, 2, Qt.SolidLine)
             painter.setPen(pen)
@@ -535,6 +559,7 @@ class DrawingApp(QDialog):
                 self.index.append({'type': self.type,
                                    'vel': self.vel,
                                    'heading': self.heading,
+                                   'start': [self.start.x(), self.start.y()],
                                    'end': [self.end.x(), self.end.y()]})
                 self.v0 = Vector2(self.vel * math.cos(math.radians(self.heading)),
                                   self.vel * math.sin(math.radians(self.heading)))
@@ -547,11 +572,11 @@ class DrawingApp(QDialog):
                 self.index.append({'type': self.type,
                                    'vel': self.vel,
                                    'heading': self.heading,
+                                   'start': [self.start.x(), self.start.y()],
                                    'end': [self.end.x(), self.end.y()]})
             self.update()
             self.keepDraw = False
             self.proc_draw = False
-            # Append new obj to array
 
     def mouseMoveEvent(self, event):
         if (event.buttons() & QtCore.Qt.LeftButton) and self.keepDraw and self.proc_draw:

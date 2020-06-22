@@ -208,6 +208,7 @@ def plot_speed(ax, path):
     velocities = [item['length'] / item['duration'] * 3600 for item in path["items"]]
     ax.step(range(1, len(path["items"]) + 1), velocities, where='post')
     ax.set_ylim(bottom=0)
+    ax.set_ylim(top=max(velocities) * 1.1)
     ax.set_xlabel('Number of segment')
     ax.set_ylabel('Speed, knt')
     ax.grid()

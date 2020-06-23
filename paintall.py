@@ -270,7 +270,8 @@ class DrawingApp(QDialog):
         self.draw_grid()
 
     def update_scale(self):
-        self.scale = self.spinBox4.value()
+        steph = self.height() / self.n_line_y
+        self.scale = steph / self.spinBox4.value()
         self.clear_window()
         self.draw_grid()
 
@@ -278,6 +279,7 @@ class DrawingApp(QDialog):
         updateDialog = CreateShipDialog()
         self.vel, self.heading = updateDialog.exec_()
         self.proc_draw = True
+        self.spinBox4.setDisabled(True)
         self.keepDraw = True
 
     def open_or_create_directory(self):
@@ -343,6 +345,7 @@ class DrawingApp(QDialog):
         self.update()
         self.draw_grid()
         self.dir_select = False
+        self.spinBox4.setDisabled(False)
 
     def draw_grid(self):
         """
@@ -356,18 +359,18 @@ class DrawingApp(QDialog):
         self.n_line_y = round(self.height() / optimal_step)
         stepw = self.width() / self.n_line_x
         steph = self.height() / self.n_line_y
-        scale = steph / self.scale
+        self.scale = steph / self.spinBox4.value()
         pen = QPen(Qt.black, 1, Qt.SolidLine)
         pen.setStyle(Qt.DashDotDotLine)
         painter.setPen(pen)
         for i in range(self.n_line_x+1):
             painter.drawLine(i*stepw, 0, i*stepw, self.height())
             painter.drawText(i*stepw, self.n_line_y*steph - 10,
-                             str(round(i*stepw / scale, 2)))
+                             str(round(i*stepw / self.scale, 2)))
         for i in range(self.n_line_y + 1):
             painter.drawLine(0, i * steph, self.width(), i * steph)
             painter.drawText(self.n_line_x * stepw - 40, self.height() - i * steph,
-                             str(round(i * steph / scale, 2)))
+                             str(round(i * steph / self.scale, 2)))
 
     def convert_file(self, path):
         """
@@ -558,7 +561,7 @@ class DrawingApp(QDialog):
                 else:
                     painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + '0')
             except ZeroDivisionError:
-                painter.drawText(mid_x, mid_y, str(dist / self.scale))
+                painter.drawText(mid_x, mid_y, str(round(dist / self.scale, 2)))
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton and self.proc_draw:

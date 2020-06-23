@@ -176,7 +176,7 @@ class DrawingApp(QDialog):
         self.image = []
         self.index = []
         # Scale: pixels in nm
-        self.scale = 10
+        self.scale = 5
         # Preferred number of lines in grid
         self.n_line_x = 10
         self.n_line_y = 10
@@ -259,11 +259,11 @@ class DrawingApp(QDialog):
 
         # Scaling params
         lbe4 = QLabel(self)
-        lbe4.setText('Scale, px in nm:')
+        lbe4.setText('Scale, px in sq:')
         lbe4.move(650, 30)
         self.spinBox4.setRange(0.01, 1000)
         self.spinBox4.move(765, 25)
-        self.spinBox4.setValue(10)
+        self.spinBox4.setValue(self.scale)
         self.spinBox4.setSingleStep(0.1)
         self.spinBox4.valueChanged.connect(self.update_scale)
 
@@ -356,17 +356,18 @@ class DrawingApp(QDialog):
         self.n_line_y = round(self.height() / optimal_step)
         stepw = self.width() / self.n_line_x
         steph = self.height() / self.n_line_y
+        scale = steph / self.scale
         pen = QPen(Qt.black, 1, Qt.SolidLine)
         pen.setStyle(Qt.DashDotDotLine)
         painter.setPen(pen)
         for i in range(self.n_line_x+1):
             painter.drawLine(i*stepw, 0, i*stepw, self.height())
             painter.drawText(i*stepw, self.n_line_y*steph - 10,
-                             str(round(i*stepw / self.scale, 2)))
+                             str(round(i*stepw / scale, 2)))
         for i in range(self.n_line_y + 1):
             painter.drawLine(0, i * steph, self.width(), i * steph)
             painter.drawText(self.n_line_x * stepw - 40, self.height() - i * steph,
-                             str(round(i * steph / self.scale, 2)))
+                             str(round(i * steph / scale, 2)))
 
     def convert_file(self, path):
         """

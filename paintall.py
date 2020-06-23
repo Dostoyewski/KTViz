@@ -168,7 +168,8 @@ class DrawingApp(QDialog):
         self.keepDraw = False
         self.start = QPoint()
         self.end = QPoint()
-        self.resize(900, 700)
+        self.resize(900, 720)
+        self.setFixedSize(900, 720)
         self.move(100, 100)
         self.setWindowTitle("Scenario drawer")
         self.type = 'our'

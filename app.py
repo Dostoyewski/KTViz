@@ -318,9 +318,11 @@ class PlotCanvas(FigureCanvas):
         :param route_file: Name of file with route
         """
         self.ax.clear()
-
-        if route_file is not None:
-            plot.plot_route(self.ax, route_file, frame)
+        try:
+            if route_file is not None:
+                plot.plot_route(self.ax, route_file, frame)
+        except FileNotFoundError:
+            pass
 
         plot.plot_maneuvers(self.ax, path_data)
 

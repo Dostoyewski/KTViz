@@ -73,9 +73,11 @@ class Report:
                     f = io.BytesIO()
                     fig.savefig(f, format="svg")
                     image_data = f.getvalue().decode("utf-8")  # svg data
-
+        try:
             with open("nav-report.json", "r") as f:
                 nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
+        except FileNotFoundError:
+            pass
 
         os.chdir(working_dir)
         self.cases.append({"datadir": datadir,

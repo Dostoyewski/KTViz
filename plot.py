@@ -206,9 +206,11 @@ def plot_captions(ax, positions):
 
 def plot_speed(ax, path):
     velocities = [item['length'] / item['duration'] * 3600 for item in path["items"]]
-    ax.step(range(1, len(path["items"]) + 1), velocities, where='post')
+    velocities.append(velocities[-1])
+    ax.step(np.arange(.5, len(velocities) + .5, 1), velocities, where='post')
     ax.set_ylim(bottom=0)
     ax.set_ylim(top=max(velocities) * 1.1)
+    ax.set_xticks(np.arange(1, len(velocities), 1))
     ax.set_xlabel('Number of segment')
     ax.set_ylabel('Speed, knt')
     ax.grid()
@@ -233,6 +235,10 @@ def plot_from_files(maneuvers_file, route_file=None):
         plot_speed(ax_vel, data[0])
 
         ax.axis('equal')
+        total_time = sum([x['duration'] for x in data[0]['items']])
+        t = total_time + data[0]['start_time']
+        h, m, s = math.floor(total_time / 3600), math.floor(total_time % 3600 / 60), total_time % 60
+        ax.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s))
         ax.grid()
 
         start_time = data[0]['start_time']

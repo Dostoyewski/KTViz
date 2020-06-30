@@ -1,0 +1,87 @@
+{
+  "type": "FeatureCollection",
+  "features":
+  [
+    {
+      "type": "Feature",
+      "geometry":
+      {
+        "type": "Point",
+        "coordinates": [59.95, 30.1]
+      },
+      "properties":
+      {
+        "limitation_type": "point_approach_prohibition",
+        "hardness": "hard",
+        "id" : "point_1",
+        "source_id" : "WRECKS_2998",
+        "source_object_code": "WRECKS",
+        "distance" : 10.0
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry":
+      {
+        "type": "LineString",
+        "coordinates":
+        [
+          [60.0, 30.0],
+          [60.1, 29.9],
+          [60.0, 29.9]
+        ]
+      },
+      "properties":
+      {
+        "limitation_type": "line_crossing_prohibition",
+        "hardness": "soft",
+        "id" : "line_32",
+        "source_id" : "TSSBND_238",
+        "source_object_code": "TSSBND"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry":
+      {
+        "type": "Polygon",
+        "coordinates":
+        [
+          [[60, 30], [60.1, 30], [60.2, 30.2], [59.8, 30.2], [60, 30]],
+          [[20, 30], [35, 35], [30, 20], [20, 30]]
+        ]
+      },
+      "properties":
+      {
+        "limitation_type": "zone_entering_prohibition",
+        "hardness": "hard",
+        "id" : "zone_13",
+        "source_id" : "MIPARE_98",
+        "source_object_code": "MIPARE"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry":
+      {
+        "type": "Polygon",
+        "coordinates":
+        [
+          [[60, 30], [60.1, 30], [60.2, 29.8], [60.2, 30.2], [60, 30]],
+          [[20, 30], [35, 35], [30, 20], [20, 30]]
+        ]
+      },
+      "properties":
+      {
+        "limitation_type": "movement_parameters_limitation",
+        "hardness": "soft",
+        "id" : "zone_28",
+        "source_id" : "RECTRK_32",
+        "source_object_code": "RECTRK",
+        "min_course" : 30.0,
+        "max_course" : 60.0,
+        "max_speed" : 20.0
+      }
+    }
+  ]
+}

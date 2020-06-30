@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import math
 import os
 import sys
 
+import math
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QIcon
@@ -14,6 +14,10 @@ from matplotlib.figure import Figure
 
 import plot
 from paintall import DrawingApp
+
+
+# For build:
+# pyinstaller --onefile --icon=Icon.ico --noconsole app.py
 
 
 class ParamBar(QWidget):
@@ -121,6 +125,7 @@ class App(QMainWindow):
         self.data = []
         self.frame = None
         self.route_file = None
+        self.poly_file = None
         # Adding icon
         self.setWindowIcon(QIcon('Icon.ico'))
         self.initUI()
@@ -247,7 +252,7 @@ class App(QMainWindow):
 
     def load(self):
         self.load_data(self.filename)
-        self.m.plot_paths(self.data, self.frame, self.route_file)
+        self.m.plot_paths(self.data, self.frame, self.route_file, self.poly_file)
         self.vel.plot_paths(self.data)
         self.update_time()
 
@@ -267,6 +272,7 @@ class App(QMainWindow):
         self.loaded = True
         self.data, self.frame = plot.prepare_file(filename)
         self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
+        self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'poly-data.json')
 
     def update_time(self):
         start_time = self.data[0]['start_time']
@@ -310,9 +316,10 @@ class PlotCanvas(FigureCanvas):
         self.ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
         self.ax1 = self.figure.add_axes(self.ax.get_position(), frameon=False)
 
-    def plot_paths(self, path_data, frame, route_file=None):
+    def plot_paths(self, path_data, frame, route_file=None, poly_data=None):
         """
         Plots paths
+        :param poly_data: Name of file with polygons
         :param path_data: Loaded data
         :param frame: Frame for coordinates conversion
         :param route_file: Name of file with route
@@ -321,6 +328,12 @@ class PlotCanvas(FigureCanvas):
         try:
             if route_file is not None:
                 plot.plot_route(self.ax, route_file, frame)
+        except FileNotFoundError:
+            pass
+
+        try:
+            if poly_data is not None:
+                plot.plot_limits(self.ax, poly_data, frame)
         except FileNotFoundError:
             pass
 

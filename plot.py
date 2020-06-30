@@ -1,13 +1,14 @@
+import argparse
 import json
-import math
 import os
 from collections import namedtuple
 
+import math
+import numpy as np
 from geographiclib.geodesic import Geodesic
 from math import sin, cos, radians, degrees
-import numpy as np
-import argparse
 from matplotlib import pyplot as plt, gridspec
+from matplotlib.patches import Ellipse, Polygon
 
 Position = namedtuple('Position', ['x', 'y', 'course', 'vel'])
 
@@ -129,6 +130,78 @@ def prepare_path(data, frame=None):
     return new_data
 
 
+def plot_limits(ax, filename, frame=None):
+    """
+    This function plots navigation limits
+    :param frame: frame to convert
+    :param ax: axes
+    :param filename: file with limitations
+    :return:
+    """
+    with open(filename) as f:
+        data = json.loads(f.read())
+        polygons = [item for item in data['features']
+                    if item['geometry']['type'] == 'Polygon']
+        points = [item for item in data['features']
+                  if item['geometry']['type'] == 'Point']
+        lines = [item for item in data['features']
+                 if item['geometry']['type'] == 'LineString']
+        plot_polygons(ax, polygons, frame)
+        plot_points(ax, points, frame)
+        plot_lines(ax, lines, frame)
+
+
+def plot_lines(ax, lines, frame):
+    """
+    Plot line_crossing_prohibition objects
+    :param frame: frame
+    :param ax: axes
+    :param lines: array with lines
+    :return:
+    """
+    for obj in lines:
+        coords = obj['geometry']['coordinates']
+        coords_x = [frame.from_wgs(item[0], item[1])[0] for item in coords]
+        coords_y = [frame.from_wgs(item[0], item[1])[1] for item in coords]
+        ax.plot(coords_x, coords_y, marker='D', color='r')
+
+
+def plot_points(ax, points, frame):
+    """
+    Plot point_approach_prohibition objects
+    :param frame: frame
+    :param ax: axes
+    :param points: array with points
+    :return:
+    """
+    for obj in points:
+        coords = obj['geometry']['coordinates']
+        dist = obj['properties']['distance']
+        coords = frame.from_wgs(coords[0], coords[1])
+        ax.plot(coords[0], coords[1], marker='*', color='r')
+        ax.add_patch(Ellipse([coords[0], coords[1]], dist, dist, fill=False,
+                             hatch='/', color='red'))
+
+
+def plot_polygons(ax, polygons, frame):
+    """
+    Plot polygons
+    :param frame: frame
+    :param ax: axes
+    :param polygons: array with polygons
+    :return:
+    """
+    for obj in polygons:
+        coords = obj['geometry']['coordinates']
+        coords = [frame.from_wgs(item[0], item[1])[:2] for item in coords[0]]
+        if obj['properties']['limitation_type'] == "zone_entering_prohibition":
+            ax.add_patch(Polygon(coords, closed=True,
+                                 fill=False, hatch='/', color='red'))
+        elif obj['properties']['limitation_type'] == "movement_parameters_limitation":
+            ax.add_patch(Polygon(coords, closed=True,
+                                 fill=False, hatch='|', color='orange'))
+
+
 def prepare_file(filename):
     with open(filename) as f:
         file_data = json.loads(f.read())
@@ -157,6 +230,13 @@ def plot_maneuvers(ax, data):
 def plot_route(ax, file, frame):
     with open(file) as f:
         route_data = json.loads(f.read())
+        path = prepare_path(route_data, frame=frame)
+        plot_path(path, ax, color='#fffffffa')
+
+
+def plot_poly(ax, file, frame):
+    with open(file) as f:
+        poly_data = json.loads(f.read())
         path = prepare_path(route_data, frame=frame)
         plot_path(path, ax, color='#fffffffa')
 

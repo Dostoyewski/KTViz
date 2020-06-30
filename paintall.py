@@ -259,7 +259,7 @@ class DrawingApp(QDialog):
 
         # Scaling params
         lbe4 = QLabel(self)
-        lbe4.setText('Scale, px in sq:')
+        lbe4.setText('Scale, nm in sq:')
         lbe4.move(650, 30)
         self.spinBox4.setRange(0.01, 1000)
         self.spinBox4.move(765, 25)

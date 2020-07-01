@@ -196,6 +196,8 @@ class DrawingApp(QDialog):
         self.v0 = Vector2(0, 0)
         # Some hotfix flag
         self.first = True
+        # Changing ship params
+        self.onParamChange = False
         self.initUI()
 
     def initUI(self):
@@ -494,8 +496,10 @@ class DrawingApp(QDialog):
             else:
                 pen = QPen(Qt.blue, 2, Qt.SolidLine)
                 painter.setPen(pen)
-            start = QPoint(obj['start'][0], obj['start'][1])
+            start = QPoint()
             end = QPoint(obj['end'][0], obj['end'][1])
+            start.setX(end.x() + 30 * math.cos(math.radians(obj['heading'] - 90)))
+            start.setY(end.y() + 30 * math.sin(math.radians(obj['heading'] - 90)))
             painter.drawLine(start, end)
             painter.drawEllipse(end, 10, 10)
 
@@ -511,13 +515,13 @@ class DrawingApp(QDialog):
         temp = self.image.copy(cur_size)
         painter.drawImage(event.rect(), temp)
         # painter.drawLine(self.start, self.end)
-        if self.type == 'our' or self.first:
+        if self.type == 'our' or self.first and not self.onParamChange:
             pen = QPen(Qt.red, 2, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawLine(self.start, self.end)
             painter.drawEllipse(self.end, 10, 10)
             self.first = False
-        elif self.type == 'foreign':
+        elif self.type == 'foreign' and not self.onParamChange:
             pen = QPen(Qt.blue, 2, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawLine(self.start, self.end)
@@ -569,6 +573,8 @@ class DrawingApp(QDialog):
             self.end = event.pos()
             self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
             self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
+        elif event.button() == QtCore.Qt.RightButton and not self.proc_draw:
+            self.onParamChange = True
 
     def mouseReleaseEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton and self.keepDraw:
@@ -596,9 +602,22 @@ class DrawingApp(QDialog):
                                    'heading': self.heading,
                                    'start': [self.start.x(), self.start.y()],
                                    'end': [self.end.x(), self.end.y()]})
-            self.update()
-            self.keepDraw = False
-            self.proc_draw = False
+        if self.onParamChange:
+            coords = event.pos()
+            for i in range(len(self.index)):
+                obj = self.index[i]
+                x, y = obj['end'][0], obj['end'][1]
+                if coords.x() in range(x - 10, x + 10) and coords.y() in range(y - 10, y + 10):
+                    updateDialog = CreateShipDialog()
+                    vel, heading = updateDialog.exec_()
+                    self.index[i]['vel'] = vel
+                    self.index[i]['heading'] = heading
+                    self.clear_window(True)
+                    self.plot_all_targets()
+            self.onParamChange = False
+        self.update()
+        self.keepDraw = False
+        self.proc_draw = False
 
     def mouseMoveEvent(self, event):
         if (event.buttons() & QtCore.Qt.LeftButton) and self.keepDraw and self.proc_draw:

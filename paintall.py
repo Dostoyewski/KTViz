@@ -614,6 +614,9 @@ class DrawingApp(QDialog):
                     self.index[i]['heading'] = heading
                     self.clear_window(True)
                     self.plot_all_targets()
+                    if obj['type'] == 'our':
+                        self.v0 = Vector2(vel * math.cos(math.radians(heading)),
+                                          vel * math.sin(math.radians(heading)))
             self.onParamChange = False
         self.update()
         self.keepDraw = False

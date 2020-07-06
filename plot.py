@@ -178,8 +178,8 @@ def plot_points(ax, points, frame):
         coords = obj['geometry']['coordinates']
         dist = obj['properties']['distance']
         coords = frame.from_wgs(coords[0], coords[1])
-        ax.plot(coords[0], coords[1], marker='*', color='r')
-        ax.add_patch(Ellipse([coords[0], coords[1]], dist, dist, fill=False,
+        ax.plot(coords[1], coords[0], marker='*', color='r')
+        ax.add_patch(Ellipse([coords[1], coords[0]], dist, dist, fill=False,
                              hatch='/', color='red'))
 
 
@@ -194,6 +194,7 @@ def plot_polygons(ax, polygons, frame):
     for obj in polygons:
         coords = obj['geometry']['coordinates']
         coords = [frame.from_wgs(item[0], item[1])[:2] for item in coords[0]]
+        coords = [[obj[1], obj[0]] for obj in coords]
         if obj['properties']['limitation_type'] == "zone_entering_prohibition":
             ax.add_patch(Polygon(coords, closed=True,
                                  fill=False, hatch='/', color='red'))

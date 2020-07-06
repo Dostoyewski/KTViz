@@ -8,7 +8,7 @@ from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox, \
-    QLabel, QFileDialog, QAbstractItemView, QTreeView, QListView, QDialog
+    QLabel, QFileDialog, QAbstractItemView, QTreeView, QListView, QDialog, QCheckBox
 
 from konverter import coords_global
 
@@ -168,8 +168,8 @@ class DrawingApp(QDialog):
         self.keepDraw = False
         self.start = QPoint()
         self.end = QPoint()
-        self.resize(900, 720)
-        self.setFixedSize(900, 720)
+        # self.resize(950, 720)
+        self.setFixedSize(1100, 720)
         self.move(100, 100)
         self.setWindowTitle("Scenario drawer")
         self.type = 'our'
@@ -198,6 +198,12 @@ class DrawingApp(QDialog):
         self.first = True
         # Changing ship params
         self.onParamChange = False
+        # Flag for rotating drawing field:
+        self.nord = True
+        # Future checkbox:
+        self.orientation = None
+        # Heading offset
+        self.offset = 0
         self.initUI()
 
     def initUI(self):
@@ -269,7 +275,15 @@ class DrawingApp(QDialog):
         self.spinBox4.setSingleStep(0.1)
         self.spinBox4.valueChanged.connect(self.update_scale)
 
+        # Rotation grid params
+        self.orientation = QCheckBox("South-north", self)
+        self.orientation.move(880, 2)
+        self.orientation.toggle()
+        self.orientation.stateChanged.connect(self.change_orientation)
         self.draw_grid()
+
+    def change_orientation(self):
+        pass
 
     def update_scale(self):
         steph = self.height() / self.n_line_y
@@ -280,8 +294,10 @@ class DrawingApp(QDialog):
     def create_ship(self):
         updateDialog = CreateShipDialog()
         self.vel, self.heading = updateDialog.exec_()
+        self.heading += self.offset
         self.proc_draw = True
         self.spinBox4.setDisabled(True)
+        self.orientation.setDisabled(True)
         self.keepDraw = True
 
     def open_or_create_directory(self):
@@ -344,10 +360,11 @@ class DrawingApp(QDialog):
         if not upd:
             self.type = 'our'
             self.index = []
+            self.spinBox4.setDisabled(False)
+            self.orientation.setDisabled(False)
         self.update()
         self.draw_grid()
         self.dir_select = False
-        self.spinBox4.setDisabled(False)
 
     def draw_grid(self):
         """
@@ -359,13 +376,12 @@ class DrawingApp(QDialog):
         optimal_step = 60
         self.n_line_x = round(self.width() / optimal_step)
         self.n_line_y = round(self.height() / optimal_step)
-        stepw = self.width() / self.n_line_x
-        steph = self.height() / self.n_line_y
+        stepw = steph = optimal_step
         self.scale = steph / self.spinBox4.value()
         pen = QPen(Qt.black, 1, Qt.SolidLine)
         pen.setStyle(Qt.DashDotDotLine)
         painter.setPen(pen)
-        for i in range(self.n_line_x+1):
+        for i in range(self.n_line_x + 1):
             painter.drawLine(i*stepw, 0, i*stepw, self.height())
             painter.drawText(i*stepw, self.n_line_y*steph - 10,
                              str(round(i*stepw / self.scale, 2)))
@@ -571,6 +587,9 @@ class DrawingApp(QDialog):
         if event.button() == QtCore.Qt.LeftButton and self.proc_draw:
             self.keepDraw = True
             self.end = event.pos()
+            if self.orientation == True:
+                self.offset = -self.heading
+                self.heading += self.offset
             self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
             self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
         elif event.button() == QtCore.Qt.RightButton and not self.proc_draw:
@@ -586,7 +605,7 @@ class DrawingApp(QDialog):
                 painter.drawEllipse(self.end, 10, 10)
                 self.index.append({'type': self.type,
                                    'vel': self.vel,
-                                   'heading': self.heading,
+                                   'heading': self.heading - self.offset,
                                    'start': [self.start.x(), self.start.y()],
                                    'end': [self.end.x(), self.end.y()]})
                 self.v0 = Vector2(self.vel * math.cos(math.radians(self.heading)),
@@ -599,7 +618,7 @@ class DrawingApp(QDialog):
                 painter.drawEllipse(self.end, 10, 10)
                 self.index.append({'type': self.type,
                                    'vel': self.vel,
-                                   'heading': self.heading,
+                                   'heading': self.heading - self.offset,
                                    'start': [self.start.x(), self.start.y()],
                                    'end': [self.end.x(), self.end.y()]})
         if self.onParamChange:
@@ -610,6 +629,7 @@ class DrawingApp(QDialog):
                 if coords.x() in range(x - 10, x + 10) and coords.y() in range(y - 10, y + 10):
                     updateDialog = CreateShipDialog()
                     vel, heading = updateDialog.exec_()
+                    heading += self.offset
                     self.index[i]['vel'] = vel
                     self.index[i]['heading'] = heading
                     self.clear_window(True)

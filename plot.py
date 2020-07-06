@@ -161,8 +161,8 @@ def plot_lines(ax, lines, frame):
     """
     for obj in lines:
         coords = obj['geometry']['coordinates']
-        coords_x = [frame.from_wgs(item[0], item[1])[0] for item in coords]
-        coords_y = [frame.from_wgs(item[0], item[1])[1] for item in coords]
+        coords_x = [frame.from_wgs(item[0], item[1])[1] for item in coords]
+        coords_y = [frame.from_wgs(item[0], item[1])[0] for item in coords]
         ax.plot(coords_x, coords_y, marker='D', color='r')
 
 

@@ -331,7 +331,6 @@ class DrawingApp(QDialog):
         :return:
         """
         self.time_horizon = self.spinBox3.value()
-        print(self.time_horizon)
 
     def resizeEvent(self, event):
         """
@@ -350,7 +349,7 @@ class DrawingApp(QDialog):
         self.draw_grid()
         self.plot_all_targets()
 
-    def clear_window(self, upd=False):
+    def clear_window(self, upd=False, painter=None):
         """
         Cleares window and sets some flags to default
         :param upd: flag to recreate self.index
@@ -362,16 +361,19 @@ class DrawingApp(QDialog):
             self.index = []
             self.spinBox4.setDisabled(False)
             self.orientation.setDisabled(False)
+        else:
+            self.plot_all_targets(painter)
+        self.draw_grid(painter)
         self.update()
-        self.draw_grid()
         self.dir_select = False
 
-    def draw_grid(self):
+    def draw_grid(self, painter=None):
         """
         This function draws nm grid
         :return:
         """
-        painter = QPainter(self.image)
+        if painter is None:
+            painter = QPainter(self.image)
         # Optimal step — 60 pixels
         optimal_step = 60
         self.n_line_x = round(self.width() / optimal_step)
@@ -499,12 +501,13 @@ class DrawingApp(QDialog):
     def closeEvent(self, event):
         print("Closed")
 
-    def plot_all_targets(self):
+    def plot_all_targets(self, painter=None):
         """
         This function plots all obj in self.index after resize
         :return:
         """
-        painter = QPainter(self.image)
+        if painter is None:
+            painter = QPainter(self.image)
         for obj in self.index:
             if obj['type'] == 'our':
                 pen = QPen(Qt.red, 2, Qt.SolidLine)
@@ -519,75 +522,23 @@ class DrawingApp(QDialog):
             painter.drawLine(start, end)
             painter.drawEllipse(end, 10, 10)
 
-    def paintEvent(self, event, type='circle'):
+    def paintEvent(self, event):
         """
         Event handler for painter
         :param event:
-        :param type:
         :return:
         """
         painter = QPainter(self)
         cur_size = QRect(0, 0, self.width(), self.height())
         temp = self.image.copy(cur_size)
         painter.drawImage(event.rect(), temp)
-        # painter.drawLine(self.start, self.end)
-        if self.type == 'our' or self.first and not self.onParamChange:
-            pen = QPen(Qt.red, 2, Qt.SolidLine)
-            painter.setPen(pen)
-            painter.drawLine(self.start, self.end)
-            painter.drawEllipse(self.end, 10, 10)
-            self.first = False
-        elif self.type == 'foreign' and not self.onParamChange:
-            pen = QPen(Qt.blue, 2, Qt.SolidLine)
-            painter.setPen(pen)
-            painter.drawLine(self.start, self.end)
-            painter.drawEllipse(self.end, 10, 10)
-            # Draw dist between target ship and our
-            pen = QPen(Qt.green, 2, Qt.SolidLine)
-            painter.setPen(pen)
-            our_pose = QPoint(self.index[0]['end'][0], self.index[0]['end'][1])
-            painter.drawLine(self.end, our_pose)
-            mid_x = (self.end.x() + our_pose.x()) / 2
-            mid_y = (self.end.y() + our_pose.y()) / 2
-            dist = ((self.end.x() - our_pose.x())**2 + (self.end.y() - our_pose.y())**2)**0.5
-            v = Vector2(self.vel * math.cos(math.radians(self.heading)),
-                              self.vel * math.sin(math.radians(self.heading)))
-            R = Vector2(-(self.end.y() - our_pose.y()) / self.scale,
-                        (self.end.x() - our_pose.x()) / self.scale)
-            try:
-                pen = QPen(Qt.black, 2, Qt.SolidLine)
-                painter.setPen(pen)
-                cpa, tcpa = self.calc_cpa_params(v, self.v0, R)
-                min_pose = v * tcpa
-                min_pose_o = self.v0 * tcpa
-                mpd_point = QPoint()
-                mpd_point_o = QPoint()
-                # Our min dist point
-                mpd_point.setX(self.end.x() + min_pose.y * self.scale)
-                mpd_point.setY(self.end.y() - min_pose.x * self.scale)
-                # Target min dist point
-                mpd_point_o.setX(our_pose.x() + min_pose_o.y * self.scale)
-                mpd_point_o.setY(our_pose.y() - min_pose_o.x * self.scale)
-                painter.drawText(mid_x, mid_y, str(round(dist / self.scale, 2)))
-                if tcpa > 0:
-                    painter.drawText(mid_x, mid_y + 20, 'CPA: ' + str(round(cpa, 2)))
-                    painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + str(round(tcpa, 2)))
-                    pen = QPen(Qt.blue, 2, Qt.SolidLine)
-                    painter.setPen(pen)
-                    painter.drawEllipse(mpd_point, 4, 4)
-                    pen = QPen(Qt.red, 2, Qt.SolidLine)
-                    painter.setPen(pen)
-                    painter.drawEllipse(mpd_point_o, 4, 4)
-                else:
-                    painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + '0')
-            except ZeroDivisionError:
-                painter.drawText(mid_x, mid_y, str(round(dist / self.scale, 2)))
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton and self.proc_draw:
             self.keepDraw = True
             self.end = event.pos()
-            if self.orientation == True:
+            print(self.orientation.isChecked())
+            if not self.orientation:
                 self.offset = -self.heading
                 self.heading += self.offset
             self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
@@ -596,8 +547,8 @@ class DrawingApp(QDialog):
             self.onParamChange = True
 
     def mouseReleaseEvent(self, event):
+        painter = QPainter(self.image)
         if event.button() == QtCore.Qt.LeftButton and self.keepDraw:
-            painter = QPainter(self.image)
             if self.type == 'our':
                 pen = QPen(Qt.red, 2, Qt.SolidLine)
                 painter.setPen(pen)
@@ -632,22 +583,91 @@ class DrawingApp(QDialog):
                     heading += self.offset
                     self.index[i]['vel'] = vel
                     self.index[i]['heading'] = heading
-                    self.clear_window(True)
-                    self.plot_all_targets()
+                    self.clear_window(upd=True, painter=painter)
                     if obj['type'] == 'our':
                         self.v0 = Vector2(vel * math.cos(math.radians(heading)),
                                           vel * math.sin(math.radians(heading)))
+                    else:
+                        end = QPoint(self.index[i]['end'][0], self.index[i]['end'][1])
+                        self.plot_target_info(painter, end, end,
+                                              vel, heading)
             self.onParamChange = False
         self.update()
         self.keepDraw = False
         self.proc_draw = False
 
     def mouseMoveEvent(self, event):
+        painter = QPainter(self.image)
         if (event.buttons() & QtCore.Qt.LeftButton) and self.keepDraw and self.proc_draw:
+            self.clear_window(upd=True, painter=painter)
             self.end = event.pos()
             self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
             self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
+            if self.type == 'our' or self.first and not self.onParamChange:
+                pen = QPen(Qt.red, 2, Qt.SolidLine)
+                painter.setPen(pen)
+                painter.drawLine(self.start, self.end)
+                painter.drawEllipse(self.end, 10, 10)
+                self.first = False
+            elif self.type == 'foreign' and not self.onParamChange:
+                self.plot_target_info(painter, self.start, self.end,
+                                      self.vel, self.heading)
         self.update()
+
+    def plot_target_info(self, painter, start, end, vel, heading):
+        """
+        Plots cpa, tcpa, dist and min_dist points
+        :param painter: QPainter
+        :param start: start point
+        :param end: end point
+        :param vel:
+        :param heading:
+        :return:
+        """
+        pen = QPen(Qt.blue, 2, Qt.SolidLine)
+        painter.setPen(pen)
+        painter.drawLine(start, end)
+        painter.drawEllipse(end, 10, 10)
+        # Draw dist between target ship and our
+        pen = QPen(Qt.green, 2, Qt.SolidLine)
+        painter.setPen(pen)
+        our_pose = QPoint(self.index[0]['end'][0], self.index[0]['end'][1])
+        painter.drawLine(end, our_pose)
+        mid_x = (end.x() + our_pose.x()) / 2
+        mid_y = (end.y() + our_pose.y()) / 2
+        dist = ((end.x() - our_pose.x()) ** 2 + (end.y() - our_pose.y()) ** 2) ** 0.5
+        v = Vector2(vel * math.cos(math.radians(heading)),
+                    vel * math.sin(math.radians(heading)))
+        R = Vector2(-(end.y() - our_pose.y()) / self.scale,
+                    (end.x() - our_pose.x()) / self.scale)
+        try:
+            pen = QPen(Qt.black, 2, Qt.SolidLine)
+            painter.setPen(pen)
+            cpa, tcpa = self.calc_cpa_params(v, self.v0, R)
+            min_pose = v * tcpa
+            min_pose_o = self.v0 * tcpa
+            mpd_point = QPoint()
+            mpd_point_o = QPoint()
+            # Our min dist point
+            mpd_point.setX(end.x() + min_pose.y * self.scale)
+            mpd_point.setY(end.y() - min_pose.x * self.scale)
+            # Target min dist point
+            mpd_point_o.setX(our_pose.x() + min_pose_o.y * self.scale)
+            mpd_point_o.setY(our_pose.y() - min_pose_o.x * self.scale)
+            painter.drawText(mid_x, mid_y, str(round(dist / self.scale, 2)))
+            if tcpa > 0:
+                painter.drawText(mid_x, mid_y + 20, 'CPA: ' + str(round(cpa, 2)))
+                painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + str(round(tcpa, 2)))
+                pen = QPen(Qt.blue, 2, Qt.SolidLine)
+                painter.setPen(pen)
+                painter.drawEllipse(mpd_point, 4, 4)
+                pen = QPen(Qt.red, 2, Qt.SolidLine)
+                painter.setPen(pen)
+                painter.drawEllipse(mpd_point_o, 4, 4)
+            else:
+                painter.drawText(mid_x, mid_y + 40, 'tCPA: ' + '0')
+        except ZeroDivisionError:
+            painter.drawText(mid_x, mid_y, str(round(dist / self.scale, 2)))
 
     @staticmethod
     def calc_cpa_params(v, v0, R):

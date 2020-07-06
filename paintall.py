@@ -517,8 +517,10 @@ class DrawingApp(QDialog):
                 painter.setPen(pen)
             start = QPoint()
             end = QPoint(obj['end'][0], obj['end'][1])
-            start.setX(end.x() + 30 * math.cos(math.radians(obj['heading'] - 90)))
-            start.setY(end.y() + 30 * math.sin(math.radians(obj['heading'] - 90)))
+            start.setX(end.x() + 30 * math.cos(math.radians(obj['heading'] - 90
+                                                            + self.offset)))
+            start.setY(end.y() + 30 * math.sin(math.radians(obj['heading'] - 90
+                                                            + self.offset)))
             painter.drawLine(start, end)
             painter.drawEllipse(end, 10, 10)
 
@@ -538,9 +540,10 @@ class DrawingApp(QDialog):
             self.keepDraw = True
             self.end = event.pos()
             print(self.orientation.isChecked())
-            if not self.orientation:
-                self.offset = -self.heading
-                self.heading += self.offset
+            if not self.orientation.isChecked():
+                if self.type == 'our':
+                    self.offset = -self.heading
+                    self.heading = 0
             self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
             self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
         elif event.button() == QtCore.Qt.RightButton and not self.proc_draw:
@@ -583,12 +586,16 @@ class DrawingApp(QDialog):
                     heading += self.offset
                     self.index[i]['vel'] = vel
                     self.index[i]['heading'] = heading
-                    self.clear_window(upd=True, painter=painter)
                     if obj['type'] == 'our':
                         self.v0 = Vector2(vel * math.cos(math.radians(heading)),
                                           vel * math.sin(math.radians(heading)))
+                        if not self.orientation.isChecked():
+                            self.offset = -(heading - self.offset)
+                            self.index[i]['heading'] = -self.offset
+                        self.clear_window(upd=True, painter=painter)
                     else:
                         end = QPoint(self.index[i]['end'][0], self.index[i]['end'][1])
+                        self.clear_window(upd=True, painter=painter)
                         self.plot_target_info(painter, end, end,
                                               vel, heading)
             self.onParamChange = False

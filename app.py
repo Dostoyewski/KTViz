@@ -272,7 +272,7 @@ class App(QMainWindow):
         self.loaded = True
         self.data, self.frame = plot.prepare_file(filename)
         self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
-        self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'poly-data.json')
+        self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
 
     def update_time(self):
         start_time = self.data[0]['start_time']

@@ -148,7 +148,7 @@ class App(QMainWindow):
 
         # Slider config
         self.sl.setMinimum(0)
-        self.sl.setMaximum(100)
+        self.sl.setMaximum(99)
         self.sl.setValue(0)
         self.sl.setTickPosition(QSlider.TicksBelow)
         self.sl.setTickInterval(1)

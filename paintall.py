@@ -172,6 +172,7 @@ class DrawingApp(QDialog):
         self.setFixedSize(1100, 720)
         self.move(100, 100)
         self.setWindowTitle("Scenario drawer")
+        self.setMouseTracking(True)
         self.type = 'our'
         self.image = []
         self.index = []
@@ -280,10 +281,33 @@ class DrawingApp(QDialog):
         self.orientation.move(880, 2)
         self.orientation.toggle()
         self.orientation.stateChanged.connect(self.change_orientation)
+
+        # Angle dispay
+        lbe5 = QLabel(self)
+        lbe5.move(880, 30)
+        lbe5.setText("Angle: ")
+        self.m_peleng = QLabel(self)
+        self.m_peleng.move(930, 30)
+        self.m_peleng.setText("NODATA")
+
+        # Dist display
+        lbe6 = QLabel(self)
+        lbe6.move(880, 50)
+        lbe6.setText("Dist: ")
+        self.m_dist = QLabel(self)
+        self.m_dist.move(930, 50)
+        self.m_dist.setText("NODATA")
+
         self.draw_grid()
 
     def change_orientation(self):
-        pass
+        if len(self.index) != 0:
+            if not self.orientation.isChecked():
+                self.offset = -self.index[0]['heading']
+                self.clear_window(upd=True)
+            else:
+                self.offset = 0
+                self.clear_window(upd=True)
 
     def update_scale(self):
         steph = self.height() / self.n_line_y
@@ -619,6 +643,19 @@ class DrawingApp(QDialog):
             elif self.type == 'foreign' and not self.onParamChange:
                 self.plot_target_info(painter, self.start, self.end,
                                       self.vel, self.heading)
+        if self.type != 'our':
+            our_pose = QPoint(self.index[0]['end'][0], self.index[0]['end'][1])
+            end = event.pos()
+            dx = end.x() - our_pose.x()
+            dy = end.y() - our_pose.y()
+            dist = (dx ** 2 + dy ** 2) ** 0.5
+            angle = math.degrees(math.atan2(dy, dx)) + 90
+            if angle < 0:
+                angle += 360
+            angle = round(angle, 2)
+            dist = round(dist / self.scale, 2)
+            self.m_peleng.setText(str(angle))
+            self.m_dist.setText(str(dist))
         self.update()
 
     def plot_target_info(self, painter, start, end, vel, heading):

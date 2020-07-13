@@ -206,6 +206,15 @@ def plot_polygons(ax, polygons, frame):
 def prepare_file(filename):
     with open(filename) as f:
         file_data = json.loads(f.read())
+    try:
+        # If new format
+        typo = file_data[0]['solution_type']
+        file_data = [file_data[0]['Path']]
+        with open('target-maneuvers.json') as f:
+            target_data = json.loads(f.read())
+        file_data.extend(target_data)
+    except KeyError:
+        pass
     # Sample initial position to anchor Frame
     sample = file_data[0]['items'][0]
     if 'lat' in sample and 'lon' in sample:

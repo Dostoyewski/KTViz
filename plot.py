@@ -198,6 +198,9 @@ def plot_polygons(ax, polygons, frame):
         if obj['properties']['limitation_type'] == "zone_entering_prohibition":
             ax.add_patch(Polygon(coords, closed=True,
                                  fill=False, hatch='/', color='red'))
+        elif obj['properties']['limitation_type'] == "zone_leaving_prohibition":
+            ax.add_patch(Polygon(coords, closed=True,
+                                 fill=False, hatch='/', color='blue'))
         elif obj['properties']['limitation_type'] == "movement_parameters_limitation":
             ax.add_patch(Polygon(coords, closed=True,
                                  fill=False, hatch='|', color='orange'))

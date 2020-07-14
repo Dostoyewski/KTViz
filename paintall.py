@@ -298,6 +298,14 @@ class DrawingApp(QDialog):
         self.m_dist.move(930, 50)
         self.m_dist.setText("NODATA")
 
+        # Course angle display
+        lbe7 = QLabel(self)
+        lbe7.move(880, 70)
+        lbe7.setText("CAng: ")
+        self.m_course = QLabel(self)
+        self.m_course.move(930, 70)
+        self.m_course.setText("NODATA")
+
         self.draw_grid()
 
     def change_orientation(self):
@@ -653,9 +661,11 @@ class DrawingApp(QDialog):
             if angle < 0:
                 angle += 360
             angle = round(angle, 2)
+            cangle = angle - self.index[0]['heading']
             dist = round(dist / self.scale, 2)
             self.m_peleng.setText(str(angle))
             self.m_dist.setText(str(dist))
+            self.m_course.setText(str(cangle))
         self.update()
 
     def plot_target_info(self, painter, start, end, vel, heading):

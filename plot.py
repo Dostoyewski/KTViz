@@ -211,24 +211,23 @@ def prepare_file(filename):
         file_data = json.loads(f.read())
     try:
         # If new format
-        typo = file_data[0]['solution_type']
-        file_data = [file_data[0]['Path']]
+        data = [file_data[0]['path']]
         with open('target-maneuvers.json') as f:
             target_data = json.loads(f.read())
-        file_data.extend(target_data)
+        data.extend(target_data)
     except KeyError:
-        pass
+        data = file_data
     # Sample initial position to anchor Frame
-    sample = file_data[0]['items'][0]
+    sample = data[0]['items'][0]
     if 'lat' in sample and 'lon' in sample:
         key1, key2 = 'lat', 'lon'
-        frame = Frame(file_data[0]['items'][0][key1], file_data[0]['items'][0][key2])
+        frame = Frame(data[0]['items'][0][key1], data[0]['items'][0][key2])
     else:
         raise KeyError('No coords in maneuver')
 
     # Prepare data
     paths = []
-    for data in file_data:
+    for data in data:
         new_data = prepare_path(data, frame=frame)
         paths.append(new_data)
 

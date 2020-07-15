@@ -1,14 +1,18 @@
 import json
+import sys
 import time
 
+import math
 from PIL import ImageGrab
-from PyQt5 import QtGui
+from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QAbstractItemView, QTreeView, QListView, QDialog
+from PyQt5.QtWidgets import QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox, \
+    QLabel, QFileDialog, QAbstractItemView, QTreeView, QListView, QDialog, QCheckBox
 
-from app import *
 from konverter import coords_global
+
+DEBUG = False
 
 hmi_data = {
     "wind_direction": 189.0,
@@ -201,6 +205,12 @@ class DrawingApp(QDialog):
         self.orientation = None
         # Heading offset
         self.offset = 0
+        # Drawing polygon flag
+        self.drawing_poly = False
+        # Index with polygons
+        self.poly_index = []
+        # Polygon points
+        self.ppoints = []
         self.initUI()
 
     def initUI(self):
@@ -247,6 +257,10 @@ class DrawingApp(QDialog):
             self.viz.move(610, 15)
             self.viz.resize(140, 50)
             self.viz.clicked.connect(self.save_to_viz)
+
+        self.draw_poly = QPushButton('Draw Polygon', self)
+        self.draw_poly.move(0, 50)
+        self.draw_poly.clicked.connect(self.draw_polygon)
 
         self.viz = QPushButton('Create new ship', self)
         self.viz.move(500, 0)
@@ -391,9 +405,32 @@ class DrawingApp(QDialog):
             self.orientation.setDisabled(False)
         else:
             self.plot_all_targets(painter)
+            self.plot_all_polygons(painter)
         self.draw_grid(painter)
         self.update()
         self.dir_select = False
+
+    def plot_all_polygons(self, painter=None):
+        """
+        Plots all polygons
+        :param painter:
+        :return:
+        """
+        if painter is None:
+            painter = QPainter(self.image)
+        painter.setPen(QPen(Qt.red, 2, Qt.SolidLine))
+        painter.setBrush(QBrush(Qt.red, Qt.BDiagPattern))
+        for obj in self.poly_index:
+            painter.drawPolygon(QPolygon(obj['points']))
+        painter.setBrush(QBrush(Qt.red, Qt.NoBrush))
+
+    def draw_polygon(self):
+        """
+        Activates drawing polygon mode
+        :return:
+        """
+        self.drawing_poly = True
+        self.draw_poly.setDisabled(True)
 
     def draw_grid(self, painter=None):
         """
@@ -483,6 +520,31 @@ class DrawingApp(QDialog):
                        "length_offset": 15.0,
                        'timestamp': timestamp}, fp)
 
+        for obj in self.poly_index:
+            points = []
+            for point in obj['points']:
+                coords = coords_global(-(point.y() - ship['end'][1]) / self.scale,
+                                       (point.x() - ship['end'][0]) / self.scale,
+                                       self.spinBox1.value(),
+                                       self.spinBox2.value())
+                points.append(coords)
+            constraints['features'].append({"type": "Feature",
+                                            "properties": {
+                                                "id": "96079",
+                                                "source_id": "5119",
+                                                "limitation_type": "movement_parameters_limitation",
+                                                "hardness": "hard",
+                                                "source_object_code": "RECTRC",
+                                                "min_course": 5,
+                                                "max_course": 30,
+                                                "max_speed": 10000000000.0
+                                            },
+                                            "geometry": {
+                                                "type": "Polygon",
+                                                "coordinates": [points],
+                                            }
+                                            }
+                                           )
         with open(path + "/constraints.json", "w") as fp:
             json.dump(constraints, fp)
 
@@ -576,10 +638,13 @@ class DrawingApp(QDialog):
             self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
         elif event.button() == QtCore.Qt.RightButton and not self.proc_draw:
             self.onParamChange = True
+        elif event.button() == QtCore.Qt.LeftButton and self.drawing_poly:
+            self.keepDraw = True
+            self.start = event.pos()
 
     def mouseReleaseEvent(self, event):
         painter = QPainter(self.image)
-        if event.button() == QtCore.Qt.LeftButton and self.keepDraw:
+        if event.button() == QtCore.Qt.LeftButton and self.keepDraw and not self.drawing_poly:
             if self.type == 'our':
                 pen = QPen(Qt.red, 2, Qt.SolidLine)
                 painter.setPen(pen)
@@ -603,6 +668,12 @@ class DrawingApp(QDialog):
                                    'heading': self.heading - self.offset,
                                    'start': [self.start.x(), self.start.y()],
                                    'end': [self.end.x(), self.end.y()]})
+        elif event.button() == QtCore.Qt.LeftButton and self.keepDraw and self.drawing_poly:
+            self.draw_poly.setDisabled(False)
+            self.drawing_poly = False
+            self.poly_index.append({"type": "Polygon",
+                                    "points": self.ppoints,
+                                    "desc": 'movement_parameters_limitation'})
         if self.onParamChange:
             coords = event.pos()
             for i in range(len(self.index)):
@@ -633,7 +704,7 @@ class DrawingApp(QDialog):
 
     def mouseMoveEvent(self, event):
         painter = QPainter(self.image)
-        if (event.buttons() & QtCore.Qt.LeftButton) and self.keepDraw and self.proc_draw:
+        if (event.buttons() & QtCore.Qt.LeftButton) and self.keepDraw and self.proc_draw and not self.drawing_poly:
             self.clear_window(upd=True, painter=painter)
             self.end = event.pos()
             self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
@@ -647,6 +718,19 @@ class DrawingApp(QDialog):
             elif self.type == 'foreign' and not self.onParamChange:
                 self.plot_target_info(painter, self.start, self.end,
                                       self.vel, self.heading)
+        elif (event.buttons() & QtCore.Qt.LeftButton) and self.keepDraw and self.drawing_poly:
+            self.clear_window(upd=True, painter=painter)
+            self.end = event.pos()
+            painter.setPen(QPen(Qt.red, 2, Qt.SolidLine))
+            painter.setBrush(QBrush(Qt.red, Qt.BDiagPattern))
+            # Объявление только так, иначе будет баг с изменением геометрии полигона!!!
+            self.ppoints = [
+                QPoint(self.start.x(), self.start.y()),
+                QPoint(self.start.x(), self.end.y()),
+                QPoint(self.end.x(), self.end.y()),
+                QPoint(self.end.x(), self.start.y()),
+            ]
+            painter.drawPolygon(QPolygon(self.ppoints))
         if self.type != 'our':
             our_pose = QPoint(self.index[0]['end'][0], self.index[0]['end'][1])
             end = event.pos()

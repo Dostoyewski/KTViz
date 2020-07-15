@@ -15,7 +15,7 @@ from matplotlib.figure import Figure
 import plot
 from paintall import DrawingApp
 
-DEBUG = True
+DEBUG = False
 
 # For build:
 # pyinstaller --onefile --icon=Icon.ico --noconsole app.py

@@ -1,14 +1,14 @@
 import argparse
 import json
-import os
 from collections import namedtuple
 
-import math
 import numpy as np
 from geographiclib.geodesic import Geodesic
 from math import sin, cos, radians, degrees
 from matplotlib import pyplot as plt, gridspec
 from matplotlib.patches import Ellipse, Polygon
+
+from app import *
 
 Position = namedtuple('Position', ['x', 'y', 'course', 'vel'])
 
@@ -212,11 +212,19 @@ def prepare_file(filename):
     try:
         # If new format
         data = [file_data[0]['path']]
+        if DEBUG:
+            print('New type detected')
         dirname = os.path.split(filename)[0] + '/'
+        if DEBUG:
+            print('Path: ', dirname)
         with open(dirname + 'target-maneuvers.json') as f:
             target_data = json.loads(f.read())
+            if DEBUG:
+                print('Loaded target data')
         data.extend(target_data)
     except KeyError:
+        if DEBUG:
+            print('Format set to old')
         data = file_data
     # Sample initial position to anchor Frame
     sample = data[0]['items'][0]

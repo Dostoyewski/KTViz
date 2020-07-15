@@ -1,18 +1,14 @@
 import json
-import sys
 import time
 
-import math
 from PIL import ImageGrab
-from PyQt5 import QtGui, QtCore
+from PyQt5 import QtGui
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QApplication, QVBoxLayout, QPushButton, QDoubleSpinBox, \
-    QLabel, QFileDialog, QAbstractItemView, QTreeView, QListView, QDialog, QCheckBox
+from PyQt5.QtWidgets import QAbstractItemView, QTreeView, QListView, QDialog
 
+from app import *
 from konverter import coords_global
-
-DEBUG = False
 
 hmi_data = {
     "wind_direction": 189.0,

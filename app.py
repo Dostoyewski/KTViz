@@ -15,6 +15,7 @@ from matplotlib.figure import Figure
 import plot
 from paintall import DrawingApp
 
+DEBUG = True
 
 # For build:
 # pyinstaller --onefile --icon=Icon.ico --noconsole app.py
@@ -85,7 +86,8 @@ class App(QMainWindow):
         try:
             screen_resolution = app.desktop().screenGeometry()
             width, height = screen_resolution.width(), screen_resolution.height()
-            print("Screen dimensions: ({}x{})".format(width, height))
+            if DEBUG:
+                print("Screen dimensions: ({}x{})".format(width, height))
             self.widthp = round(width * 0.7)
             self.heightp = round(height * 0.7)
             if self.heightp > 1000:
@@ -94,7 +96,8 @@ class App(QMainWindow):
             self.widthp = 1280
             self.heightp = 720
 
-        print("Window dimensions set to ({}x{})".format(self.widthp, self.heightp))
+        if DEBUG:
+            print("Window dimensions set to ({}x{})".format(self.widthp, self.heightp))
         self.scale_x = self.widthp / 1800
         self.scale_y = self.heightp / 900
         self.filename = ""

@@ -212,8 +212,7 @@ def prepare_file(filename):
     try:
         # If new format
         data = [file_data[0]['path']]
-        dirname = os.path.split(filename)[0] + '/'
-        with open(dirname + 'target-maneuvers.json') as f:
+        with open('target-maneuvers.json') as f:
             target_data = json.loads(f.read())
         data.extend(target_data)
     except KeyError:

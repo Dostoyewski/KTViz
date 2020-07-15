@@ -214,10 +214,10 @@ def prepare_file(filename):
         data = [file_data[0]['path']]
         if DEBUG:
             print('New type detected')
-        dirname = os.path.split(filename)[0] + '/'
+        dirname = os.path.split(filename)[0]
         if DEBUG:
             print('Path: ', dirname)
-        with open(dirname + 'target-maneuvers.json') as f:
+        with open(os.path.join(dirname,'target-maneuvers.json')) as f:
             target_data = json.loads(f.read())
             if DEBUG:
                 print('Loaded target data')

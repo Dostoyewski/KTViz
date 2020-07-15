@@ -12,6 +12,7 @@ import mpld3
 from mpld3 import plugins
 
 from plot import plot_from_files
+from matplotlib import pyplot as plt
 
 
 def fix_returncode(code):
@@ -54,6 +55,7 @@ class Report:
                                         "--route", "route-data.json",
                                         "--maneuver", "maneuver.json",
                                         "--analyse", "nav-report.json",
+                                        "--predict","target-maneuvers.json",
                                         ("--rvo" if rvo is True else "--no-rvo" if rvo is False else "")],
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time
@@ -73,6 +75,7 @@ class Report:
                     f = io.BytesIO()
                     fig.savefig(f, format="svg")
                     image_data = f.getvalue().decode("utf-8")  # svg data
+                plt.close(fig)
         try:
             with open("nav-report.json", "r") as f:
                 nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)

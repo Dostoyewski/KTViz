@@ -233,7 +233,7 @@ class App(QMainWindow):
         self.btnZoom.move(int(0.677 * self.width() + 80), int(0.933 * self.height()))
 
         self.vel.move(int(0.67 * self.width()) + 5, int(0.132 * self.height()))
-        self.vel.resize(int(0.330 * self.width()) - 5, 0.794 * self.height())
+        self.vel.resize(int(0.330 * self.width()) - 5, int(0.794 * self.height()))
 
     def resizeEvent(self, event):
         """

@@ -5,7 +5,7 @@ import os
 
 from geographiclib.geodesic import Geodesic
 
-from plot import Frame
+from konverter import Frame
 
 
 def is_too_far(lat1, lon1, lat2, lon2):

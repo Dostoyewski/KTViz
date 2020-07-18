@@ -3,7 +3,7 @@ import json
 from collections import namedtuple
 
 import numpy as np
-from geographiclib.geodesic import Geodesic
+from konverter import Frame
 from math import sin, cos, radians, degrees
 from matplotlib import pyplot as plt, gridspec
 from matplotlib.patches import Ellipse, Polygon
@@ -72,37 +72,6 @@ def plot_position(x, y, course, ax, radius=.0, color='red', label=None):
         danger_r = plt.Circle((y, x), radius, color=color, fill=False)
         ax.add_artist(danger_r)
     return scatter
-
-
-class Frame:
-    def __init__(self, lat, lon):
-        self.lat = lat
-        self.lon = lon
-
-    def from_wgs(self, lat, lon):
-        """
-        Converts WGS coords to local
-        :param lat:
-        :param lon:
-        :return: x, y, distance, bearing
-        """
-        path = Geodesic.WGS84.Inverse(self.lat, self.lon, lat, lon)
-
-        angle = radians(path['azi1'])
-        dist = path['s12'] / 1852
-        return dist * cos(angle), dist * sin(angle), dist, angle
-
-    def to_wgs(self, x, y):
-        """
-        Converts local coords to WGS
-        :param x:
-        :param y:
-        :return: lat, lon
-        """
-        azi1 = degrees(math.atan2(y, x))
-        dist = (x ** 2 + y ** 2) ** .5
-        path = Geodesic.WGS84.Direct(self.lat, self.lon, azi1, dist * 1852)
-        return path['lat2'], path['lon2']
 
 
 class Data:
@@ -218,7 +187,7 @@ def prepare_file(filename):
         dirname = os.path.split(filename)[0]
         if DEBUG:
             print('Path: ', dirname)
-        with open(os.path.join(dirname,'target-maneuvers.json')) as f:
+        with open(os.path.join(dirname, 'target-maneuvers.json')) as f:
             target_data = json.loads(f.read())
             if DEBUG:
                 print('Loaded target data')

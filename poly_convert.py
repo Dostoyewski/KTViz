@@ -15,30 +15,33 @@ def is_too_far(lat1, lon1, lat2, lon2):
 
 def fix_polygon(feature, frame):
     lon, lat = feature['geometry']['coordinates'][0][0]
+    changed = False
     if is_too_far(lat, lon, frame.lat, frame.lon):
         for coords in feature['geometry']['coordinates']:
             for point in coords:
                 point[0], point[1] = point[1], point[0]
-
-    return feature
+        changed = True
+    return feature, changed
 
 
 def fix_linestring(feature, frame):
     lon, lat = feature['geometry']['coordinates'][0][0]
+    changed = False
     if is_too_far(lat, lon, frame.lat, frame.lon):
         for coords in feature['geometry']['coordinates']:
             coords[0], coords[1] = coords[1], coords[0]
-
-    return feature
+        changed = True
+    return feature, changed
 
 
 def fix_point(feature, frame):
     lon, lat = feature['geometry']['coordinates']
+    changed = False
     if is_too_far(lat, lon, frame.lat, frame.lon):
         feature['geometry']['coordinates'][0], feature['geometry']['coordinates'][1] = \
             feature['geometry']['coordinates'][1], feature['geometry']['coordinates'][0]
-
-    return feature
+        changed = True
+    return feature, changed
 
 
 def fix_feature(feature, frame):
@@ -54,32 +57,31 @@ def check_constraints_file(file, frame):
     with open(file) as f:
         data = json.loads(f.read())
 
+    any_changed = False
     for i in range(len(data['features'])):
-        data['features'][i] = fix_feature(data['features'][i], frame)
+        data['features'][i], changed = fix_feature(data['features'][i], frame)
+        any_changed = any_changed or changed
 
     with open(file, 'w') as f:
         json.dump(data, f)
 
+    return any_changed
+
 
 def run_directory(datadir):
     os.chdir(datadir)
-
-    # Get a list of old results
-    # file_list = glob.glob('maneuver*.json') + glob.glob('nav-report.json')
-    # and remove them
-    # for filePath in file_list:
-    #     try:
-    #         os.remove(filePath)
-    #     except OSError:
-    #         pass
 
     with open(os.path.join(datadir, 'nav-data.json')) as f:
         nav_data = json.loads(f.read())
         frame = Frame(nav_data['lat'], nav_data['lon'])
 
     file_list = glob.glob('constraints*.json')
+    any_changed = False
     for constr_file in file_list:
-        check_constraints_file(constr_file, frame)
+        changed = check_constraints_file(constr_file, frame)
+        any_changed = any_changed or changed
+
+    return any_changed
 
 
 def fix_from_root(data_directory):

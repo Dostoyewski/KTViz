@@ -6,7 +6,7 @@ import math
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel
+from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel, QMessageBox
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox, QWidget, QVBoxLayout, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -14,8 +14,10 @@ from matplotlib.figure import Figure
 
 import plot
 from paintall import DrawingApp
+import poly_convert
 
 DEBUG = False
+
 
 # For build:
 # pyinstaller --onefile --icon=Icon.ico --noconsole app.py
@@ -124,6 +126,11 @@ class App(QMainWindow):
         self.btnHome.clicked.connect(self.home)
         self.btnHome.resize(35, 35)
 
+        self.btnPolyFix = QPushButton('fix', self)
+        self.btnPolyFix.setToolTip('fix constraints')
+        self.btnPolyFix.clicked.connect(self.fix_constraints_file)
+        self.btnPolyFix.resize(35, 35)
+
         self.loaded = False
         self.data = []
         self.frame = None
@@ -206,6 +213,17 @@ class App(QMainWindow):
     def pan(self):
         self.toolbar.pan()
 
+    def fix_constraints_file(self):
+        if len(self.filename) != 0:
+            changed = poly_convert.run_directory(os.path.dirname(os.path.abspath(self.filename)))
+            self.reload()
+            if changed:
+                QMessageBox.warning(self, 'Исправление  файлов ограничений',
+                                        'Ограничения исправлены. Нужно перезапустить решатель!')
+            else:
+                QMessageBox.information(self, 'Исправление  файлов ограничений',
+                                        'Кажется, ограничения не нужно исправлять.')
+
     @staticmethod
     def open_drawer():
         """
@@ -231,6 +249,7 @@ class App(QMainWindow):
         self.btnHome.move(int(0.677 * self.width()), int(0.933 * self.height()))
         self.btnPan.move(int(0.677 * self.width() + 40), int(0.933 * self.height()))
         self.btnZoom.move(int(0.677 * self.width() + 80), int(0.933 * self.height()))
+        self.btnPolyFix.move(int(0.677 * self.width() + 265), int(0.933 * self.height()))
 
         self.vel.move(int(0.67 * self.width()) + 5, int(0.132 * self.height()))
         self.vel.resize(int(0.330 * self.width()) - 5, int(0.794 * self.height()))

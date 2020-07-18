@@ -72,7 +72,7 @@ class Vector2(object):
         self.y = y
 
     def __abs__(self):
-        return (self.x**2 + self.y**2)**0.5
+        return (self.x ** 2 + self.y ** 2) ** 0.5
 
     def __add__(self, other):
         return Vector2(self.x + other.x, self.y + other.y)
@@ -111,6 +111,7 @@ class CreateShipDialog(QDialog):
     """
     Creating new ship dialog
     """
+
     def __init__(self):
         super(CreateShipDialog, self).__init__()
         self.vel = QDoubleSpinBox(self)
@@ -366,7 +367,7 @@ class DrawingApp(QDialog):
 
         img.save(self.path + "/scenario.jpeg", "JPEG")
         self.convert_file(self.path)
-        
+
     def update_values(self):
         """
         Updating drawing params
@@ -449,9 +450,9 @@ class DrawingApp(QDialog):
         pen.setStyle(Qt.DashDotDotLine)
         painter.setPen(pen)
         for i in range(self.n_line_x + 1):
-            painter.drawLine(i*stepw, 0, i*stepw, self.height())
-            painter.drawText(i*stepw, self.n_line_y*steph - 10,
-                             str(round(i*stepw / self.scale, 2)))
+            painter.drawLine(i * stepw, 0, i * stepw, self.height())
+            painter.drawText(i * stepw, self.n_line_y * steph - 10,
+                             str(round(i * stepw / self.scale, 2)))
         for i in range(self.n_line_y + 1):
             painter.drawLine(0, i * steph, self.width(), i * steph)
             painter.drawText(self.n_line_x * stepw - 40, self.height() - i * steph,
@@ -523,8 +524,8 @@ class DrawingApp(QDialog):
         for obj in self.poly_index:
             points = []
             for point in obj['points']:
-                coords = coords_global(-(point.y() - ship['end'][1]) / self.scale,
-                                       (point.x() - ship['end'][0]) / self.scale,
+                coords = coords_global((point.x() - ship['end'][0]) / self.scale,
+                                       -(point.y() - ship['end'][1]) / self.scale,
                                        self.spinBox1.value(),
                                        self.spinBox2.value())
                 points.append(coords)
@@ -634,8 +635,8 @@ class DrawingApp(QDialog):
                 if self.type == 'our':
                     self.offset = -self.heading
                     self.heading = 0
-            self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
-            self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
+            self.start.setX(self.end.x() + 30 * math.cos(math.radians(self.heading - 90)))
+            self.start.setY(self.end.y() + 30 * math.sin(math.radians(self.heading - 90)))
         elif event.button() == QtCore.Qt.RightButton and not self.proc_draw:
             self.onParamChange = True
         elif event.button() == QtCore.Qt.LeftButton and self.drawing_poly:
@@ -707,8 +708,8 @@ class DrawingApp(QDialog):
         if (event.buttons() & QtCore.Qt.LeftButton) and self.keepDraw and self.proc_draw and not self.drawing_poly:
             self.clear_window(upd=True, painter=painter)
             self.end = event.pos()
-            self.start.setX(self.end.x() + 30*math.cos(math.radians(self.heading - 90)))
-            self.start.setY(self.end.y() + 30*math.sin(math.radians(self.heading - 90)))
+            self.start.setX(self.end.x() + 30 * math.cos(math.radians(self.heading - 90)))
+            self.start.setY(self.end.y() + 30 * math.sin(math.radians(self.heading - 90)))
             if self.type == 'our' or self.first and not self.onParamChange:
                 pen = QPen(Qt.red, 2, Qt.SolidLine)
                 painter.setPen(pen)

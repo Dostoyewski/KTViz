@@ -53,3 +53,34 @@ def coords_global(x, y, lat, lon):
     dist = (x ** 2 + y ** 2) ** .5
     path = Geodesic.WGS84.Direct(lat, lon, azi1, dist * 1852)
     return path['lat2'], path['lon2']
+
+class Frame:
+    def __init__(self, lat, lon):
+        self.lat = lat
+        self.lon = lon
+
+    def from_wgs(self, lat, lon):
+        """
+        Converts WGS coords to local
+        :param lat:
+        :param lon:
+        :return: x, y, distance, bearing
+        """
+        path = Geodesic.WGS84.Inverse(self.lat, self.lon, lat, lon)
+
+        angle = math.radians(path['azi1'])
+        dist = path['s12'] / 1852
+        return dist * math.cos(angle), dist * math.sin(angle), dist, angle
+
+    def to_wgs(self, x, y):
+        """
+        Converts local coords to WGS
+        :param x:
+        :param y:
+        :return: lat, lon
+        """
+        azi1 = math.degrees(math.atan2(y, x))
+        dist = (x ** 2 + y ** 2) ** .5
+        path = Geodesic.WGS84.Direct(self.lat, self.lon, azi1, dist * 1852)
+        return path['lat2'], path['lon2']
+

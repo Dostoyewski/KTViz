@@ -3,7 +3,7 @@ import json
 from collections import namedtuple
 
 import numpy as np
-from geographiclib.geodesic import Geodesic
+from konverter import Frame
 from math import sin, cos, radians, degrees
 from matplotlib import pyplot as plt, gridspec
 from matplotlib.patches import Ellipse, Polygon
@@ -74,37 +74,6 @@ def plot_position(x, y, course, ax, radius=.0, color='red', label=None):
     return scatter
 
 
-class Frame:
-    def __init__(self, lat, lon):
-        self.lat = lat
-        self.lon = lon
-
-    def from_wgs(self, lat, lon):
-        """
-        Converts WGS coords to local
-        :param lat:
-        :param lon:
-        :return: x, y, distance, bearing
-        """
-        path = Geodesic.WGS84.Inverse(self.lat, self.lon, lat, lon)
-
-        angle = radians(path['azi1'])
-        dist = path['s12'] / 1852
-        return dist * cos(angle), dist * sin(angle), dist, angle
-
-    def to_wgs(self, x, y):
-        """
-        Converts local coords to WGS
-        :param x:
-        :param y:
-        :return: lat, lon
-        """
-        azi1 = degrees(math.atan2(y, x))
-        dist = (x ** 2 + y ** 2) ** .5
-        path = Geodesic.WGS84.Direct(self.lat, self.lon, azi1, dist * 1852)
-        return path['lat2'], path['lon2']
-
-
 class Data:
     def __init__(self, frame, route=None):
         self.paths = []
@@ -161,8 +130,8 @@ def plot_lines(ax, lines, frame):
     """
     for obj in lines:
         coords = obj['geometry']['coordinates']
-        coords_x = [frame.from_wgs(item[0], item[1])[1] for item in coords]
-        coords_y = [frame.from_wgs(item[0], item[1])[0] for item in coords]
+        coords_x = [frame.from_wgs(item[1], item[0])[1] for item in coords]
+        coords_y = [frame.from_wgs(item[1], item[0])[0] for item in coords]
         ax.plot(coords_x, coords_y, marker='D', color='r')
 
 
@@ -177,7 +146,7 @@ def plot_points(ax, points, frame):
     for obj in points:
         coords = obj['geometry']['coordinates']
         dist = obj['properties']['distance']
-        coords = frame.from_wgs(coords[0], coords[1])
+        coords = frame.from_wgs(coords[1], coords[0])
         ax.plot(coords[1], coords[0], marker='*', color='r')
         ax.add_patch(Ellipse([coords[1], coords[0]], dist, dist, fill=False,
                              hatch='/', color='red'))
@@ -193,7 +162,8 @@ def plot_polygons(ax, polygons, frame):
     """
     for obj in polygons:
         coords = obj['geometry']['coordinates']
-        coords = [frame.from_wgs(item[0], item[1])[:2] for item in coords[0]]
+        # GeoJSON uses lon, lat notation
+        coords = [frame.from_wgs(item[1], item[0])[:2] for item in coords[0]]
         coords = [[obj[1], obj[0]] for obj in coords]
         if obj['properties']['limitation_type'] == "zone_entering_prohibition":
             ax.add_patch(Polygon(coords, closed=True,
@@ -217,7 +187,7 @@ def prepare_file(filename):
         dirname = os.path.split(filename)[0]
         if DEBUG:
             print('Path: ', dirname)
-        with open(os.path.join(dirname,'target-maneuvers.json')) as f:
+        with open(os.path.join(dirname, 'target-maneuvers.json')) as f:
             target_data = json.loads(f.read())
             if DEBUG:
                 print('Loaded target data')

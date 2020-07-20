@@ -524,10 +524,12 @@ class DrawingApp(QDialog):
         for obj in self.poly_index:
             points = []
             for point in obj['points']:
-                coords = coords_global((point.x() - ship['end'][0]) / self.scale,
-                                       -(point.y() - ship['end'][1]) / self.scale,
+                coords = coords_global(-(point.y() - ship['end'][1]) / self.scale,
+                                       (point.x() - ship['end'][0]) / self.scale,
                                        self.spinBox1.value(),
                                        self.spinBox2.value())
+                coords = list(coords)
+                coords[0], coords[1] = coords[1], coords[0]
                 points.append(coords)
             constraints['features'].append({"type": "Feature",
                                             "properties": {

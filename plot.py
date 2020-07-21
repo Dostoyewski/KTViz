@@ -287,7 +287,7 @@ def plot_speed(ax, path):
     ax.grid()
 
 
-def plot_from_files(maneuvers_file, route_file=None):
+def plot_from_files(maneuvers_file, route_file=None, poly_file=None):
     if os.path.isfile(maneuvers_file):
         fig = plt.figure(figsize=(10, 7.5))
         gs1 = gridspec.GridSpec(5, 1)
@@ -301,6 +301,12 @@ def plot_from_files(maneuvers_file, route_file=None):
 
         if route_file is not None:
             plot_route(ax, route_file, frame)
+
+        try:
+            if poly_file is not None:
+                plot.plot_limits(ax, poly_file, frame)
+        except FileNotFoundError:
+            pass
 
         plot_maneuvers(ax, data)
         plot_speed(ax_vel, data[0])

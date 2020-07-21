@@ -228,8 +228,6 @@ def plot_route(ax, file, frame):
 def plot_poly(ax, file, frame):
     with open(file) as f:
         poly_data = json.loads(f.read())
-        path = prepare_path(route_data, frame=frame)
-        plot_path(path, ax, color='#fffffffa')
 
 
 def get_positions(data, t):
@@ -287,7 +285,7 @@ def plot_speed(ax, path):
     ax.grid()
 
 
-def plot_from_files(maneuvers_file, route_file=None, poly_file=None):
+def plot_from_files(maneuvers_file, route_file=None, poly_file=None, settings_file=None):
     if os.path.isfile(maneuvers_file):
         fig = plt.figure(figsize=(10, 7.5))
         gs1 = gridspec.GridSpec(5, 1)
@@ -308,6 +306,16 @@ def plot_from_files(maneuvers_file, route_file=None, poly_file=None):
         except FileNotFoundError:
             pass
 
+        radius = 1.5
+        try:
+            if settings_file is not None:
+                settings_file = 'settings.json'
+                with open(settings_file) as f:
+                    settings_data = json.loads(f.read())
+                    radius = settings_data['maneuver_calculation']['safe_diverg_dist'] * .5
+        except FileNotFoundError:
+            pass
+
         plot_maneuvers(ax, data)
         plot_speed(ax_vel, data[0])
 
@@ -320,7 +328,7 @@ def plot_from_files(maneuvers_file, route_file=None, poly_file=None):
 
         start_time = data[0]['start_time']
         positions = get_positions(data, start_time)
-        plot_positions(ax, positions)
+        plot_positions(ax, positions, radius=radius)
         ax.legend()
 
         return fig

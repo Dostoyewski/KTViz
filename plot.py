@@ -3,12 +3,12 @@ import json
 from collections import namedtuple
 
 import numpy as np
-from konverter import Frame
 from math import sin, cos, radians, degrees
 from matplotlib import pyplot as plt, gridspec
 from matplotlib.patches import Ellipse, Polygon
 
 from app import *
+from konverter import Frame
 
 Position = namedtuple('Position', ['x', 'y', 'course', 'vel'])
 
@@ -276,13 +276,31 @@ def plot_captions(ax, positions):
 
 
 def plot_speed(ax, path):
+    """
+    Makes speed plot
+    :param ax: axes
+    :param path: path, contains trajectory items
+    :return:
+    """
     velocities = [item['length'] / item['duration'] * 3600 for item in path["items"]]
+    times = [item['duration'] / 3600 for item in path["items"]]
+    dtimes = [0]
+    for i in range(len(times)):
+        dtimes.append(sum(dtimes[0:i + 1]) + times[i])
     velocities.append(velocities[-1])
     ax.step(np.arange(.5, len(velocities) + .5, 1), velocities, where='post')
+    # ax.step(dtimes, velocities, where='post')
     ax.set_ylim(bottom=0)
     ax.set_ylim(top=max(velocities) * 1.1)
     ax.set_xticks(np.arange(1, len(velocities), 1))
+    # ax.set_xticks(dtimes)
+    xticks = np.arange(.5, len(velocities) + .5, 1)
+    for i in range(len(dtimes)):
+        # Эта методика округления нужна для нормального отображения результатов!
+        # Ее не трогать!!! Это НЕ костыль!!!
+        ax.text(xticks[i], velocities[i] - 1, str(round(dtimes[i], 2))[:-1])
     ax.set_xlabel('Number of segment')
+    # ax.set_xlabel('Time, h')
     ax.set_ylabel('Speed, knt')
     ax.grid()
 

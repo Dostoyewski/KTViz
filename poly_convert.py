@@ -65,6 +65,8 @@ def check_constraints_file(file, frame):
     with open(file, 'w') as f:
         json.dump(data, f)
 
+    if any_changed:
+        print('{} fixed'.format(os.path.abspath(file)))
     return any_changed
 
 

@@ -55,7 +55,7 @@ class Report:
                                         "--route", "route-data.json",
                                         "--maneuver", "maneuver.json",
                                         "--analyse", "nav-report.json",
-                                        "--predict","target-maneuvers.json",
+                                        "--predict", "target-maneuvers.json",
                                         ("--rvo" if rvo is True else "--no-rvo" if rvo is False else "")],
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time
@@ -66,7 +66,7 @@ class Report:
         nav_report = ""
         if fix_returncode(completedProc.returncode) in (0, 1):
             if os.path.isfile("maneuver.json"):
-                fig = plot_from_files("maneuver.json", route_file="route-data.json")
+                fig = plot_from_files("maneuver.json", route_file="route-data.json", poly_file="constraints.json")
                 if self.interactive:
                     plugins.clear(fig)  # clear all plugins from the figure
                     plugins.connect(fig, plugins.Reset(), plugins.Zoom())

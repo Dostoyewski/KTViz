@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import os
 import sys
 
@@ -136,6 +137,7 @@ class App(QMainWindow):
         self.frame = None
         self.route_file = None
         self.poly_file = None
+        self.settings_file = None
         # Adding icon
         self.setWindowIcon(QIcon('Icon.ico'))
         self.initUI()
@@ -175,13 +177,13 @@ class App(QMainWindow):
         self.btnKtDraw.clicked.connect(self.open_drawer)
 
         # Safe radius box
-        self.params.spinBoxRadius.setRange(0, 10)
+        self.params.spinBoxRadius.setRange(0, 100)
         self.params.spinBoxRadius.setValue(1.5)
         self.params.spinBoxRadius.setSingleStep(0.1)
         self.params.spinBoxRadius.valueChanged.connect(self.value_changed)
 
         # Safe radius box
-        self.params.spinBoxDist.setRange(0, 10)
+        self.params.spinBoxDist.setRange(0, 100)
         self.params.spinBoxDist.setValue(5)
         self.params.spinBoxDist.setSingleStep(0.1)
         self.params.spinBoxDist.valueChanged.connect(self.value_changed)
@@ -219,7 +221,7 @@ class App(QMainWindow):
             self.reload()
             if changed:
                 QMessageBox.warning(self, 'Исправление  файлов ограничений',
-                                        'Ограничения исправлены. Нужно перезапустить решатель!')
+                                    'Ограничения исправлены. Нужно перезапустить решатель!')
             else:
                 QMessageBox.information(self, 'Исправление  файлов ограничений',
                                         'Кажется, ограничения не нужно исправлять.')
@@ -274,7 +276,7 @@ class App(QMainWindow):
 
     def load(self):
         self.load_data(self.filename)
-        self.m.plot_paths(self.data, self.frame, self.route_file, self.poly_file)
+        self.m.plot_paths(self.data, self.frame, self.route_file, self.poly_file, self.settings_file)
         self.vel.plot_paths(self.data)
         self.update_time()
 
@@ -295,6 +297,10 @@ class App(QMainWindow):
         self.data, self.frame = plot.prepare_file(filename)
         self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
         self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
+        self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
+        with open(self.settings_file) as f:
+            settings_data = json.loads(f.read())
+            self.params.spinBoxRadius.setValue(settings_data['maneuver_calculation']['safe_diverg_dist'] * .5)
 
     def update_time(self):
         start_time = self.data[0]['start_time']
@@ -338,7 +344,7 @@ class PlotCanvas(FigureCanvas):
         self.ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
         self.ax1 = self.figure.add_axes(self.ax.get_position(), frameon=False)
 
-    def plot_paths(self, path_data, frame, route_file=None, poly_data=None):
+    def plot_paths(self, path_data, frame, route_file=None, poly_data=None, settings_file=None):
         """
         Plots paths
         :param poly_data: Name of file with polygons

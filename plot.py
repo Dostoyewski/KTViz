@@ -1,5 +1,4 @@
 import argparse
-import json
 from collections import namedtuple
 
 import numpy as np
@@ -176,12 +175,48 @@ def plot_polygons(ax, polygons, frame):
                                  fill=False, hatch='|', color='orange'))
 
 
-def prepare_file(filename):
+def check_multiply_trajs(filename):
+    """
+    Checks, if it is more, than one traj in file
+    :param filename:
+    :return:
+    """
+    with open(filename) as f:
+        file_data = json.loads(f.read())
+    try:
+        data = [file_data[0]['path']]
+        if len(file_data) > 1:
+            return True
+    except:
+        pass
+    return False
+
+
+def get_path_info(filename, solver):
+    """
+
+    :param filename:
+    :param solver:
+    :return:
+    """
+    with open(filename) as f:
+        file_data = json.loads(f.read())
+    return file_data[solver]['solver_name'], file_data[solver]['msg']
+
+
+def prepare_file(filename, solver=0):
+    """
+    Prepares data from file to plot
+    :param filename: name of file
+    :param solver: index of solution (if exist)
+    :return: path, convertation frame, new_format flag
+    """
+    new_format = False
     with open(filename) as f:
         file_data = json.loads(f.read())
     try:
         # If new format
-        data = [file_data[0]['path']]
+        data = [file_data[solver]['path']]
         if DEBUG:
             print('New type detected')
         dirname = os.path.split(filename)[0]
@@ -192,6 +227,7 @@ def prepare_file(filename):
             if DEBUG:
                 print('Loaded target data')
         data.extend(target_data)
+        new_format = True
     except KeyError:
         if DEBUG:
             print('Format set to old')
@@ -210,7 +246,7 @@ def prepare_file(filename):
         new_data = prepare_path(data, frame=frame)
         paths.append(new_data)
 
-    return paths, frame
+    return paths, frame, new_format
 
 
 def plot_maneuvers(ax, data):

@@ -7,15 +7,16 @@ import math
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel, QMessageBox, QGroupBox, \
+    QRadioButton
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox, QWidget, QVBoxLayout, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
 import plot
-from paintall import DrawingApp
 import poly_convert
+from paintall import DrawingApp
 
 DEBUG = False
 
@@ -67,6 +68,19 @@ class ParamBar(QWidget):
         self.spinBoxDist = QDoubleSpinBox(self)
         self.spinBoxDist.setObjectName("doubleSpinBox")
         self.horizontalLayout.addWidget(self.spinBoxDist)
+
+        # Radio button group to set solver type
+        self.groupbox = QGroupBox("Solver")
+        self.vbox = QVBoxLayout()
+        self.groupbox.setLayout(self.vbox)
+
+        self.s1 = QRadioButton("#1")
+        self.vbox.addWidget(self.s1)
+
+        self.s2 = QRadioButton("#2")
+        self.vbox.addWidget(self.s2)
+        self.horizontalLayout.addWidget(self.groupbox)
+        self.groupbox.setDisabled(True)
 
 
 class App(QMainWindow):
@@ -138,6 +152,14 @@ class App(QMainWindow):
         self.route_file = None
         self.poly_file = None
         self.settings_file = None
+
+        # Content two solvers?
+        self.has_two_trajs = False
+        # Index of trajectory:
+        self.solver = 0
+        # Solver info and solution msg
+        self.solver_info = ""
+        self.info_msg = ""
         # Adding icon
         self.setWindowIcon(QIcon('Icon.ico'))
         self.initUI()
@@ -203,8 +225,20 @@ class App(QMainWindow):
         self.params.cbGc.toggle()
         self.params.cbGc.stateChanged.connect(self.value_changed)
 
+        # Solver selection:
+        self.params.s1.clicked.connect(self.upd_solver)
+        self.params.s2.clicked.connect(self.upd_solver)
+
         self.vel.move(int(1200 * self.scale_x), int(120 * self.scale_y))
         self.show()
+
+    def upd_solver(self):
+        if self.params.s1.isChecked():
+            self.solver = 0
+        elif self.params.s2.isChecked():
+            self.solver = 1
+        self.load(solver=self.solver)
+
 
     def home(self):
         self.toolbar.home()
@@ -272,10 +306,13 @@ class App(QMainWindow):
         if len(self.filename) == 0:
             self.openFileNameDialog()
         else:
-            self.load()
+            if self.has_two_trajs:
+                self.load(solver=self.solver)
+            else:
+                self.load()
 
-    def load(self):
-        self.load_data(self.filename)
+    def load(self, solver=0):
+        self.load_data(self.filename, solver)
         self.m.plot_paths(self.data, self.frame, self.route_file, self.poly_file, self.settings_file)
         self.vel.plot_paths(self.data)
         self.update_time()
@@ -292,9 +329,17 @@ class App(QMainWindow):
         if self.loaded:
             self.update_time()
 
-    def load_data(self, filename):
+    def load_data(self, filename, solver=0):
         self.loaded = True
-        self.data, self.frame = plot.prepare_file(filename)
+        self.data, self.frame, new_format = plot.prepare_file(filename)
+        if new_format:
+            self.has_two_trajs = plot.check_multiply_trajs(filename)
+            self.data, self.frame, new_format = plot.prepare_file(filename, solver)
+            self.solver_info, self.info_msg = plot.get_path_info(filename, solver)
+        else:
+            self.has_two_trajs = False
+            self.solver_info, self.info_msg = "", ""
+        self.params.groupbox.setDisabled(not self.has_two_trajs)
         self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
         self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
         self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
@@ -310,7 +355,9 @@ class App(QMainWindow):
                                 distance=self.params.spinBoxDist.value() if self.params.cbDist.isChecked() else 0,
                                 radius=self.params.spinBoxRadius.value(),
                                 coords=self.params.cbCoords.isChecked(),
-                                frame=self.frame if self.params.cbGc.isChecked() else None)
+                                frame=self.frame if self.params.cbGc.isChecked() else None,
+                                solver_info=self.solver_info,
+                                msg=self.info_msg)
         self.m.draw()
 
     def openFileNameDialog(self):
@@ -371,7 +418,8 @@ class PlotCanvas(FigureCanvas):
         self.ax.grid()
         self.draw()
 
-    def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None):
+    def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None,
+                         solver_info="", msg=""):
         self.ax1.clear()
         positions = plot.get_positions(path_data, t)
         plot.plot_positions(self.ax1, positions, coords=coords, frame=frame, radius=radius)
@@ -382,7 +430,16 @@ class PlotCanvas(FigureCanvas):
         self.ax1.set_xlim(self.ax.get_xlim())
         local_time = t - path_data[0]['start_time']
         h, m, s = math.floor(local_time / 3600), math.floor(local_time % 3600 / 60), local_time % 60
-        self.ax1.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s))
+        if solver_info != "":
+            if msg != "":
+                self.ax1.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s)
+                                   + ', solver: ' + str(solver_info)
+                                   + ', msg: ' + str(msg))
+            else:
+                self.ax1.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s)
+                                   + ', solver: ' + str(solver_info))
+        else:
+            self.ax1.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s))
 
 
 class VelocityCanvas(FigureCanvas):

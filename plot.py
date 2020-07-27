@@ -227,6 +227,18 @@ def prepare_file(filename, solver=0):
             if DEBUG:
                 print('Loaded target data')
         data.extend(target_data)
+        need_add_flag = False
+        try:
+            # Loading data from new solver
+            if solver == 0:
+                solver_new = 1
+            else:
+                solver_new = 0
+            data_new = file_data[solver_new]['path']
+            data.append(data_new)
+            need_add_flag = True
+        except:
+            pass
         new_format = True
     except KeyError:
         if DEBUG:
@@ -245,12 +257,20 @@ def prepare_file(filename, solver=0):
     for data in data:
         new_data = prepare_path(data, frame=frame)
         paths.append(new_data)
-
+    if need_add_flag:
+        paths[-1]['second'] = True
     return paths, frame, new_format
 
 
 def plot_maneuvers(ax, data):
     for i, path in enumerate(data):
+        # Plot path from second solver
+        try:
+            if path['second']:
+                plot_path(path, ax, color='orange')
+                continue
+        except KeyError:
+            pass
         plot_path(path, ax, color=('brown' if i == 0 else 'blue'))
 
 

@@ -369,7 +369,17 @@ def plot_from_files(maneuvers_file, route_file=None, poly_file=None, settings_fi
         ax_vel.clear()
         ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
 
-        data, frame = prepare_file(maneuvers_file)
+        data, frame, new_format = prepare_file(maneuvers_file)
+        if new_format:
+            has_two_trajs = plot.check_multiply_trajs(maneuvers_file)
+            data, frame, new_format = plot.prepare_file(maneuvers_file, solver=0)
+            if has_two_trajs:
+                data2, frame2, new_format = plot.prepare_file(maneuvers_file, solver=1)
+
+            solver_info, info_msg = plot.get_path_info(maneuvers_file, 0)
+        else:
+            has_two_trajs = False
+            solver_info, info_msg = "", ""
 
         if route_file is not None:
             plot_route(ax, route_file, frame)
@@ -391,6 +401,8 @@ def plot_from_files(maneuvers_file, route_file=None, poly_file=None, settings_fi
             pass
 
         plot_maneuvers(ax, data)
+        if has_two_trajs:
+            plot_path(data2[0], ax, 'red')
         plot_speed(ax_vel, data[0])
 
         ax.axis('equal')

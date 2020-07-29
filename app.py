@@ -372,6 +372,7 @@ class App(QMainWindow):
         if filename:
             self.filename = filename[0]
             self.loaded = False
+            self.solver = 0
             self.reload()
 
 

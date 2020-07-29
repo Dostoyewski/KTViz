@@ -267,7 +267,7 @@ def plot_maneuvers(ax, data):
         # Plot path from second solver
         try:
             if path['second']:
-                plot_path(path, ax, color='orange')
+                plot_path(path, ax, color='darkCyan')
                 continue
         except KeyError:
             pass
@@ -290,7 +290,7 @@ def get_positions(data, t):
     return [path_position(path, t) for path in data]
 
 
-def plot_positions(ax, positions, radius=1.5, coords=False, frame=None):
+def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_trajs=False):
     for i, position in enumerate(positions):
         if position.x is not None:
             label_text = '#{}, {:.2f}knt,{:.2f}°'.format(i, position.vel * 3600, position.course)
@@ -300,9 +300,14 @@ def plot_positions(ax, positions, radius=1.5, coords=False, frame=None):
                     label_text += '\n{:.4f}°, {:.4f}°'.format(lat, lon)
                 else:
                     label_text += '\n{:.4f}, {:.4f}'.format(position.x, position.y)
-            plot_position(position.x, position.y, position.course, ax, radius=radius,
-                          color=('red' if i == 0 else 'blue'),
-                          label=label_text)
+            if two_trajs and i == len(positions) - 1:
+                plot_position(position.x, position.y, position.course, ax, radius=radius,
+                              color='darkCyan',
+                              label=label_text)
+            else:
+                plot_position(position.x, position.y, position.course, ax, radius=radius,
+                              color=('red' if i == 0 else 'blue'),
+                              label=label_text)
             ax.text(position.y, position.x, '#{}'.format(i), size=8)
 
 

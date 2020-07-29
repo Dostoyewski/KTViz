@@ -357,7 +357,8 @@ class App(QMainWindow):
                                 coords=self.params.cbCoords.isChecked(),
                                 frame=self.frame if self.params.cbGc.isChecked() else None,
                                 solver_info=self.solver_info,
-                                msg=self.info_msg)
+                                msg=self.info_msg,
+                                two_trajs=self.has_two_trajs)
         self.m.draw()
 
     def openFileNameDialog(self):
@@ -373,6 +374,7 @@ class App(QMainWindow):
             self.filename = filename[0]
             self.loaded = False
             self.solver = 0
+            self.has_two_trajs = False
             self.reload()
 
 
@@ -420,10 +422,11 @@ class PlotCanvas(FigureCanvas):
         self.draw()
 
     def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None,
-                         solver_info="", msg=""):
+                         solver_info="", msg="", two_trajs=False):
         self.ax1.clear()
         positions = plot.get_positions(path_data, t)
-        plot.plot_positions(self.ax1, positions, coords=coords, frame=frame, radius=radius)
+        plot.plot_positions(self.ax1, positions, coords=coords, frame=frame,
+                            radius=radius, two_trajs=two_trajs)
         if distance > 0:
             plot.plot_distances(self.ax1, positions, distance)
         self.ax1.legend()

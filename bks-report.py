@@ -9,10 +9,10 @@ import time
 from datetime import datetime
 
 import mpld3
+from matplotlib import pyplot as plt
 from mpld3 import plugins
 
 from plot import plot_from_files
-from matplotlib import pyplot as plt
 
 
 def fix_returncode(code):
@@ -30,7 +30,7 @@ class Report:
 
     def generate(self, data_directory, rvo=None):
         for root, dirs, files in os.walk(data_directory):
-            if "nav-data.json" in files:
+            if "nav-data.json" in files or 'navigation.json' in files:
                 self.run_case(os.path.join(data_directory, root), self.exe, rvo)
 
     def run_case(self, datadir, usv, rvo=None):

@@ -340,9 +340,14 @@ class App(QMainWindow):
             self.has_two_trajs = False
             self.solver_info, self.info_msg = "", ""
         self.params.groupbox.setDisabled(not self.has_two_trajs)
-        self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
-        self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
-        self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
+        if filename == 'maneuver.json':
+            self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
+            self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
+            self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
+        else:
+            self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route.json')
+            self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
+            self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
         with open(self.settings_file) as f:
             settings_data = json.loads(f.read())
             self.params.spinBoxRadius.setValue(settings_data['maneuver_calculation']['safe_diverg_dist'] * .5)

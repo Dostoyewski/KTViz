@@ -73,9 +73,14 @@ def check_constraints_file(file, frame):
 def run_directory(datadir):
     os.chdir(datadir)
 
-    with open(os.path.join(datadir, 'nav-data.json')) as f:
-        nav_data = json.loads(f.read())
-        frame = Frame(nav_data['lat'], nav_data['lon'])
+    try:
+        with open(os.path.join(datadir, 'nav-data.json')) as f:
+            nav_data = json.loads(f.read())
+            frame = Frame(nav_data['lat'], nav_data['lon'])
+    except FileNotFoundError:
+        with open(os.path.join(datadir, 'navigation.json')) as f:
+            nav_data = json.loads(f.read())
+            frame = Frame(nav_data['lat'], nav_data['lon'])
 
     file_list = glob.glob('constraints*.json')
     any_changed = False
@@ -88,7 +93,7 @@ def run_directory(datadir):
 
 def fix_from_root(data_directory):
     for root, dirs, files in os.walk(data_directory):
-        if "nav-data.json" in files:
+        if "nav-data.json" in files or 'navigation.json' in files:
             run_directory(os.path.join(data_directory, root))
 
 

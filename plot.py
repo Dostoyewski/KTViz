@@ -222,10 +222,16 @@ def prepare_file(filename, solver=0):
         dirname = os.path.split(filename)[0]
         if DEBUG:
             print('Path: ', dirname)
-        with open(os.path.join(dirname, 'target-maneuvers.json')) as f:
-            target_data = json.loads(f.read())
-            if DEBUG:
-                print('Loaded target data')
+        try:
+            with open(os.path.join(dirname, 'target-maneuvers.json')) as f:
+                target_data = json.loads(f.read())
+                if DEBUG:
+                    print('Loaded target data')
+        except FileNotFoundError:
+            with open(os.path.join(dirname, 'predicted_tracks.json')) as f:
+                target_data = json.loads(f.read())
+                if DEBUG:
+                    print('Loaded target data')
         data.extend(target_data)
         need_add_flag = False
         try:

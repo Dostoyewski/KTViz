@@ -1,8 +1,10 @@
+import glob
 import json
 import os
-import glob
-from plot import Frame
+
 from math import cos, sin, radians
+
+from plot import Frame
 
 
 def reverse_time_xy(x, y, speed, course, time):
@@ -81,7 +83,7 @@ def run_case(datadir):
 
 def run(data_directory):
     for root, dirs, files in os.walk(data_directory):
-        if "nav-data.json" in files:
+        if "nav-data.json" in files or 'navigation.json' in files:
             run_case(os.path.join(data_directory, root))
 
 

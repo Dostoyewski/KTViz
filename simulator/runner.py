@@ -5,11 +5,11 @@ from .data import ScenarioData
 
 
 class RunResult:
-    def __init__(self, data, stdout, return_code, time):
+    def __init__(self, data, stdout, return_code, exec_time):
         self.data = data
         self.stdout = stdout
         self.return_code = return_code
-        self.time = time
+        self.exec_time = exec_time
 
 
 class Runner:
@@ -52,7 +52,8 @@ class Runner:
             args.append('--simple-prediction')
 
         exec_time = time.time()
-        completedProc = subprocess.run(args, cwd=directory, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        completed_proc = subprocess.run(args, cwd=directory, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time
 
-        return RunResult(ScenarioData.load_directory(directory), completedProc.stdout, completedProc.returncode, time)
+        return RunResult(ScenarioData.load_directory(directory), completed_proc.stdout, completed_proc.returncode,
+                         exec_time)

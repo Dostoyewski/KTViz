@@ -44,11 +44,13 @@ class Path:
         self.start_time = start_time
         self.items = []
 
-    def load_from_array(self, array):
-        self.start_time = array['start_time']
+    @staticmethod
+    def load_from_array(array):
+        path = Path(array['start_time'])
         for item in array['items']:
-            self.items.append(Path.Segment(item['lat'], item['lon'], item['begin_angle'], item['curve'], item['length'],
+            path.items.append(Path.Segment(item['lat'], item['lon'], item['begin_angle'], item['curve'], item['length'],
                                            item['duration'], item['starboard_dev'], item['port_dev']))
+        return path
 
     def dump_to_array(self):
         return {'start_time': self.start_time,

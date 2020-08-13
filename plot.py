@@ -233,6 +233,14 @@ def prepare_file(filename, solver=0):
                 if DEBUG:
                     print('Loaded target data')
         data.extend(target_data)
+        try:
+            with open(os.path.join(dirname, 'real-target-maneuvers.json')) as f:
+                real_target_data = json.loads(f.read())
+                if DEBUG:
+                    print('Loaded real target data')
+            data.extend(real_target_data)
+        except FileNotFoundError:
+            pass
         need_add_flag = False
         try:
             # Loading data from new solver

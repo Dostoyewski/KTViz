@@ -445,13 +445,26 @@ def plot_from_files(maneuvers_file, route_file=None, poly_file=None, settings_fi
         ax.grid()
 
         start_time = data[0]['start_time']
-        positions = get_positions(data, start_time)
+        try:
+            positions = get_positions(data, start_time)
+        except KeyError:
+            start_time = find_max_time(data)
+            positions = get_positions(data, start_time)
         plot_positions(ax, positions, radius=radius)
         ax.legend()
 
         return fig
     else:
         raise FileNotFoundError("{} not found".format(maneuvers_file))
+
+
+def find_max_time(data):
+    """
+    Finds minimal time
+    :param data: trajs file
+    :return: minimal time from epoch
+    """
+    return max([path['start_time'] for path in data])
 
 
 if __name__ == "__main__":

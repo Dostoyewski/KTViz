@@ -357,7 +357,12 @@ class App(QMainWindow):
 
     def update_time(self):
         start_time = self.data[0]['start_time']
-        total_time = sum([x['duration'] for x in self.data[0]['items']])
+        try:
+            positions = plot.get_positions(self.data, start_time)
+            total_time = sum([x['duration'] for x in self.data[0]['items']])
+        except KeyError:
+            start_time = plot.find_max_time(self.data)
+            total_time = sum([x['duration'] for x in self.data[0]['items']]) + start_time - self.data[0]['start_time']
         time = start_time + total_time * self.sl.value() * .01
         self.m.update_positions(self.data, time,
                                 distance=self.params.spinBoxDist.value() if self.params.cbDist.isChecked() else 0,
@@ -436,7 +441,11 @@ class PlotCanvas(FigureCanvas):
     def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None,
                          solver_info="", msg="", two_trajs=False):
         self.ax1.clear()
-        positions = plot.get_positions(path_data, t)
+        try:
+            positions = plot.get_positions(path_data, t)
+        except KeyError:
+            t = plot.find_max_time(path_data)
+            positions = plot.get_positions(path_data, t)
         plot.plot_positions(self.ax1, positions, coords=coords, frame=frame,
                             radius=radius, two_trajs=two_trajs)
         if distance > 0:

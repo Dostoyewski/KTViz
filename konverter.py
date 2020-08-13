@@ -54,6 +54,7 @@ def coords_global(x, y, lat, lon):
     path = Geodesic.WGS84.Direct(lat, lon, azi1, dist * 1852)
     return path['lat2'], path['lon2']
 
+
 class Frame:
     def __init__(self, lat, lon):
         self.lat = lat

@@ -313,7 +313,8 @@ class App(QMainWindow):
 
     def load(self, solver=0):
         self.load_data(self.filename, solver)
-        self.m.plot_paths(self.data, self.frame, self.route_file, self.poly_file, self.settings_file)
+        self.m.plot_paths(self.data, self.frame, self.route_file, self.poly_file, self.settings_file,
+                          self.nav_file, self.target_file)
         self.vel.plot_paths(self.data)
         self.update_time()
 
@@ -342,12 +343,14 @@ class App(QMainWindow):
         self.params.groupbox.setDisabled(not self.has_two_trajs)
         if filename == 'maneuver.json':
             self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
-            self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
-            self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
         else:
             self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route.json')
-            self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
-            self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
+
+        self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
+        self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
+        self.nav_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'nav-data.json')
+        self.target_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'target-data.json')
+
         with open(self.settings_file) as f:
             settings_data = json.loads(f.read())
             self.params.spinBoxRadius.setValue(settings_data['maneuver_calculation']['safe_diverg_dist'] * .5)
@@ -399,9 +402,12 @@ class PlotCanvas(FigureCanvas):
         self.ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
         self.ax1 = self.figure.add_axes(self.ax.get_position(), frameon=False)
 
-    def plot_paths(self, path_data, frame, route_file=None, poly_data=None, settings_file=None):
+    def plot_paths(self, path_data, frame, route_file=None, poly_data=None, settings_file=None,
+                   nav_file=None, target_file=None):
         """
         Plots paths
+        :param target_file: target-data.json file
+        :param nav_file: nav-data.json file
         :param poly_data: Name of file with polygons
         :param path_data: Loaded data
         :param frame: Frame for coordinates conversion
@@ -420,6 +426,7 @@ class PlotCanvas(FigureCanvas):
         except FileNotFoundError:
             pass
 
+        plot.plot_nav_points(self.ax, nav_file, target_file, frame)
         plot.plot_maneuvers(self.ax, path_data)
 
         self.ax.axis('equal')

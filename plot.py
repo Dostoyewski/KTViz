@@ -296,6 +296,27 @@ def get_positions(data, t):
     return [path_position(path, t) for path in data]
 
 
+def plot_nav_points(ax, nav_file, target_file, frame):
+    """
+    Plots current positions from nav-data file
+    :param frame: converter frame
+    :param target_file: target-data file
+    :param ax: mtplb axes
+    :param nav_file: nav-data file
+    :return:
+    """
+    with open(nav_file) as f:
+        nav_data = json.loads(f.read())
+    with open(target_file) as f:
+        target_data = json.loads(f.read())
+    target_data.append(nav_data)
+    for obj in target_data:
+        out = frame.from_wgs(obj['lat'], obj['lon'])
+        x, y = out[0], out[1]
+        ax.scatter(y, x, color='black', marker='x')
+        ax.text(y, x, str(obj['timestamp']))
+
+
 def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_trajs=False):
     for i, position in enumerate(positions):
         if position.x is not None:

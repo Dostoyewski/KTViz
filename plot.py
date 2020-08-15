@@ -233,12 +233,17 @@ def prepare_file(filename, solver=0):
                 if DEBUG:
                     print('Loaded target data')
         data.extend(target_data)
+        has_real = False
         try:
             with open(os.path.join(dirname, 'real-target-maneuvers.json')) as f:
                 real_target_data = json.loads(f.read())
                 if DEBUG:
                     print('Loaded real target data')
+            for obj in real_target_data:
+                # Flag if real
+                obj['real'] = True
             data.extend(real_target_data)
+            has_real = True
         except FileNotFoundError:
             pass
         need_add_flag = False
@@ -268,11 +273,19 @@ def prepare_file(filename, solver=0):
 
     # Prepare data
     paths = []
-    for data in data:
-        new_data = prepare_path(data, frame=frame)
+    for obj in data:
+        new_data = prepare_path(obj, frame=frame)
         paths.append(new_data)
     if need_add_flag:
         paths[-1]['second'] = True
+    if has_real:
+        for i in range(len(data)):
+            try:
+                # Copying 'real' flags from data
+                if data[i]['real']:
+                    paths[i]['real'] = True
+            except KeyError:
+                pass
     return paths, frame, new_format
 
 
@@ -282,6 +295,12 @@ def plot_maneuvers(ax, data):
         try:
             if path['second']:
                 plot_path(path, ax, color='darkCyan')
+                continue
+        except KeyError:
+            pass
+        try:
+            if path['real']:
+                plot_path(path, ax, color='gray')
                 continue
         except KeyError:
             pass

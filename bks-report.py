@@ -8,9 +8,7 @@ import subprocess
 import time
 from datetime import datetime
 
-import mpld3
 from matplotlib import pyplot as plt
-from mpld3 import plugins
 
 from plot import plot_from_files
 
@@ -21,9 +19,8 @@ def fix_returncode(code):
 
 class Report:
 
-    def __init__(self, executable, interactive=False):
+    def __init__(self, executable):
         self.exe = executable
-        self.interactive = interactive
         self.cases = []
         self.work_dir = os.path.abspath(os.getcwd())
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
@@ -67,14 +64,10 @@ class Report:
         if fix_returncode(completedProc.returncode) in (0, 1):
             if os.path.isfile("maneuver.json"):
                 fig = plot_from_files("maneuver.json", route_file="route-data.json", poly_file="constraints.json")
-                if self.interactive:
-                    plugins.clear(fig)  # clear all plugins from the figure
-                    plugins.connect(fig, plugins.Reset(), plugins.Zoom())
-                    image_data = mpld3.fig_to_html(fig)
-                else:
-                    f = io.BytesIO()
-                    fig.savefig(f, format="svg")
-                    image_data = f.getvalue().decode("utf-8")  # svg data
+
+                f = io.BytesIO()
+                fig.savefig(f, format="svg")
+                image_data = f.getvalue().decode("utf-8")  # svg data
                 plt.close(fig)
         try:
             with open("nav-report.json", "r") as f:
@@ -191,7 +184,6 @@ if __name__ == "__main__":
     parser.add_argument("executable", type=str, help="Path to USV executable")
     parser.add_argument("--rvo", action="store_true", help="Run USV with --rvo")
     parser.add_argument("--no-rvo", action="store_true", help="Run USV with --no-rvo")
-    parser.add_argument("--interactive", action="store_true", help="Make interactive plots (can be heavy)")
     args = parser.parse_args()
 
     use_rvo = None
@@ -202,6 +194,6 @@ if __name__ == "__main__":
 
     cur_dir = os.path.abspath(os.getcwd())
     usv_executable = os.path.join(cur_dir, args.executable)
-    report = Report(usv_executable, interactive=args.interactive)
+    report = Report(usv_executable)
     report.generate(cur_dir, rvo=use_rvo)
     report.saveHTML("report.html")

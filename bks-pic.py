@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 import ctypes
-import glob
 import io
 import json
 import os
-import subprocess
 import time
 from datetime import datetime
 
-import mpld3
 from matplotlib import pyplot as plt
-from mpld3 import plugins
 
 from plot import plot_from_files
 
@@ -29,7 +25,6 @@ class Report:
         self.cases = []
         self.work_dir = set_work_dir
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
-        
 
     def generate(self, data_directory, rvo=None):
         for root, dirs, files in os.walk(data_directory):
@@ -43,49 +38,49 @@ class Report:
         # Get a list of old results
         # file_list = glob.glob('maneuver*.json') + glob.glob('nav-report.json')
         # for filePath in file_list:
-            # try:
-                # os.remove(filePath)
-            # except OSError:
-                # pass
+        # try:
+        # os.remove(filePath)
+        # except OSError:
+        # pass
 
         # Print the exit code.
         exec_time = time.time()
         # completedProc = subprocess.run([usv, "--targets", "target-data.json",
-                                        # "--settings", "settings.json",
-                                        # "--nav-data", "nav-data.json",
-                                        # "--hydrometeo", "hmi-data.json",
-                                        # "--constraints", "constraints.json",
-                                        # "--route", "route-data.json",
-                                        # "--maneuver", "maneuver.json",
-                                        # "--analyse", "nav-report.json",
-                                        # "--predict", "target-maneuvers.json",
-                                        # ("--rvo" if rvo is True else "--no-rvo" if rvo is False else "")],
-                                       # stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # "--settings", "settings.json",
+        # "--nav-data", "nav-data.json",
+        # "--hydrometeo", "hmi-data.json",
+        # "--constraints", "constraints.json",
+        # "--route", "route-data.json",
+        # "--maneuver", "maneuver.json",
+        # "--analyse", "nav-report.json",
+        # "--predict", "target-maneuvers.json",
+        # ("--rvo" if rvo is True else "--no-rvo" if rvo is False else "")],
+        # stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time
 
         # print("{} .Return code: {}. Exec time: {} sec"
-              # .format(datadir, fix_returncode(completedProc.returncode), exec_time))
+        # .format(datadir, fix_returncode(completedProc.returncode), exec_time))
         image_data = ""
         nav_report = ""
         # if fix_returncode(completedProc.returncode) in (0, 1):
         # if 1:
         if os.path.isfile(self.man_path):
-         # fig = plot_from_files("maneuver.json", route_file="route-data.json", poly_file="constraints.json")
-         # fig = plot_from_files("maneuver.json")
-         fig = plot_from_files(self.man_path)
-                # f = io.BytesIO()
-         fig.savefig(self.path_picture)
-         plt.close(fig)
-                # image_data = f.getvalue().decode("utf-8")  # svg data
-                # if self.interactive:
-                    # plugins.clear(fig)  # clear all plugins from the figure
-                    # plugins.connect(fig, plugins.Reset(), plugins.Zoom())
-                    # image_data = mpld3.fig_to_html(fig)
-                # else:
-                    # f = io.BytesIO()
-                    # fig.savefig(f, format="svg")
-                    # image_data = f.getvalue().decode("utf-8")  # svg data
-        
+            # fig = plot_from_files("maneuver.json", route_file="route-data.json", poly_file="constraints.json")
+            # fig = plot_from_files("maneuver.json")
+            fig = plot_from_files(self.man_path)
+            # f = io.BytesIO()
+            fig.savefig(self.path_picture)
+            plt.close(fig)
+            # image_data = f.getvalue().decode("utf-8")  # svg data
+            # if self.interactive:
+            # plugins.clear(fig)  # clear all plugins from the figure
+            # plugins.connect(fig, plugins.Reset(), plugins.Zoom())
+            # image_data = mpld3.fig_to_html(fig)
+            # else:
+            # f = io.BytesIO()
+            # fig.savefig(f, format="svg")
+            # image_data = f.getvalue().decode("utf-8")  # svg data
+
         try:
             with open("nav-report.json", "r") as f:
                 nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
@@ -157,7 +152,6 @@ class Report:
 <title>results from {datetime}</title>
 <style>{styles}</style>
 <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
-<script type="text/javascript" src="http://mpld3.github.io/js/mpld3.v0.3.js"></script>
 </head>
 <body>
 <h1>report from {datetime}</h1>""".format(datetime=datetime.now(), styles=css)
@@ -200,9 +194,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="BKS report generator")
     # parser.add_argument("executable", type=str, help="Path to USV executable")
-    parser.add_argument("set_work_dir", type = str, help = "set_work_dir")
-    parser.add_argument("maneuver_path", type = str, help = "Path to manever file")
-    parser.add_argument("path_to_save_pic", type = str, help = "Path to save pic")
+    parser.add_argument("set_work_dir", type=str, help="set_work_dir")
+    parser.add_argument("maneuver_path", type=str, help="Path to manever file")
+    parser.add_argument("path_to_save_pic", type=str, help="Path to save pic")
     parser.add_argument("--rvo", action="store_true", help="Run USV with --rvo")
     parser.add_argument("--no-rvo", action="store_true", help="Run USV with --no-rvo")
     parser.add_argument("--interactive", action="store_true", help="Make interactive plots (can be heavy)")
@@ -218,6 +212,6 @@ if __name__ == "__main__":
     # usv_executable = os.path.join(cur_dir, args.executable)
     man_path = os.path.join(args.maneuver_path)
     path_pic = os.path.join(args.path_to_save_pic)
-    report = Report(cur_dir,man_path,path_pic, interactive=args.interactive)
+    report = Report(cur_dir, man_path, path_pic, interactive=args.interactive)
     report.generate(cur_dir, rvo=use_rvo)
     # report.savehtml("report.html")

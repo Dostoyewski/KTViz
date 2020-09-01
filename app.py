@@ -162,6 +162,12 @@ class App(QMainWindow):
         self.info_msg = ""
         # Adding icon
         self.setWindowIcon(QIcon('Icon.ico'))
+        # If has nav-data
+        self.nav_file = False
+        # If has new format
+        self.target_file = False
+        # If has real-target-maneuver
+        self.real_data = False
         self.initUI()
 
     def initUI(self):
@@ -350,6 +356,7 @@ class App(QMainWindow):
         self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
         self.nav_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'nav-data.json')
         self.target_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'target-data.json')
+        self.real_data = 'real-target-maneuvers.json' in os.listdir(os.path.dirname(os.path.abspath(filename)))
 
         with open(self.settings_file) as f:
             settings_data = json.loads(f.read())
@@ -371,7 +378,8 @@ class App(QMainWindow):
                                 frame=self.frame if self.params.cbGc.isChecked() else None,
                                 solver_info=self.solver_info,
                                 msg=self.info_msg,
-                                two_trajs=self.has_two_trajs)
+                                two_trajs=self.has_two_trajs,
+                                real_data=self.real_data)
         self.m.draw()
 
     def openFileNameDialog(self):
@@ -439,7 +447,7 @@ class PlotCanvas(FigureCanvas):
         self.draw()
 
     def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None,
-                         solver_info="", msg="", two_trajs=False):
+                         solver_info="", msg="", two_trajs=False, real_data=False):
         self.ax1.clear()
         try:
             positions = plot.get_positions(path_data, t)
@@ -447,7 +455,7 @@ class PlotCanvas(FigureCanvas):
             t = plot.find_max_time(path_data)
             positions = plot.get_positions(path_data, t)
         plot.plot_positions(self.ax1, positions, coords=coords, frame=frame,
-                            radius=radius, two_trajs=two_trajs)
+                            radius=radius, two_trajs=two_trajs, real_trajs=real_data)
         if distance > 0:
             plot.plot_distances(self.ax1, positions, distance)
         self.ax1.legend()

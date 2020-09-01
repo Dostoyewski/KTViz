@@ -344,10 +344,26 @@ def plot_nav_points(ax, nav_file, target_file, frame):
         ax.text(y, x, str(obj['timestamp']))
 
 
-def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_trajs=False):
+def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_trajs=False,
+                   real_trajs=False):
+    """
+    Plots ships positions
+    :param ax: plot axes
+    :param positions: array with positions
+    :param radius: safe radius
+    :param coords: if needs to konvert from local to WGS84
+    :param frame: frame
+    :param two_trajs: if has two trajs from different solvers
+    :param real_trajs: if has real-target-maneuvers.json
+    :return:
+    """
     for i, position in enumerate(positions):
         if position.x is not None:
-            label_text = '#{}, {:.2f}knt,{:.2f}°'.format(i, position.vel * 3600, position.course)
+            if real_trajs and i > len(positions) / 2:
+                label_text = 'real-#{}, {:.2f}knt,{:.2f}°'.format(int(i - len(positions) / 2 + 0.5),
+                                                                  position.vel * 3600, position.course)
+            else:
+                label_text = '#{}, {:.2f}knt,{:.2f}°'.format(i, position.vel * 3600, position.course)
             if coords:
                 if frame is not None:
                     lat, lon = frame.to_wgs(position.x, position.y)

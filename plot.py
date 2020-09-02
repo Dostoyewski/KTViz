@@ -378,7 +378,10 @@ def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_traj
                 plot_position(position.x, position.y, position.course, ax, radius=radius,
                               color=('red' if i == 0 else 'blue'),
                               label=label_text)
-            ax.text(position.y, position.x, '#{}'.format(i), size=8)
+            if real_trajs and i > len(positions) / 2:
+                ax.text(position.y, position.x, 'real-#{}'.format(int(i - len(positions) / 2 + 0.5), size=8))
+            else:
+                ax.text(position.y, position.x, '#{}'.format(i), size=8)
 
 
 def plot_distances(ax, positions, distance=5.):

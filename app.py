@@ -347,9 +347,9 @@ class App(QMainWindow):
             self.has_two_trajs = False
             self.solver_info, self.info_msg = "", ""
         self.params.groupbox.setDisabled(not self.has_two_trajs)
-        if filename == 'maneuver.json':
+        try:
             self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
-        else:
+        except FileNotFoundError:
             self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route.json')
 
         self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')

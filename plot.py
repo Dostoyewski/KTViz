@@ -225,14 +225,19 @@ def prepare_file(filename, solver=0):
         try:
             with open(os.path.join(dirname, 'target-maneuvers.json')) as f:
                 target_data = json.loads(f.read())
+                data.extend(target_data)
                 if DEBUG:
                     print('Loaded target data')
         except FileNotFoundError:
-            with open(os.path.join(dirname, 'predicted_tracks.json')) as f:
-                target_data = json.loads(f.read())
+            try:
+                with open(os.path.join(dirname, 'predicted_tracks.json')) as f:
+                    target_data = json.loads(f.read())
+                    data.extend(target_data)
+                    if DEBUG:
+                        print('Loaded target data')
+            except FileNotFoundError:
                 if DEBUG:
-                    print('Loaded target data')
-        data.extend(target_data)
+                    print("target data does not exist!!!")
         has_real = False
         try:
             with open(os.path.join(dirname, 'real-target-maneuvers.json')) as f:
@@ -345,9 +350,10 @@ def plot_nav_points(ax, nav_file, target_file, frame):
 
 
 def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_trajs=False,
-                   real_trajs=False):
+                   real_trajs=False, only_real=False):
     """
     Plots ships positions
+    :param only_real: flag if has only real-target-maneuvers
     :param ax: plot axes
     :param positions: array with positions
     :param radius: safe radius
@@ -359,11 +365,14 @@ def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_traj
     """
     for i, position in enumerate(positions):
         if position.x is not None:
-            if real_trajs and i > len(positions) / 2:
+            if real_trajs and i > len(positions) / 2 and not only_real and i != 0:
                 label_text = 'real-#{}, {:.2f}knt,{:.2f}°'.format(int(i - len(positions) / 2 + 0.5),
                                                                   position.vel * 3600, position.course)
             else:
-                label_text = '#{}, {:.2f}knt,{:.2f}°'.format(i, position.vel * 3600, position.course)
+                if only_real and i != 0:
+                    label_text = 'real-#{}, {:.2f}knt,{:.2f}°'.format(i, position.vel * 3600, position.course)
+                else:
+                    label_text = '#{}, {:.2f}knt,{:.2f}°'.format(i, position.vel * 3600, position.course)
             if coords:
                 if frame is not None:
                     lat, lon = frame.to_wgs(position.x, position.y)
@@ -378,10 +387,14 @@ def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_traj
                 plot_position(position.x, position.y, position.course, ax, radius=radius,
                               color=('red' if i == 0 else 'blue'),
                               label=label_text)
-            if real_trajs and i > len(positions) / 2:
+
+            if real_trajs and i > len(positions) / 2 and not only_real and i != 0:
                 ax.text(position.y, position.x, 'real-#{}'.format(int(i - len(positions) / 2 + 0.5), size=8))
             else:
-                ax.text(position.y, position.x, '#{}'.format(i), size=8)
+                if only_real and i != 0:
+                    ax.text(position.y, position.x, 'real-#{}'.format(i, size=8))
+                else:
+                    ax.text(position.y, position.x, '#{}'.format(i), size=8)
 
 
 def plot_distances(ax, positions, distance=5.):

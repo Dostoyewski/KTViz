@@ -17,6 +17,10 @@ def process_json_file(filename, function, args=()):
         print('rewrite: {}'.format(filename))
 
 
+def wrap_angle(angle):
+    return math.fmod(angle + 360., 360.)
+
+
 def find_cases(root_dir='.'):
     result = []
     for directory, dirs, files in os.walk(root_dir):
@@ -41,7 +45,7 @@ def prepare_table(root_dir='.'):
 
 def move_point(lat, lon, lat1, lon1, lat2, lon2, da):
     path = Geodesic.WGS84.Inverse(lat1, lon1, lat, lon)
-    path = Geodesic.WGS84.Direct(lat2, lon2, math.fmod(path['azi1'] + da, 360.0), path['s12'])
+    path = Geodesic.WGS84.Direct(lat2, lon2, wrap_angle(path['azi1'] + da), path['s12'])
     return path['lat2'], path['lon2']
 
 
@@ -54,7 +58,7 @@ def move_path(path, lat1, lon1, lat2, lon2, dcog):
             end_lat, end_lon = move_point(item['lat'], item['lon'], lat1, lon1, lat2, lon2, dcog)
 
         item['lat'], item['lon'] = end_lat, end_lon
-        item['begin_angle'] = math.fmod(item['begin_angle'] + dcog, 360.0)
+        item['begin_angle'] = wrap_angle(item['begin_angle'] + dcog)
 
         if item['curve'] == 0:
             dx, dy = round(length * b_cos, 2), round(length * b_sin, 2)
@@ -89,7 +93,7 @@ def move_route_data(route_data, lat1, lon1, lat2, lon2, dcog):
 def move_target_data(target_data, lat1, lon1, lat2, lon2, dcog):
     for target in target_data:
         target['lat'], target['lon'] = move_point(target['lat'], target['lon'], lat1, lon1, lat2, lon2, dcog)
-        target['COG'] = math.fmod(target['COG'] + dcog, 360.0)
+        target['COG'] = wrap_angle(target['COG'] + dcog)
     return target_data
 
 
@@ -143,6 +147,37 @@ def process_table(table):
             df.drop(index, inplace=True)
 
 
+def prettify(root_dir):
+    for directory, dirs, files in os.walk(root_dir):
+        file_list = glob.glob(os.path.join(directory, '*.json'))
+
+        for file_path in file_list:
+            print('Prettify {}'.format(file_path))
+            with open(file_path) as f:
+                data = json.load(f)
+            basename = os.path.basename(file_path)
+
+            if basename == 'nav-data.json':
+                data['COG'] = wrap_angle(data['COG'])
+                data['heading'] = wrap_angle(data['heading'])
+
+            if basename == 'route-data.json':
+                for item in data['items']:
+                    item['begin_angle'] = wrap_angle(item['begin_angle'])
+
+            if basename == 'target-data.json':
+                for target in data:
+                    target['COG'] = wrap_angle(target['COG'])
+
+            if basename == 'real-target-maneuvers.json':
+                for path in data:
+                    for item in path['items']:
+                        item['begin_angle'] = wrap_angle(item['begin_angle'])
+
+            with open(file_path, 'w') as f:
+                json.dump(data, f, indent='\t')
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -157,7 +192,7 @@ if __name__ == '__main__':
 
     if os.path.exists(arguments.index_file) and os.path.isfile(arguments.index_file):
         with open(arguments.index_file) as f:
-            df = pd.read_csv(f, sep='\t', )
+            df = pd.read_csv(f, sep='\t')
         process_table(df)
 
     else:
@@ -166,14 +201,6 @@ if __name__ == '__main__':
             df.to_csv(f, index=False, sep='\t', line_terminator='\n')
 
     if arguments.pretty:
-        for directory, dirs, files in os.walk(cur_dir):
-            file_list = glob.glob(os.path.join(directory, '*.json'))
-
-            for file_path in file_list:
-                print('Prettify {}'.format(file_path))
-                with open(file_path) as f:
-                    data = json.load(f)
-                with open(file_path, 'w') as f:
-                    json.dump(data, f, indent='\t')
+        prettify(cur_dir)
 
     print(df.to_string(index=False))

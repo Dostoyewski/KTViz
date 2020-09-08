@@ -74,7 +74,7 @@ def data_move_real_target_maneuvers(case_dir, lat1, lon1, lat2, lon2, dcog):
         new_paths.append(move_path(path, lat1, lon1, lat2, lon2, dcog))
 
     with open(filename, 'w') as f:
-        json.dump(new_paths, f)
+        json.dump(new_paths, f, indent='\t')
         print('rewrite: {}'.format(filename))
 
 
@@ -85,7 +85,7 @@ def data_move_route_data(case_dir, lat1, lon1, lat2, lon2, dcog):
     route_data = move_path(route_data, lat1, lon1, lat2, lon2, dcog)
 
     with open(filename, 'w') as f:
-        json.dump(route_data, f)
+        json.dump(route_data, f, indent='\t')
         print('rewrite: {}'.format(filename))
 
 
@@ -98,7 +98,29 @@ def data_move_targets(case_dir, lat1, lon1, lat2, lon2, dcog):
         target['COG'] = math.fmod(target['COG'] + dcog, 360.0)
 
     with open(filename, 'w') as f:
-        json.dump(target_data, f)
+        json.dump(target_data, f, indent='\t')
+        print('rewrite: {}'.format(filename))
+
+
+def data_move_constraints(case_dir, lat1, lon1, lat2, lon2, dcog):
+    filename = os.path.join(case_dir, 'constraints.json')
+    with open(filename) as f:
+        data = json.load(f)
+    for feature in data['features']:
+        if feature['geometry']['type'] == 'Polygon':
+            for coords in feature['geometry']['coordinates']:
+                for point in coords:
+                    point[1], point[0] = move_point(point[1], point[0], lat1, lon1, lat2, lon2, dcog)
+        if feature['geometry']['type'] == 'Line':
+            for coords in feature['geometry']['coordinates']:
+                coords[1], coords[0] = move_point(coords[1], coords[0], lat1, lon1, lat2, lon2, dcog)
+        if feature['geometry']['type'] == 'Line':
+            feature['geometry']['coordinates'][1], feature['geometry']['coordinates'][0] = \
+                move_point(feature['geometry']['coordinates'][1], feature['geometry']['coordinates'][0], lat1, lon1,
+                           lat2, lon2, dcog)
+
+    with open(filename, 'w') as f:
+        json.dump(data, f)
         print('rewrite: {}'.format(filename))
 
 
@@ -110,24 +132,29 @@ def move_case(case_dir, lat_, lon_, cog_):
     lat1, lon1 = nav_data['lat'], nav_data['lon']
     nav_data['lat'], nav_data['lon'], nav_data['COG'], nav_data['heading'] = lat_, lon_, cog_, cog_
     with open(nav_filename, 'w') as f:
-        json.dump(nav_data, f)
+        json.dump(nav_data, f, indent='\t')
         print('rewrite: {}'.format(nav_filename))
 
     data_move_targets(case_dir, lat1, lon1, lat_, lon_, dcog)
     data_move_route_data(case_dir, lat1, lon1, lat_, lon_, dcog)
     data_move_real_target_maneuvers(case_dir, lat1, lon1, lat_, lon_, dcog)
+    data_move_constraints(case_dir, lat1, lon1, lat_, lon_, dcog)
 
 
 def process_table(table):
     for index, row in table.iterrows():
-        lat, lon, cog = our_coords_course(row['dir'])
-        if (lat, lon, cog) != (row['lat'], row['lon'], row['cog']):
-            print('Found difference in {}'.format(row['dir']))
-            print('Actual:')
-            print('lat: {}, lon: {}, COG: {}', lat, lon, cog)
-            print('From index:')
-            print('lat: {}, lon: {}, COG: {}', row['lat'], row['lon'], row['cog'])
-            move_case(row['dir'], row['lat'], row['lon'], row['cog'])
+        try:
+            lat, lon, cog = our_coords_course(row['dir'])
+            if (lat, lon, cog) != (row['lat'], row['lon'], row['cog']):
+                print('Found difference in {}'.format(row['dir']))
+                print('Actual:')
+                print('lat: {}, lon: {}, COG: {}', lat, lon, cog)
+                print('From index:')
+                print('lat: {}, lon: {}, COG: {}', row['lat'], row['lon'], row['cog'])
+                move_case(row['dir'], row['lat'], row['lon'], row['cog'])
+        except FileNotFoundError:
+            print('{} not found'.format(row['dir']))
+            df.drop(index, inplace=True)
 
 
 if __name__ == '__main__':

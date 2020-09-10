@@ -52,13 +52,14 @@ def move_point(lat, lon, lat1, lon1, lat2, lon2, da):
 def move_path(path, lat1, lon1, lat2, lon2, dcog):
     for i, item in enumerate(path['items']):
         length = item['length']
-        b_cos = math.cos(math.radians(item['begin_angle']))
-        b_sin = math.sin(math.radians(item['begin_angle']))
         if i == 0:
             end_lat, end_lon = move_point(item['lat'], item['lon'], lat1, lon1, lat2, lon2, dcog)
 
         item['lat'], item['lon'] = end_lat, end_lon
         item['begin_angle'] = wrap_angle(item['begin_angle'] + dcog)
+
+        b_cos = math.cos(math.radians(item['begin_angle']))
+        b_sin = math.sin(math.radians(item['begin_angle']))
 
         if item['curve'] == 0:
             dx, dy = round(length * b_cos, 2), round(length * b_sin, 2)
@@ -72,7 +73,7 @@ def move_path(path, lat1, lon1, lat2, lon2, dcog):
 
         azi1 = math.degrees(math.atan2(dy, dx))
         dist = (dx ** 2 + dy ** 2) ** .5
-        r = Geodesic.WGS84.Direct(lat2, lon2, azi1, dist)
+        r = Geodesic.WGS84.Direct(end_lat, end_lon, azi1, dist * 1852)
         end_lat, end_lon = r['lat2'], r['lon2']
 
     return path
@@ -99,6 +100,12 @@ def move_target_data(target_data, lat1, lon1, lat2, lon2, dcog):
 
 def move_constraints_data(data, lat1, lon1, lat2, lon2, dcog):
     for feature in data['features']:
+        if 'min_course' in feature['properties']:
+            feature['properties']['min_course'] = wrap_angle(feature['properties']['min_course'] + dcog)
+
+        if 'max_course' in feature['properties']:
+            feature['properties']['max_course'] = wrap_angle(feature['properties']['max_course'] + dcog)
+
         if feature['geometry']['type'] == 'Polygon':
             for coords in feature['geometry']['coordinates']:
                 for point in coords:

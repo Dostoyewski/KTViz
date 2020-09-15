@@ -170,6 +170,8 @@ class App(QMainWindow):
         self.real_data = False
         # If has only real-target-maneuvers
         self.only_real = False
+        # If maneuver.json exists:
+        self.has_maneuver = True
         self.initUI()
 
     def initUI(self):
@@ -320,9 +322,18 @@ class App(QMainWindow):
                 self.load()
 
     def load(self, solver=0):
+        if 'route' in self.filename:
+            self.route_file = self.filename
+            try:
+                if 'maneuver.json' in os.listdir(os.path.dirname(os.path.abspath(self.filename))):
+                    self.filename = os.path.join(os.path.dirname(os.path.abspath(self.filename)), 'maneuver.json')
+                else:
+                    self.has_maneuver = False
+            except FileNotFoundError:
+                self.has_maneuver = False
         self.load_data(self.filename, solver)
         self.m.plot_paths(self.data, self.frame, self.route_file, self.poly_file, self.settings_file,
-                          self.nav_file, self.target_file)
+                          self.nav_file, self.target_file, not self.has_maneuver)
         self.vel.plot_paths(self.data)
         self.update_time()
 
@@ -340,8 +351,8 @@ class App(QMainWindow):
 
     def load_data(self, filename, solver=0):
         self.loaded = True
-        self.data, self.frame, new_format = plot.prepare_file(filename)
-        if new_format:
+        self.data, self.frame, new_format = plot.prepare_file(filename, has_maneuver=self.has_maneuver)
+        if new_format and self.has_maneuver:
             self.has_two_trajs = plot.check_multiply_trajs(filename)
             self.data, self.frame, new_format = plot.prepare_file(filename, solver)
             self.solver_info, self.info_msg = plot.get_path_info(filename, solver)
@@ -384,7 +395,8 @@ class App(QMainWindow):
                                 msg=self.info_msg,
                                 two_trajs=self.has_two_trajs,
                                 real_data=self.real_data,
-                                only_real=self.only_real)
+                                only_real=self.only_real,
+                                has_maneuver=self.has_maneuver)
         self.m.draw()
 
     def openFileNameDialog(self):
@@ -421,7 +433,7 @@ class PlotCanvas(FigureCanvas):
         self.ax1 = self.figure.add_axes(self.ax.get_position(), frameon=False)
 
     def plot_paths(self, path_data, frame, route_file=None, poly_data=None, settings_file=None,
-                   nav_file=None, target_file=None):
+                   nav_file=None, target_file=None, has_maneuver=False):
         """
         Plots paths
         :param target_file: target-data.json file
@@ -445,14 +457,15 @@ class PlotCanvas(FigureCanvas):
             pass
 
         plot.plot_nav_points(self.ax, nav_file, target_file, frame)
-        plot.plot_maneuvers(self.ax, path_data)
+        plot.plot_maneuvers(self.ax, path_data, has_maneuver)
 
         self.ax.axis('equal')
         self.ax.grid()
         self.draw()
 
     def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None,
-                         solver_info="", msg="", two_trajs=False, real_data=False, only_real=False):
+                         solver_info="", msg="", two_trajs=False, real_data=False, only_real=False,
+                         has_maneuver=True):
         self.ax1.clear()
         try:
             positions = plot.get_positions(path_data, t)
@@ -460,7 +473,8 @@ class PlotCanvas(FigureCanvas):
             t = plot.find_max_time(path_data)
             positions = plot.get_positions(path_data, t)
         plot.plot_positions(self.ax1, positions, coords=coords, frame=frame,
-                            radius=radius, two_trajs=two_trajs, real_trajs=real_data, only_real=only_real)
+                            radius=radius, two_trajs=two_trajs, real_trajs=real_data,
+                            only_real=only_real, has_maneuver=has_maneuver)
         if distance > 0:
             plot.plot_distances(self.ax1, positions, distance)
         self.ax1.legend()

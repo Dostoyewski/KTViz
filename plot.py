@@ -204,16 +204,20 @@ def get_path_info(filename, solver):
     return file_data[solver]['solver_name'], file_data[solver]['msg']
 
 
-def prepare_file(filename, solver=0):
+def prepare_file(filename, solver=0, has_maneuver=True):
     """
     Prepares data from file to plot
+    :param has_maneuver: if has maneuver.json
     :param filename: name of file
     :param solver: index of solution (if exist)
     :return: path, convertation frame, new_format flag
     """
     new_format = False
-    with open(filename) as f:
-        file_data = json.loads(f.read())
+    if has_maneuver:
+        with open(filename) as f:
+            file_data = json.loads(f.read())
+    else:
+        file_data = [{'path': []}, {'path': []}]
     try:
         # If new format
         data = [file_data[solver]['path']]
@@ -269,18 +273,28 @@ def prepare_file(filename, solver=0):
             print('Format set to old')
         data = file_data
     # Sample initial position to anchor Frame
-    sample = data[0]['items'][0]
-    if 'lat' in sample and 'lon' in sample:
-        key1, key2 = 'lat', 'lon'
-        frame = Frame(data[0]['items'][0][key1], data[0]['items'][0][key2])
+    try:
+        sample = data[0]['items'][0]
+        if 'lat' in sample and 'lon' in sample:
+            key1, key2 = 'lat', 'lon'
+            frame = Frame(data[0]['items'][0][key1], data[0]['items'][0][key2])
+    except TypeError:
+        if not has_maneuver:
+            with open(filename) as f:
+                file_data = json.loads(f.read())
+            lat, lon = file_data['items'][0]['lat'], file_data['items'][0]['lon']
+        frame = Frame(lat, lon)
     else:
         raise KeyError('No coords in maneuver')
 
     # Prepare data
     paths = []
     for obj in data:
-        new_data = prepare_path(obj, frame=frame)
-        paths.append(new_data)
+        try:
+            new_data = prepare_path(obj, frame=frame)
+            paths.append(new_data)
+        except TypeError:
+            pass
     if need_add_flag:
         paths[-1]['second'] = True
     if has_real:
@@ -294,8 +308,20 @@ def prepare_file(filename, solver=0):
     return paths, frame, new_format
 
 
-def plot_maneuvers(ax, data):
+def plot_maneuvers(ax, data, no_maneuver=False):
+    """
+    Plot trajs
+    :param ax:
+    :param data:
+    :param no_maneuver: if no maneuver.json
+    :return:
+    """
     for i, path in enumerate(data):
+        # Dummy fix #2
+        if no_maneuver:
+            z = i + 1
+        else:
+            z = i
         # Plot path from second solver
         try:
             if path['second']:
@@ -309,7 +335,7 @@ def plot_maneuvers(ax, data):
                 continue
         except KeyError:
             pass
-        plot_path(path, ax, color=('brown' if i == 0 else 'blue'))
+        plot_path(path, ax, color=('brown' if z == 0 else 'blue'))
 
 
 def plot_route(ax, file, frame):
@@ -345,14 +371,19 @@ def plot_nav_points(ax, nav_file, target_file, frame):
     for obj in target_data:
         out = frame.from_wgs(obj['lat'], obj['lon'])
         x, y = out[0], out[1]
+        # Dummy fix:
+        if abs(x) > 1500 or abs(y) > 1500:
+            out = frame.from_wgs(obj['lon'], obj['lat'])
+            x, y = out[0], out[1]
         ax.scatter(y, x, color='black', marker='x')
         ax.text(y, x, str(obj['timestamp']))
 
 
 def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_trajs=False,
-                   real_trajs=False, only_real=False):
+                   real_trajs=False, only_real=False, has_maneuver=True):
     """
     Plots ships positions
+    :param has_maneuver: if has maneuver.json
     :param only_real: flag if has only real-target-maneuvers
     :param ax: plot axes
     :param positions: array with positions
@@ -364,6 +395,8 @@ def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_traj
     :return:
     """
     for i, position in enumerate(positions):
+        if not has_maneuver:
+            i += 1
         if position.x is not None:
             if real_trajs and i > len(positions) / 2 and not only_real and i != 0:
                 label_text = 'real-#{}, {:.2f}knt,{:.2f}°'.format(int(i - len(positions) / 2 + 0.5),

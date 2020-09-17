@@ -278,14 +278,14 @@ def prepare_file(filename, solver=0, has_maneuver=True):
         if 'lat' in sample and 'lon' in sample:
             key1, key2 = 'lat', 'lon'
             frame = Frame(data[0]['items'][0][key1], data[0]['items'][0][key2])
+        else:
+            raise KeyError('No coords in maneuver')
     except TypeError:
         if not has_maneuver:
             with open(filename) as f:
                 file_data = json.loads(f.read())
             lat, lon = file_data['items'][0]['lat'], file_data['items'][0]['lon']
         frame = Frame(lat, lon)
-    else:
-        raise KeyError('No coords in maneuver')
 
     # Prepare data
     paths = []

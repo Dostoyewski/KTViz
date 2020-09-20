@@ -216,6 +216,10 @@ def prepare_file(filename, solver=0, has_maneuver=True):
     if has_maneuver:
         with open(filename) as f:
             file_data = json.loads(f.read())
+        if len(file_data[0]['path']['items']) == 0:
+            if DEBUG:
+                print('empty maneuver')
+        has_maneuver = False
     else:
         file_data = [{'path': []}, {'path': []}]
     try:
@@ -280,11 +284,17 @@ def prepare_file(filename, solver=0, has_maneuver=True):
             frame = Frame(data[0]['items'][0][key1], data[0]['items'][0][key2])
         else:
             raise KeyError('No coords in maneuver')
-    except TypeError:
+    except (TypeError, IndexError) as e:
         if not has_maneuver:
             with open(filename) as f:
                 file_data = json.loads(f.read())
-            lat, lon = file_data['items'][0]['lat'], file_data['items'][0]['lon']
+            if len(file_data[0]['path']['items']) != 0:
+                lat, lon = file_data['items'][0]['lat'], file_data['items'][0]['lon']
+            else:
+                for rec in data:
+                    if len(rec['items']) > 0 and 'lat' in rec['items'][0] and 'lon' in rec['items'][0]:
+                        lat, lon = rec['items'][0]['lat'], rec['items'][0]['lon']
+                        break
         frame = Frame(lat, lon)
 
     # Prepare data
@@ -460,27 +470,28 @@ def plot_speed(ax, path):
     :param path: path, contains trajectory items
     :return:
     """
-    velocities = [item['length'] / item['duration'] * 3600 for item in path["items"]]
-    times = [item['duration'] / 3600 for item in path["items"]]
-    dtimes = [0]
-    for i in range(len(times)):
-        dtimes.append(sum(dtimes[0:i + 1]) + times[i])
-    velocities.append(velocities[-1])
-    ax.step(np.arange(.5, len(velocities) + .5, 1), velocities, where='post')
-    # ax.step(dtimes, velocities, where='post')
-    ax.set_ylim(bottom=0)
-    ax.set_ylim(top=max(velocities) * 1.1)
-    ax.set_xticks(np.arange(1, len(velocities), 1))
-    # ax.set_xticks(dtimes)
-    xticks = np.arange(.5, len(velocities) + .5, 1)
-    for i in range(len(dtimes)):
-        # Эта методика округления нужна для нормального отображения результатов!
-        # Ее не трогать!!! Это НЕ костыль!!!
-        ax.text(xticks[i], velocities[i] - 1, str(round(dtimes[i], 2))[:-1])
-    ax.set_xlabel('Number of segment')
-    # ax.set_xlabel('Time, h')
-    ax.set_ylabel('Speed, knt')
-    ax.grid()
+    if len(path['items']) > 0:
+        velocities = [item['length'] / item['duration'] * 3600 for item in path["items"]]
+        times = [item['duration'] / 3600 for item in path["items"]]
+        dtimes = [0]
+        for i in range(len(times)):
+            dtimes.append(sum(dtimes[0:i + 1]) + times[i])
+        velocities.append(velocities[-1])
+        ax.step(np.arange(.5, len(velocities) + .5, 1), velocities, where='post')
+        # ax.step(dtimes, velocities, where='post')
+        ax.set_ylim(bottom=0)
+        ax.set_ylim(top=max(velocities) * 1.1)
+        ax.set_xticks(np.arange(1, len(velocities), 1))
+        # ax.set_xticks(dtimes)
+        xticks = np.arange(.5, len(velocities) + .5, 1)
+        for i in range(len(dtimes)):
+            # Эта методика округления нужна для нормального отображения результатов!
+            # Ее не трогать!!! Это НЕ костыль!!!
+            ax.text(xticks[i], velocities[i] - 1, str(round(dtimes[i], 2))[:-1])
+        ax.set_xlabel('Number of segment')
+        # ax.set_xlabel('Time, h')
+        ax.set_ylabel('Speed, knt')
+        ax.grid()
 
 
 def plot_from_files(maneuvers_file, route_file=None, poly_file=None, settings_file=None):

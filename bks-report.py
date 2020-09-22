@@ -44,15 +44,15 @@ class Report:
 
         # Print the exit code.
         exec_time = time.time()
-        completedProc = subprocess.run([usv, "--targets", "target-data.json",
+        completedProc = subprocess.run([usv, "--target-settings", "target-settings.json",
+                                        "--targets", "target-data.json",
                                         "--settings", "settings.json",
                                         "--nav-data", "nav-data.json",
                                         "--hydrometeo", "hmi-data.json",
                                         "--constraints", "constraints.json",
                                         "--route", "route-data.json",
                                         "--maneuver", "maneuver.json",
-                                        "--analyse", "nav-report.json",
-                                        "--predict", "target-maneuvers.json",
+                                        "--simple-prediction",
                                         ("--rvo" if rvo is True else "--no-rvo" if rvo is False else "")],
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time

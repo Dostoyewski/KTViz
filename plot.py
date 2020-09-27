@@ -288,8 +288,10 @@ def prepare_file(filename, solver=0, has_maneuver=True):
         if not has_maneuver:
             with open(filename) as f:
                 file_data = json.loads(f.read())
+            if type(file_data) == dict:
+                file_data = [{'path': file_data}]
             if len(file_data[0]['path']['items']) != 0:
-                lat, lon = file_data['items'][0]['lat'], file_data['items'][0]['lon']
+                lat, lon = file_data[0]['path']['items'][0]['lat'], file_data[0]['path']['items'][0]['lon']
             else:
                 for rec in data:
                     if len(rec['items']) > 0 and 'lat' in rec['items'][0] and 'lon' in rec['items'][0]:

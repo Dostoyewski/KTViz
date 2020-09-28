@@ -1,64 +1,100 @@
+import glob
 import json
 import os
-import glob
+import math
 
 
-def update_settings(filename):
-    with open(filename, 'r') as f:
-        settings = json.load(f)
+def process_json_file(filename, function, args=()):
+    with open(filename) as f:
+        json_data = json.load(f)
 
-    if not ('forward_speed1' in settings['maneuver_calculation']):
-        print('Updating...')
-        max_speed = settings['maneuver_calculation']['maximal_speed']
-        min_speed = settings['maneuver_calculation']['minimal_speed']
-        step = (max_speed - min_speed) / 4
-        settings['maneuver_calculation']['forward_speed1'] = min_speed
-        settings['maneuver_calculation']['forward_speed2'] = min_speed + step
-        settings['maneuver_calculation']['forward_speed3'] = min_speed + step * 2
-        settings['maneuver_calculation']['forward_speed4'] = min_speed + step * 3
-        settings['maneuver_calculation']['forward_speed5'] = max_speed
+    json_data = function(json_data, *args)
 
-        settings['maneuver_calculation']['reverse_speed1'] = max_speed * .5
-        settings['maneuver_calculation']['reverse_speed2'] = max_speed
-
-        settings['maneuver_calculation']['max_circulation_radius'] = settings['maneuver_calculation'][
-            'circulation_radius']
-        settings['maneuver_calculation']['min_circulation_radius'] = settings['maneuver_calculation'][
-            'circulation_radius']
-
-        del settings['maneuver_calculation']['circulation_radius']
-
-        settings['maneuver_calculation']['breaking_distance'] = 0
-        settings['maneuver_calculation']['run_out_distance'] = 0
-        settings['maneuver_calculation']['forecast_time'] = 3600 * 2  # 2 hours
-        with open(filename, 'w') as f:
-            json.dump(settings, f,indent=2)
-    else:
-        print('Skip')
+    with open(filename, 'w') as f:
+        json.dump(json_data, f, indent='\t')
+        print('rewrite: {}'.format(filename))
 
 
-def run_case(datadir):
-    working_dir = os.path.abspath(os.getcwd())
-    os.chdir(datadir)
-    print(datadir)
-    # Get a list of old results
-    file_list = glob.glob('maneuver*.json') + glob.glob('nav-report.json')
-    for filePath in file_list:
-        try:
-            os.remove(filePath)
-        except OSError:
-            pass
-
-    update_settings('settings.json')
-    os.chdir(working_dir)
+def wrap_angle(angle):
+    return math.fmod(angle + 360., 360.)
 
 
-def run(data_directory):
-    for root, dirs, files in os.walk(data_directory):
-        if "nav-data.json" in files:
-            run_case(os.path.join(data_directory, root))
+def find_cases(root_dir='.'):
+    result = []
+    for item in os.listdir(root_dir):
+        if os.path.isdir(os.path.join(root_dir, item)):
+            files = os.listdir(os.path.join(root_dir, item))
+            if "nav-data.json" in files:
+                result.append(os.path.join(root_dir if root_dir != '.' else '', item))
+    return result
 
 
-if __name__ == "__main__":
+def prepare_table(root_dir='.'):
+    cases = find_cases(root_dir)
+    for case in cases:
+        print(case)
+        change_case(case)
+
+
+def change_case(case_dir):
+    # move_args = (lat1, lon1, lat_, lon_, dcog)
+    def change_min_dist(json_data):
+        json_data['maneuver_calculation']['min_diverg_dist'] = json_data['maneuver_calculation'][
+                                                                   'safe_diverg_dist'] * .9
+        return json_data
+
+    def change_target(data):
+        data['maneuver_calculation']['safe_diverg_dist'] = 2.4
+        data['safety_control']['cpa'] = 2.4
+        return data
+
+    # process_json_file(os.path.join(case_dir, 'settings.json'), change_min_dist)
+    # process_json_file(os.path.join(case_dir, 'target-settings.json'), change_target)
+    # process_json_file(os.path.join(case_dir, 'real-target-maneuvers.json'), move_real_target_maneuvers_data, move_args)
+    # process_json_file(os.path.join(case_dir, 'constraints.json'), move_constraints_data, move_args)
+
+
+def prettify(root_dir):
+    for directory, dirs, files in os.walk(root_dir):
+        file_list = glob.glob(os.path.join(directory, '*.json'))
+
+        for file_path in file_list:
+            print('Prettify {}'.format(file_path))
+            with open(file_path) as f:
+                data = json.load(f)
+            basename = os.path.basename(file_path)
+
+            if basename == 'nav-data.json':
+                data['COG'] = wrap_angle(data['COG'])
+                data['heading'] = wrap_angle(data['heading'])
+
+            if basename == 'route-data.json':
+                for item in data['items']:
+                    item['begin_angle'] = wrap_angle(item['begin_angle'])
+
+            if basename == 'target-data.json':
+                for target in data:
+                    target['COG'] = wrap_angle(target['COG'])
+
+            if basename == 'real-target-maneuvers.json':
+                for path in data:
+                    for item in path['items']:
+                        item['begin_angle'] = wrap_angle(item['begin_angle'])
+
+            with open(file_path, 'w') as f:
+                json.dump(data, f, indent='\t')
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Creates index file starting from working directory. If index already exists, tries to change "
+                    "coordinates according to changes in index file.")
+    parser.add_argument("--pretty", action="store_true", help="Pretty format all json files")
+    arguments = parser.parse_args()
+
     cur_dir = os.path.abspath(os.getcwd())
-    run(cur_dir)
+    prepare_table()
+    if arguments.pretty:
+        prettify(cur_dir)

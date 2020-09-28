@@ -1,32 +1,13 @@
-import glob
 import json
 import os
 import pandas as pd
 from geographiclib.geodesic import Geodesic
 import math
-
-
-def process_json_file(filename, function, args=()):
-    with open(filename) as f:
-        json_data = json.load(f)
-
-    json_data = function(json_data, *args)
-
-    with open(filename, 'w') as f:
-        json.dump(json_data, f, indent='\t')
-        print('rewrite: {}'.format(filename))
+from data_update import find_cases, prettify, process_json_file
 
 
 def wrap_angle(angle):
     return math.fmod(angle + 360., 360.)
-
-
-def find_cases(root_dir='.'):
-    result = []
-    for directory, dirs, files in os.walk(root_dir):
-        if "nav-data.json" in files or 'navigation.json' in files:
-            result.append(os.path.join(root_dir if root_dir != '.' else '', directory))
-    return result
 
 
 def our_coords_course(case_dir):
@@ -152,37 +133,6 @@ def process_table(table):
         except FileNotFoundError:
             print('{} not found'.format(row['dir']))
             df.drop(index, inplace=True)
-
-
-def prettify(root_dir):
-    for directory, dirs, files in os.walk(root_dir):
-        file_list = glob.glob(os.path.join(directory, '*.json'))
-
-        for file_path in file_list:
-            print('Prettify {}'.format(file_path))
-            with open(file_path) as f:
-                data = json.load(f)
-            basename = os.path.basename(file_path)
-
-            if basename == 'nav-data.json':
-                data['COG'] = wrap_angle(data['COG'])
-                data['heading'] = wrap_angle(data['heading'])
-
-            if basename == 'route-data.json':
-                for item in data['items']:
-                    item['begin_angle'] = wrap_angle(item['begin_angle'])
-
-            if basename == 'target-data.json':
-                for target in data:
-                    target['COG'] = wrap_angle(target['COG'])
-
-            if basename == 'real-target-maneuvers.json':
-                for path in data:
-                    for item in path['items']:
-                        item['begin_angle'] = wrap_angle(item['begin_angle'])
-
-            with open(file_path, 'w') as f:
-                json.dump(data, f, indent='\t')
 
 
 if __name__ == '__main__':

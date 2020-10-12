@@ -460,6 +460,11 @@ class PlotCanvas(FigureCanvas):
         plot.plot_maneuvers(self.ax, path_data, has_maneuver)
 
         self.ax.axis('equal')
+        xlim = self.ax.get_xlim()
+        ylim = self.ax.get_ylim()
+        xlim, ylim = plot.recalc_lims(xlim, ylim, path_data[0])
+        self.ax.set_xlim(xlim)
+        self.ax.set_ylim(ylim)
         self.ax.grid()
         self.draw()
 

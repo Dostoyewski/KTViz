@@ -41,7 +41,20 @@ def path_position(path, t):
     return Position(None, None, None, None)
 
 
-def plot_path(path, ax, color):
+def recalc_lims(xlim, ylim, path):
+    xx, yy = calculate_path_points(path)
+    xmax, xmin = np.max(yy), np.min(yy)
+    dx = xmax - xmin
+    ymax, ymin = np.max(xx), np.min(xx)
+    dy = ymax - ymin
+    # if dx > dy:
+    xlim = (xmin - dx * .1, xmax + dx * .1)
+    # else:
+    ylim = (ymin - dy * .1, ymax + dy * .1)
+    return xlim, ylim
+
+
+def calculate_path_points(path):
     angle_inc = radians(1)
     xx, yy = [], []
     for item in path['items']:
@@ -62,6 +75,11 @@ def plot_path(path, ax, color):
                 x_, y_ = sin(angle), sign * (1 - cos(angle))
                 xx.append(item['X'] + r * (x_ * b_cos - y_ * b_sin))
                 yy.append(item['Y'] + r * (x_ * b_sin + y_ * b_cos))
+    return xx, yy
+
+
+def plot_path(path, ax, color):
+    xx, yy = calculate_path_points(path)
     ax.plot(yy, xx, color=color)
 
 
@@ -557,6 +575,12 @@ def plot_from_files(maneuvers_file, route_file=None, poly_file=None, settings_fi
             positions = get_positions(data, start_time)
         plot_positions(ax, positions, radius=radius)
         ax.legend()
+
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        xlim, ylim = plot.recalc_lims(xlim, ylim, data[0])
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
 
         return fig
     else:

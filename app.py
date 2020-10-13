@@ -89,7 +89,6 @@ class App(QMainWindow):
     def __init__(self):
         super().__init__()
         # Time axis
-        self.sl = QSlider(Qt.Horizontal, self)
         self.left = 10
         self.top = 50
         self.title = 'KTViz 1.0'
@@ -120,7 +119,9 @@ class App(QMainWindow):
         self.filename = ""
         self.relative = True
         self.m = PlotCanvas(self, width=round(12 * self.scale_x), height=round(8 * self.scale_y))
-        self.vel = VelocityCanvas(self, width=round(6 * self.scale_x), height=round(7 * self.scale_y))
+        self.segments = SegmentsVelocityCanvas(self, width=round(6 * self.scale_x), height=round(7 * self.scale_y))
+        self.time = TimeVelocityCanvas(self, width=round(6 * self.scale_x), height=50)
+        self.time.register_click(self.update_time)
 
         self.toolbar = NavigationToolbar(self.m, self)
         self.toolbar.hide()
@@ -190,16 +191,6 @@ class App(QMainWindow):
         # Load button
         self.params.pushButton.clicked.connect(self.openFileNameDialog)
 
-        # Slider config
-        self.sl.setMinimum(0)
-        self.sl.setMaximum(99)
-        self.sl.setValue(0)
-        self.sl.setTickPosition(QSlider.TicksBelow)
-        self.sl.setTickInterval(1)
-        self.sl.setGeometry(int(50 * self.scale_x), int(840 * self.scale_y),
-                            int(1100 * self.scale_x), 50)
-        self.sl.valueChanged.connect(self.value_changed)
-
         # Update button
         self.btnUpdate.resize(120, 35)
         self.btnUpdate.clicked.connect(self.reload)
@@ -239,7 +230,7 @@ class App(QMainWindow):
         self.params.s1.clicked.connect(self.upd_solver)
         self.params.s2.clicked.connect(self.upd_solver)
 
-        self.vel.move(int(1200 * self.scale_x), int(120 * self.scale_y))
+        self.segments.move(int(1200 * self.scale_x), int(120 * self.scale_y))
         self.show()
 
     def upd_solver(self):
@@ -248,7 +239,6 @@ class App(QMainWindow):
         elif self.params.s2.isChecked():
             self.solver = 1
         self.load(solver=self.solver)
-
 
     def home(self):
         self.toolbar.home()
@@ -286,9 +276,7 @@ class App(QMainWindow):
         """
         self.params.move(int(0.677 * self.width()), 10)
         self.params.resize(int(0.298 * self.width()), int(0.106 * self.height()))
-        self.m.resize(int(0.67 * self.width()), int(0.926 * self.height()))
-        self.sl.setGeometry(int(0.028 * self.width()), int(0.933 * self.height()),
-                            int(0.611 * self.width()), 50)
+        self.m.resize(int(0.67 * self.width()), int(self.height() - 150))
         self.btnUpdate.move(int(0.677 * self.width() + 120), int(0.933 * self.height()))
         self.btnKtDraw.move(int(self.width() - 100), int(0.933 * self.height()))
 
@@ -297,8 +285,11 @@ class App(QMainWindow):
         self.btnZoom.move(int(0.677 * self.width() + 80), int(0.933 * self.height()))
         self.btnPolyFix.move(int(0.677 * self.width() + 265), int(0.933 * self.height()))
 
-        self.vel.move(int(0.67 * self.width()) + 5, int(0.132 * self.height()))
-        self.vel.resize(int(0.330 * self.width()) - 5, int(0.794 * self.height()))
+        self.segments.move(int(0.67 * self.width()) + 5, int(0.132 * self.height()))
+        self.segments.resize(int(0.330 * self.width()) - 5, int(0.794 * self.height()))
+
+        self.time.setGeometry(int(0.002 * self.width()), int(self.height() - 155),
+                              int(0.67 * self.width()), 155)
 
     def resizeEvent(self, event):
         """
@@ -334,8 +325,9 @@ class App(QMainWindow):
         self.load_data(self.filename, solver)
         self.m.plot_paths(self.data, self.frame, self.route_file, self.poly_file, self.settings_file,
                           self.nav_file, self.target_file, not self.has_maneuver)
-        self.vel.plot_paths(self.data)
-        self.update_time()
+        self.segments.plot_paths(self.data)
+        self.time.plot_paths(self.data)
+        self.update_time(self.time.time)
 
     def show_coords_changed(self):
         self.params.cbGc.setEnabled(self.params.cbCoords.isChecked())
@@ -347,7 +339,7 @@ class App(QMainWindow):
         :return:
         """
         if self.loaded:
-            self.update_time()
+            self.update_time(self.time.time)
 
     def load_data(self, filename, solver=0):
         self.loaded = True
@@ -377,7 +369,7 @@ class App(QMainWindow):
             settings_data = json.loads(f.read())
             self.params.spinBoxRadius.setValue(settings_data['maneuver_calculation']['safe_diverg_dist'] * .5)
 
-    def update_time(self):
+    def update_time(self, time):
         start_time = self.data[0]['start_time']
         try:
             positions = plot.get_positions(self.data, start_time)
@@ -385,7 +377,7 @@ class App(QMainWindow):
         except KeyError:
             start_time = plot.find_max_time(self.data)
             total_time = sum([x['duration'] for x in self.data[0]['items']]) + start_time - self.data[0]['start_time']
-        time = start_time + total_time * self.sl.value() * .01
+        time = start_time + time
         self.m.update_positions(self.data, time,
                                 distance=self.params.spinBoxDist.value() if self.params.cbDist.isChecked() else 0,
                                 radius=self.params.spinBoxRadius.value(),
@@ -499,7 +491,7 @@ class PlotCanvas(FigureCanvas):
             self.ax1.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s))
 
 
-class VelocityCanvas(FigureCanvas):
+class SegmentsVelocityCanvas(FigureCanvas):
 
     def __init__(self, parent=None, width=50, height=50, dpi=100):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
@@ -525,14 +517,42 @@ class VelocityCanvas(FigureCanvas):
         plot.plot_speed(self.ax, path_data[0])
         self.draw()
 
-    # def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None):
-    #     self.ax1.clear()
-    #     positions = plot.get_positions(path_data, t)
-    #     plot.plot_positions(self.ax1, positions, coords=coords, frame=frame, radius=radius)
-    #     plot.plot_distances(self.ax1, positions, distance)
-    #     self.ax1.legend()
-    #     self.ax1.set_ylim(self.ax.get_ylim())
-    #     self.ax1.set_xlim(self.ax.get_xlim())
+
+class TimeVelocityCanvas(FigureCanvas):
+
+    def __init__(self, parent=None, width=50, height=150, dpi=100):
+        self.function = None
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+
+        FigureCanvas.__init__(self, self.fig)
+        self.setParent(parent)
+
+        FigureCanvas.setSizePolicy(self,
+                                   QSizePolicy.Expanding,
+                                   QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
+        self.ax = self.figure.add_subplot(111)
+        self.fig.canvas.mpl_connect('button_release_event', self.onclick)
+        self.time = 0
+
+    def plot_paths(self, path_data):
+        """
+        Plots speed
+        :param path_data: Loaded data
+        """
+        self.time = 0
+        self.ax.clear()
+        plot.plot_time_speed(self.ax, path_data[0])
+        self.draw()
+
+    def register_click(self, function):
+        self.function = function
+
+    def onclick(self, event):
+        ix, iy = event.xdata, event.ydata
+        self.time = ix
+        if self.function is not None:
+            self.function(ix)
 
 
 if __name__ == '__main__':

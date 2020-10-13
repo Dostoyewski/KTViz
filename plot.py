@@ -514,6 +514,26 @@ def plot_speed(ax, path):
         ax.grid()
 
 
+def plot_time_speed(ax, path):
+    """
+    Makes speed plot
+    :param ax: axes
+    :param path: path, contains trajectory items
+    :return:
+    """
+    if len(path['items']) > 0:
+        velocities = [item['length'] / item['duration'] * 3600 for item in path["items"]]
+        times = [item['duration'] for item in path["items"]]
+        times = [0]+ times + times[-1:]
+        velocities = velocities[0:1] + velocities + velocities[-1:]
+        ax.step(np.cumsum(times), velocities, where='post')
+        ax.set_ylim(bottom=0)
+        ax.set_ylim(top=max(velocities) * 1.1)
+        ax.set_xlabel('Time, s')
+        ax.set_ylabel('Speed, knt')
+        ax.grid()
+
+
 def plot_from_files(maneuvers_file, route_file=None, poly_file=None, settings_file=None):
     if os.path.isfile(maneuvers_file):
         fig = plt.figure(figsize=(10, 7.5))

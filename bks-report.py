@@ -52,6 +52,7 @@ class Report:
                                         "--constraints", "constraints.json",
                                         "--route", "route-data.json",
                                         "--maneuver", "maneuver.json",
+                                        "--analyse", "analyse.json",
                                         "--predict","target-maneuvers.json",
                                         ("--rvo" if rvo is True else "--no-rvo" if rvo is False else "")],
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

@@ -19,7 +19,7 @@ from paintall import DrawingApp
 
 
 # For build:
-# pyinstaller --onefile --icon=Icon.ico --noconsole app.py
+# pyinstaller --onefile --icon=Icon.ico --noconsole app.py --version-file=VersionResource.txt
 
 
 class ParamBar(QWidget):

@@ -5,10 +5,9 @@ import sys
 
 import math
 from PyQt5 import QtCore
-from PyQt5.QtCore import QRect
+from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel, QMessageBox, QGroupBox, \
-    QRadioButton, QComboBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel, QMessageBox, QComboBox, QSlider
 from PyQt5.QtWidgets import QFileDialog, QCheckBox, QDoubleSpinBox, QWidget, QVBoxLayout, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -82,6 +81,7 @@ class App(QMainWindow):
     def __init__(self):
         super().__init__()
         # Time axis
+        self.sl = QSlider(Qt.Horizontal, self)
         self.left = 10
         self.top = 50
         self.title = 'KTViz 1.0'
@@ -113,8 +113,8 @@ class App(QMainWindow):
         self.relative = True
         self.m = PlotCanvas(self, width=round(12 * self.scale_x), height=round(8 * self.scale_y))
         self.segments = SegmentsVelocityCanvas(self, width=round(6 * self.scale_x), height=round(7 * self.scale_y))
-        self.time = TimeVelocityCanvas(self, width=round(6 * self.scale_x), height=50)
-        self.time.register_click(self.update_time)
+        # self.time = TimeVelocityCanvas(self, width=round(6 * self.scale_x), height=50)
+        # self.time.register_click(self.update_time)
 
         self.toolbar = NavigationToolbar(self.m, self)
         self.toolbar.hide()
@@ -175,6 +175,16 @@ class App(QMainWindow):
 
         # Load button
         self.params.pushButton.clicked.connect(self.openFileNameDialog)
+
+        # Slider config
+        self.sl.setMinimum(0)
+        self.sl.setMaximum(99)
+        self.sl.setValue(0)
+        self.sl.setTickPosition(QSlider.TicksBelow)
+        self.sl.setTickInterval(1)
+        self.sl.setGeometry(int(50 * self.scale_x), int(840 * self.scale_y),
+                            int(1100 * self.scale_x), 50)
+        self.sl.valueChanged.connect(self.value_changed)
 
         # Update button
         self.btnUpdate.resize(120, 35)
@@ -257,7 +267,9 @@ class App(QMainWindow):
         """
         self.params.move(int(0.677 * self.width()), 10)
         self.params.resize(int(0.298 * self.width()), int(0.106 * self.height()))
-        self.m.resize(int(0.67 * self.width()), int(self.height() - 150))
+        self.m.resize(int(0.67 * self.width()), int(0.926 * self.height()))
+        self.sl.setGeometry(int(0.028 * self.width()), int(0.933 * self.height()),
+                            int(0.611 * self.width()), 50)
         self.btnUpdate.move(int(0.677 * self.width() + 120), int(0.933 * self.height()))
         self.btnKtDraw.move(int(self.width() - 100), int(0.933 * self.height()))
 
@@ -269,8 +281,8 @@ class App(QMainWindow):
         self.segments.move(int(0.67 * self.width()) + 5, int(0.132 * self.height()))
         self.segments.resize(int(0.330 * self.width()) - 5, int(0.794 * self.height()))
 
-        self.time.setGeometry(int(0.002 * self.width()), int(self.height() - 155),
-                              int(0.67 * self.width()), 155)
+        # self.time.setGeometry(int(0.002 * self.width()), int(self.height() - 155),
+        #                       int(0.67 * self.width()), 155)
 
     def resizeEvent(self, event):
         """
@@ -297,8 +309,8 @@ class App(QMainWindow):
     def redraw_plots(self):
         self.m.plot_paths(self.data, self.maneuver_idx)
         self.segments.plot_paths(self.data, self.maneuver_idx)
-        self.time.plot_paths(self.data, self.maneuver_idx)
-        self.update_time(self.time.time)
+        # self.time.plot_paths(self.data, self.maneuver_idx)
+        # self.update_time(self.time.time)
 
     def show_coords_changed(self):
         self.params.cbGc.setEnabled(self.params.cbCoords.isChecked())
@@ -310,7 +322,11 @@ class App(QMainWindow):
         :return:
         """
         if self.loaded:
-            self.update_time(self.time.time)
+            time = self.data.start_time
+            if self.data.maneuvers is not None:
+                time += plot.path_time(
+                    self.data.maneuvers[self.maneuver_idx]['path']) * self.sl.value() * .01
+            self.update_time(time)
 
     def load_data(self, filename):
         self.loaded = True

@@ -37,6 +37,10 @@ def load_case_from_directory(dir_path):
                 settings=load_json(os.path.join(dir_path, 'settings.json')))
 
 
+def path_time(path):
+    return sum([x['duration'] for x in path['items']])
+
+
 class Case:
     def __init__(self, nav_data=None, maneuvers=None, targets_data=None, targets_maneuvers=None, targets_real=None,
                  analyse=None, constraints=None, route=None, settings=None):
@@ -44,9 +48,10 @@ class Case:
         if self.nav_data is None:
             return
         self.frame = Frame(nav_data['lat'], nav_data['lon'])
-
+        self.start_time = self.nav_data['timestamp']
         self.maneuvers = maneuvers
         if self.maneuvers is not None:
+            self.start_time = maneuvers[0]['path']['start_time']
             for maneuver in self.maneuvers:
                 maneuver['path'] = prepare_path(maneuver['path'], frame=self.frame)
         self.route = route
@@ -159,11 +164,12 @@ def item_position(item, time):
 
 def path_position(path, t):
     time = t - path['start_time']
-    if time > 0:
-        for item in path['items']:
-            if time < item['duration']:
-                return item_position(item, time)
-            time -= item['duration']
+    if time < 0:
+        raise KeyError('Time lower than path start time')
+    for item in path['items']:
+        if time < item['duration']:
+            return item_position(item, time)
+        time -= item['duration']
     return Position(None, None, None, None)
 
 

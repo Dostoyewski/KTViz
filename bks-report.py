@@ -63,7 +63,7 @@ class Report:
         nav_report = ""
         if fix_returncode(completedProc.returncode) in (0, 1):
             if os.path.isfile("maneuver.json"):
-                fig = plot_from_files("maneuver.json", route_file="route-data.json", poly_file="constraints.json")
+                fig = plot_from_files("maneuver.json")
 
                 f = io.BytesIO()
                 fig.savefig(f, format="svg")

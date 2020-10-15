@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-import json
+import math
 import os
 import sys
 
-import math
+import numpy as np
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel, QMessageBox, QGroupBox, \
-    QRadioButton
-from PyQt5.QtWidgets import QFileDialog, QCheckBox, QSlider, QDoubleSpinBox, QWidget, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QLabel, QMessageBox, QComboBox, QSlider
+from PyQt5.QtWidgets import QFileDialog, QCheckBox, QDoubleSpinBox, QWidget, QVBoxLayout, QHBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -17,8 +16,6 @@ from matplotlib.figure import Figure
 import plot
 import poly_convert
 from paintall import DrawingApp
-
-DEBUG = False
 
 
 # For build:
@@ -70,17 +67,10 @@ class ParamBar(QWidget):
         self.horizontalLayout.addWidget(self.spinBoxDist)
 
         # Radio button group to set solver type
-        self.groupbox = QGroupBox("Solver")
         self.vbox = QVBoxLayout()
-        self.groupbox.setLayout(self.vbox)
 
-        self.s1 = QRadioButton("#1")
-        self.vbox.addWidget(self.s1)
-
-        self.s2 = QRadioButton("#2")
-        self.vbox.addWidget(self.s2)
-        self.horizontalLayout.addWidget(self.groupbox)
-        self.groupbox.setDisabled(True)
+        self.maneuver_select = QComboBox(self)
+        self.vbox.addWidget(self.maneuver_select)
 
 
 class App(QMainWindow):
@@ -89,6 +79,7 @@ class App(QMainWindow):
     def __init__(self):
         super().__init__()
         # Time axis
+        self.sl = QSlider(Qt.Horizontal, self)
         self.left = 10
         self.top = 50
         self.title = 'KTViz 1.0'
@@ -102,8 +93,7 @@ class App(QMainWindow):
         try:
             screen_resolution = app.desktop().screenGeometry()
             width, height = screen_resolution.width(), screen_resolution.height()
-            if DEBUG:
-                print("Screen dimensions: ({}x{})".format(width, height))
+            print("Screen dimensions: ({}x{})".format(width, height))
             self.widthp = round(width * 0.7)
             self.heightp = round(height * 0.7)
             if self.heightp > 1000:
@@ -112,16 +102,15 @@ class App(QMainWindow):
             self.widthp = 1280
             self.heightp = 720
 
-        if DEBUG:
-            print("Window dimensions set to ({}x{})".format(self.widthp, self.heightp))
+        print("Window dimensions set to ({}x{})".format(self.widthp, self.heightp))
         self.scale_x = self.widthp / 1800
         self.scale_y = self.heightp / 900
         self.filename = ""
         self.relative = True
         self.m = PlotCanvas(self, width=round(12 * self.scale_x), height=round(8 * self.scale_y))
         self.segments = SegmentsVelocityCanvas(self, width=round(6 * self.scale_x), height=round(7 * self.scale_y))
-        self.time = TimeVelocityCanvas(self, width=round(6 * self.scale_x), height=50)
-        self.time.register_click(self.update_time)
+        # self.time = TimeVelocityCanvas(self, width=round(6 * self.scale_x), height=50)
+        # self.time.register_click(self.update_time)
 
         self.toolbar = NavigationToolbar(self.m, self)
         self.toolbar.hide()
@@ -148,7 +137,7 @@ class App(QMainWindow):
         self.btnPolyFix.resize(35, 35)
 
         self.loaded = False
-        self.data = []
+        self.case = plot.Case()
         self.frame = None
         self.route_file = None
         self.poly_file = None
@@ -164,15 +153,7 @@ class App(QMainWindow):
         # Adding icon
         self.setWindowIcon(QIcon('Icon.ico'))
         # If has nav-data
-        self.nav_file = False
-        # If has new format
-        self.target_file = False
-        # If has real-target-maneuver
-        self.real_data = False
-        # If has only real-target-maneuvers
-        self.only_real = False
-        # If maneuver.json exists:
-        self.has_maneuver = True
+        self.maneuver_idx = 0
         self.initUI()
 
     def initUI(self):
@@ -190,6 +171,16 @@ class App(QMainWindow):
 
         # Load button
         self.params.pushButton.clicked.connect(self.openFileNameDialog)
+
+        # Slider config
+        self.sl.setMinimum(0)
+        self.sl.setMaximum(99)
+        self.sl.setValue(0)
+        self.sl.setTickPosition(QSlider.TicksBelow)
+        self.sl.setTickInterval(1)
+        self.sl.setGeometry(int(50 * self.scale_x), int(840 * self.scale_y),
+                            int(1100 * self.scale_x), 50)
+        self.sl.valueChanged.connect(self.value_changed)
 
         # Update button
         self.btnUpdate.resize(120, 35)
@@ -227,18 +218,14 @@ class App(QMainWindow):
         self.params.cbGc.stateChanged.connect(self.value_changed)
 
         # Solver selection:
-        self.params.s1.clicked.connect(self.upd_solver)
-        self.params.s2.clicked.connect(self.upd_solver)
+        self.params.maneuver_select.currentIndexChanged.connect(self.upd_solver)
 
         self.segments.move(int(1200 * self.scale_x), int(120 * self.scale_y))
         self.show()
 
     def upd_solver(self):
-        if self.params.s1.isChecked():
-            self.solver = 0
-        elif self.params.s2.isChecked():
-            self.solver = 1
-        self.load(solver=self.solver)
+        self.maneuver_idx = self.params.maneuver_select.currentIndex()
+        self.redraw_plots()
 
     def home(self):
         self.toolbar.home()
@@ -276,7 +263,9 @@ class App(QMainWindow):
         """
         self.params.move(int(0.677 * self.width()), 10)
         self.params.resize(int(0.298 * self.width()), int(0.106 * self.height()))
-        self.m.resize(int(0.67 * self.width()), int(self.height() - 150))
+        self.m.resize(int(0.67 * self.width()), int(0.926 * self.height()))
+        self.sl.setGeometry(int(0.028 * self.width()), int(0.933 * self.height()),
+                            int(0.611 * self.width()), 50)
         self.btnUpdate.move(int(0.677 * self.width() + 120), int(0.933 * self.height()))
         self.btnKtDraw.move(int(self.width() - 100), int(0.933 * self.height()))
 
@@ -288,8 +277,8 @@ class App(QMainWindow):
         self.segments.move(int(0.67 * self.width()) + 5, int(0.132 * self.height()))
         self.segments.resize(int(0.330 * self.width()) - 5, int(0.794 * self.height()))
 
-        self.time.setGeometry(int(0.002 * self.width()), int(self.height() - 155),
-                              int(0.67 * self.width()), 155)
+        # self.time.setGeometry(int(0.002 * self.width()), int(self.height() - 155),
+        #                       int(0.67 * self.width()), 155)
 
     def resizeEvent(self, event):
         """
@@ -307,27 +296,17 @@ class App(QMainWindow):
         if len(self.filename) == 0:
             self.openFileNameDialog()
         else:
-            if self.has_two_trajs:
-                self.load(solver=self.solver)
-            else:
-                self.load()
+            self.load()
 
-    def load(self, solver=0):
-        if 'route' in self.filename:
-            self.route_file = self.filename
-            try:
-                if 'maneuver.json' in os.listdir(os.path.dirname(os.path.abspath(self.filename))):
-                    self.filename = os.path.join(os.path.dirname(os.path.abspath(self.filename)), 'maneuver.json')
-                else:
-                    self.has_maneuver = False
-            except FileNotFoundError:
-                self.has_maneuver = False
-        self.load_data(self.filename, solver)
-        self.m.plot_paths(self.data, self.frame, self.route_file, self.poly_file, self.settings_file,
-                          self.nav_file, self.target_file, not self.has_maneuver)
-        self.segments.plot_paths(self.data)
-        self.time.plot_paths(self.data)
-        self.update_time(self.time.time)
+    def load(self):
+        self.load_data(self.filename)
+        self.redraw_plots()
+
+    def redraw_plots(self):
+        self.m.plot_paths(self.case, self.maneuver_idx)
+        self.segments.plot_paths(self.case, self.maneuver_idx)
+        # self.time.plot_paths(self.case, self.maneuver_idx)
+        # self.update_time(self.time.time)
 
     def show_coords_changed(self):
         self.params.cbGc.setEnabled(self.params.cbCoords.isChecked())
@@ -339,56 +318,35 @@ class App(QMainWindow):
         :return:
         """
         if self.loaded:
-            self.update_time(self.time.time)
+            start_time = self.case.start_time
+            total_time = 0
+            if self.case.maneuvers is not None:
+                total_time += plot.path_time(self.case.maneuvers[self.maneuver_idx]['path'])
+            elif self.case.targets_maneuvers is not None:
+                total_time += np.max([plot.path_time(path) for path in self.case.targets_maneuvers])
+            elif self.case.targets_real is not None:
+                total_time += np.max([plot.path_time(path) for path in self.case.targets_real])
+            self.update_time(start_time + total_time * self.sl.value() * .01)
 
-    def load_data(self, filename, solver=0):
+    def load_data(self, filename):
         self.loaded = True
-        self.data, self.frame, new_format = plot.prepare_file(filename, has_maneuver=self.has_maneuver)
-        if new_format and self.has_maneuver:
-            self.has_two_trajs = plot.check_multiply_trajs(filename)
-            self.data, self.frame, new_format = plot.prepare_file(filename, solver)
-            self.solver_info, self.info_msg = plot.get_path_info(filename, solver)
-        else:
-            self.has_two_trajs = False
-            self.solver_info, self.info_msg = "", ""
-        self.params.groupbox.setDisabled(not self.has_two_trajs)
-        try:
-            self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route-data.json')
-        except FileNotFoundError:
-            self.route_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'route.json')
+        self.case = plot.load_case_from_directory(os.path.dirname(filename))
 
-        self.poly_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'constraints.json')
-        self.settings_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'settings.json')
-        self.nav_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'nav-data.json')
-        self.target_file = os.path.join(os.path.dirname(os.path.abspath(filename)), 'target-data.json')
-        self.real_data = 'real-target-maneuvers.json' in os.listdir(os.path.dirname(os.path.abspath(filename)))
-        self.only_real = not ('target-maneuvers.json' in os.listdir(os.path.dirname(os.path.abspath(filename))) or
-                              'predicted_tracks.json' in os.listdir(os.path.dirname(os.path.abspath(filename))))
+        if self.case.maneuvers is not None:
+            self.params.maneuver_select.clear()
+            self.params.maneuver_select.addItems([str(i) for i in range(1, len(self.case.maneuvers) + 1)])
 
-        with open(self.settings_file) as f:
-            settings_data = json.loads(f.read())
-            self.params.spinBoxRadius.setValue(settings_data['maneuver_calculation']['safe_diverg_dist'] * .5)
+        self.params.maneuver_select.setDisabled(self.case.maneuvers is not None and len(self.case.maneuvers) > 1)
+
+        self.params.spinBoxRadius.setValue(self.case.settings['maneuver_calculation']['safe_diverg_dist'] * .5)
 
     def update_time(self, time):
-        start_time = self.data[0]['start_time']
-        try:
-            positions = plot.get_positions(self.data, start_time)
-            total_time = sum([x['duration'] for x in self.data[0]['items']])
-        except KeyError:
-            start_time = plot.find_max_time(self.data)
-            total_time = sum([x['duration'] for x in self.data[0]['items']]) + start_time - self.data[0]['start_time']
-        time = start_time + time
-        self.m.update_positions(self.data, time,
+        self.m.update_positions(self.case, time,
                                 distance=self.params.spinBoxDist.value() if self.params.cbDist.isChecked() else 0,
                                 radius=self.params.spinBoxRadius.value(),
                                 coords=self.params.cbCoords.isChecked(),
-                                frame=self.frame if self.params.cbGc.isChecked() else None,
                                 solver_info=self.solver_info,
-                                msg=self.info_msg,
-                                two_trajs=self.has_two_trajs,
-                                real_data=self.real_data,
-                                only_real=self.only_real,
-                                has_maneuver=self.has_maneuver)
+                                msg=self.info_msg)
         self.m.draw()
 
     def openFileNameDialog(self):
@@ -424,60 +382,36 @@ class PlotCanvas(FigureCanvas):
         self.ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
         self.ax1 = self.figure.add_axes(self.ax.get_position(), frameon=False)
 
-    def plot_paths(self, path_data, frame, route_file=None, poly_data=None, settings_file=None,
-                   nav_file=None, target_file=None, has_maneuver=False):
+    def plot_paths(self, case, maneuver_idx=0):
         """
         Plots paths
-        :param target_file: target-data.json file
-        :param nav_file: nav-data.json file
-        :param poly_data: Name of file with polygons
-        :param path_data: Loaded data
-        :param frame: Frame for coordinates conversion
-        :param route_file: Name of file with route
+        :param maneuver_idx: index of maneuver to plot
+        :param case: Case to plot
         """
         self.ax.clear()
-        try:
-            if route_file is not None:
-                plot.plot_route(self.ax, route_file, frame)
-        except FileNotFoundError:
-            pass
 
-        try:
-            if poly_data is not None:
-                plot.plot_limits(self.ax, poly_data, frame)
-        except FileNotFoundError:
-            pass
-
-        plot.plot_nav_points(self.ax, nav_file, target_file, frame)
-        plot.plot_maneuvers(self.ax, path_data, has_maneuver)
-
+        plot.plot_nav_points(self.ax, case)
+        plot.plot_case_paths(self.ax, case, maneuver_index=maneuver_idx)
+        plot.plot_case_limits(self.ax, case)
         self.ax.axis('equal')
-        xlim = self.ax.get_xlim()
-        ylim = self.ax.get_ylim()
-        xlim, ylim = plot.recalc_lims(xlim, ylim, path_data[0])
-        self.ax.set_xlim(xlim)
-        self.ax.set_ylim(ylim)
+        if case.maneuvers is not None:
+            xlim, ylim = plot.recalc_lims(case.maneuvers[0]['path'])
+            self.ax.set_xlim(xlim)
+            self.ax.set_ylim(ylim)
         self.ax.grid()
         self.draw()
 
-    def update_positions(self, path_data, t, distance=5, radius=1.5, coords=False, frame=None,
-                         solver_info="", msg="", two_trajs=False, real_data=False, only_real=False,
-                         has_maneuver=True):
+    def update_positions(self, case, t, distance=5, radius=1.5, coords=False, maneuver_idx=0,
+                         solver_info="", msg=""):
         self.ax1.clear()
-        try:
-            positions = plot.get_positions(path_data, t)
-        except KeyError:
-            t = plot.find_max_time(path_data)
-            positions = plot.get_positions(path_data, t)
-        plot.plot_positions(self.ax1, positions, coords=coords, frame=frame,
-                            radius=radius, two_trajs=two_trajs, real_trajs=real_data,
-                            only_real=only_real, has_maneuver=has_maneuver)
+        positions = plot.plot_case_positions(self.ax1, case, t, coords=coords, radius=radius,
+                                             maneuver_index=maneuver_idx)
         if distance > 0:
             plot.plot_distances(self.ax1, positions, distance)
         self.ax1.legend()
         self.ax1.set_ylim(self.ax.get_ylim())
         self.ax1.set_xlim(self.ax.get_xlim())
-        local_time = t - path_data[0]['start_time']
+        local_time = t - case.start_time
         h, m, s = math.floor(local_time / 3600), math.floor(local_time % 3600 / 60), local_time % 60
         if solver_info != "":
             if msg != "":
@@ -504,17 +438,16 @@ class SegmentsVelocityCanvas(FigureCanvas):
                                    QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
         self.ax = self.figure.add_subplot(111)
-        # self.ax1 = self.figure.add_subplot(212)
-        # self.fig.tight_layout()
-        # self.ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
 
-    def plot_paths(self, path_data):
+    def plot_paths(self, case, maneuver_idx=0):
         """
         Plots speed
-        :param path_data: Loaded data
+        :param case:
+        :param maneuver_idx: maneuver index
         """
         self.ax.clear()
-        plot.plot_speed(self.ax, path_data[0])
+        if case.maneuvers is not None and len(case.maneuvers) > 0:
+            plot.plot_speed(self.ax, case.maneuvers[maneuver_idx]['path'])
         self.draw()
 
 
@@ -535,14 +468,14 @@ class TimeVelocityCanvas(FigureCanvas):
         self.fig.canvas.mpl_connect('button_release_event', self.onclick)
         self.time = 0
 
-    def plot_paths(self, path_data):
+    def plot_paths(self, case, maneuver_idx=0):
         """
         Plots speed
-        :param path_data: Loaded data
         """
         self.time = 0
         self.ax.clear()
-        plot.plot_time_speed(self.ax, path_data[0])
+        if case.maneuvers is not None and len(case.maneuvers) > 0:
+            plot.plot_time_speed(self.ax, case.maneuvers[maneuver_idx]['path'])
         self.draw()
 
     def register_click(self, function):

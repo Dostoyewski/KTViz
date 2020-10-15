@@ -1,15 +1,146 @@
 import argparse
+import json
+import math
+import os
 from collections import namedtuple
+from math import sin, cos, radians, degrees
 
 import numpy as np
-from math import sin, cos, radians, degrees
 from matplotlib import pyplot as plt, gridspec
 from matplotlib.patches import Ellipse, Polygon
 
-from app import *
 from konverter import Frame
 
 Position = namedtuple('Position', ['x', 'y', 'course', 'vel'])
+
+
+def load_json(filename):
+    if not os.path.isfile(filename):
+        return None
+
+    with open(filename) as f:
+        file_data = json.loads(f.read())
+    return file_data
+
+
+def load_case_from_directory(dir_path):
+    return Case(nav_data=load_json(os.path.join(dir_path, 'nav-data.json')),
+                maneuvers=load_json(os.path.join(dir_path, 'maneuver.json')),
+                targets_data=load_json(os.path.join(dir_path, 'target-data.json')),
+                targets_maneuvers=load_json(os.path.join(dir_path, 'target-maneuvers.json')),
+                targets_real=load_json(os.path.join(dir_path, 'real-target-maneuvers.json')),
+                analyse=load_json(os.path.join(dir_path, 'analyse.json')),
+                constraints=load_json(os.path.join(dir_path, 'constraints.json')),
+                route=load_json(os.path.join(dir_path, 'route-data.json')),
+                settings=load_json(os.path.join(dir_path, 'settings.json')))
+
+
+def path_time(path):
+    return sum([x['duration'] for x in path['items']])
+
+
+class Case:
+    def __init__(self, nav_data=None, maneuvers=None, targets_data=None, targets_maneuvers=None, targets_real=None,
+                 analyse=None, constraints=None, route=None, settings=None):
+        self.nav_data = nav_data
+        if self.nav_data is None:
+            return
+        self.frame = Frame(nav_data['lat'], nav_data['lon'])
+        self.start_time = self.nav_data['timestamp']
+        self.maneuvers = maneuvers
+        if self.maneuvers is not None:
+            self.start_time = maneuvers[0]['path']['start_time']
+            for maneuver in self.maneuvers:
+                maneuver['path'] = prepare_path(maneuver['path'], frame=self.frame)
+        self.route = route
+        if route is not None:
+            self.route = prepare_path(route, frame=self.frame)
+
+        self.targets_data = targets_data
+        self.targets_maneuvers = targets_maneuvers
+        if self.targets_maneuvers is not None:
+            self.targets_maneuvers = [prepare_path(path, self.frame) for path in self.targets_maneuvers]
+        self.targets_real = targets_real
+        if self.targets_real is not None:
+            self.targets_real = [prepare_path(path, self.frame) for path in self.targets_real]
+        self.analyse = analyse
+        self.constraints = constraints
+        self.settings = settings
+
+
+def plot_case_paths(ax, case, maneuver_index=0, all_maneuvers=True, real_maneuvers=True):
+    if case.route is not None:
+        plot_path(case.route, ax, '#fffffffa')
+
+    if real_maneuvers and case.targets_real is not None:
+        for path in case.targets_maneuvers:
+            plot_path(path, ax, 'gray')
+
+    if case.targets_maneuvers is not None:
+        for path in case.targets_maneuvers:
+            plot_path(path, ax, 'blue')
+
+    if case.maneuvers is not None:
+        if all_maneuvers:
+            for i, maneuver in enumerate(case.maneuvers):
+                if i != maneuver_index:
+                    plot_path(case.maneuvers[maneuver_index]['path'], ax, 'darkCyan')
+
+        if maneuver_index <= len(case.maneuvers):
+            plot_path(case.maneuvers[maneuver_index]['path'], ax, 'brown')
+
+
+def plot_case_positions(ax, case, t, maneuver_index=0, all_maneuvers=True, real_maneuvers=True, radius=1.5,
+                        coords=False):
+    positions = []
+    colors = []
+    names = []
+
+    if real_maneuvers and case.targets_real is not None:
+        for path in case.targets_real:
+            positions.append(path_position(path, t))
+            colors.append('darkGray')
+            names.append(None)
+    # Targets
+    if case.targets_maneuvers is not None:
+        for path in case.targets_maneuvers:
+            positions.append(path_position(path, t))
+
+        if case.targets_data is not None:
+            names += [target['id'] for target in case.targets_data]
+            if case.analyse is not None:
+                statuses = {}
+                for status in case.analyse['target_statuses']:
+                    statuses[status['id']] = status['danger_level']
+                danger_levels = {0: 'blue', 1: 'orange', 2: 'red'}
+                for target in case.targets_data:
+                    if target['id'] in statuses:
+                        colors.append(danger_levels[statuses[target['id']]])
+                    else:
+                        colors.append(danger_levels[0])
+            else:
+                colors += ['blue'] * len(case.targets_maneuvers)
+
+        else:
+            names += [str(i) for i, path in enumerate(case.targets_maneuvers)]
+            colors += ['blue'] * len(case.targets_maneuvers)
+
+    # Our
+    if case.maneuvers is not None:
+        if all_maneuvers:
+            for i, maneuver in enumerate(case.maneuvers):
+                if i != maneuver_index:
+                    positions.append(path_position(maneuver['path'], t))
+                    colors.append('darkGreen')
+                    names.append(None)
+
+        if maneuver_index <= len(case.maneuvers):
+            positions.append(path_position(case.maneuvers[maneuver_index]['path'], t))
+            colors.append('green')
+            names.append('Our')
+
+    plot_positions(ax, positions, names, colors, radius=radius, coords=coords, frame=case.frame)
+    return positions
 
 
 def item_position(item, time):
@@ -41,7 +172,7 @@ def path_position(path, t):
     return Position(None, None, None, None)
 
 
-def recalc_lims(xlim, ylim, path):
+def recalc_lims(path):
     xx, yy = calculate_path_points(path)
     xmax, xmin = np.max(yy), np.min(yy)
     dx = xmax - xmin
@@ -84,18 +215,11 @@ def plot_path(path, ax, color):
 
 
 def plot_position(x, y, course, ax, radius=.0, color='red', label=None):
-    scatter = ax.scatter(y, x, color=color, marker=(3, 0, -course), label=label)
+    scatter = ax.scatter(y, x, color=color, marker=(3, 0, -course), label=label, zorder=5)
     if radius != 0:
         danger_r = plt.Circle((y, x), radius, color=color, fill=False)
         ax.add_artist(danger_r)
     return scatter
-
-
-class Data:
-    def __init__(self, frame, route=None):
-        self.paths = []
-        self.frame = frame
-        self.route = route
 
 
 def prepare_path(data, frame=None):
@@ -105,8 +229,7 @@ def prepare_path(data, frame=None):
     for item in data['items']:
         obj = {}
         for key in list(item.keys()):
-            if key != key1 and key != key2:
-                obj[key] = item[key]
+            obj[key] = item[key]
         # Translate coordinates
         obj['X'], obj['Y'], dist, angle = frame.from_wgs(item[key1], item[key2])
 
@@ -116,25 +239,27 @@ def prepare_path(data, frame=None):
     return new_data
 
 
-def plot_limits(ax, filename, frame=None):
+def plot_case_limits(ax, case):
+    plot_limits(ax, case.constraints, case.frame)
+
+
+def plot_limits(ax, data, frame):
     """
     This function plots navigation limits
     :param frame: frame to convert
     :param ax: axes
-    :param filename: file with limitations
+    :param data: limitations
     :return:
     """
-    with open(filename) as f:
-        data = json.loads(f.read())
-        polygons = [item for item in data['features']
-                    if item['geometry']['type'] == 'Polygon']
-        points = [item for item in data['features']
-                  if item['geometry']['type'] == 'Point']
-        lines = [item for item in data['features']
-                 if item['geometry']['type'] == 'LineString']
-        plot_polygons(ax, polygons, frame)
-        plot_points(ax, points, frame)
-        plot_lines(ax, lines, frame)
+    polygons = [item for item in data['features']
+                if item['geometry']['type'] == 'Polygon']
+    points = [item for item in data['features']
+              if item['geometry']['type'] == 'Point']
+    lines = [item for item in data['features']
+             if item['geometry']['type'] == 'LineString']
+    plot_polygons(ax, polygons, frame)
+    plot_points(ax, points, frame)
+    plot_lines(ax, lines, frame)
 
 
 def plot_lines(ax, lines, frame):
@@ -165,7 +290,7 @@ def plot_points(ax, points, frame):
         dist = obj['properties']['distance']
         coords = frame.from_wgs(coords[1], coords[0])
         ax.plot(coords[1], coords[0], marker='*', color='r')
-        ax.add_patch(Ellipse([coords[1], coords[0]], dist, dist, fill=False,
+        ax.add_patch(Ellipse((coords[1], coords[0]), dist, dist, fill=False,
                              hatch='/', color='red'))
 
 
@@ -193,23 +318,6 @@ def plot_polygons(ax, polygons, frame):
                                  fill=False, hatch='|', color='orange'))
 
 
-def check_multiply_trajs(filename):
-    """
-    Checks, if it is more, than one traj in file
-    :param filename:
-    :return:
-    """
-    with open(filename) as f:
-        file_data = json.loads(f.read())
-    try:
-        data = [file_data[0]['path']]
-        if len(file_data) > 1:
-            return True
-    except:
-        pass
-    return False
-
-
 def get_path_info(filename, solver):
     """
 
@@ -220,122 +328,6 @@ def get_path_info(filename, solver):
     with open(filename) as f:
         file_data = json.loads(f.read())
     return file_data[solver]['solver_name'], file_data[solver]['msg']
-
-
-def prepare_file(filename, solver=0, has_maneuver=True):
-    """
-    Prepares data from file to plot
-    :param has_maneuver: if has maneuver.json
-    :param filename: name of file
-    :param solver: index of solution (if exist)
-    :return: path, convertation frame, new_format flag
-    """
-    new_format = False
-    if has_maneuver:
-        with open(filename) as f:
-            file_data = json.loads(f.read())
-        if len(file_data[0]['path']['items']) == 0:
-            if DEBUG:
-                print('empty maneuver')
-        has_maneuver = False
-    else:
-        file_data = [{'path': []}, {'path': []}]
-    try:
-        # If new format
-        data = [file_data[solver]['path']]
-        if DEBUG:
-            print('New type detected')
-        dirname = os.path.split(filename)[0]
-        if DEBUG:
-            print('Path: ', dirname)
-        try:
-            with open(os.path.join(dirname, 'target-maneuvers.json')) as f:
-                target_data = json.loads(f.read())
-                data.extend(target_data)
-                if DEBUG:
-                    print('Loaded target data')
-        except FileNotFoundError:
-            try:
-                with open(os.path.join(dirname, 'predicted_tracks.json')) as f:
-                    target_data = json.loads(f.read())
-                    data.extend(target_data)
-                    if DEBUG:
-                        print('Loaded target data')
-            except FileNotFoundError:
-                if DEBUG:
-                    print("target data does not exist!!!")
-        has_real = False
-        try:
-            with open(os.path.join(dirname, 'real-target-maneuvers.json')) as f:
-                real_target_data = json.loads(f.read())
-                if DEBUG:
-                    print('Loaded real target data')
-            for obj in real_target_data:
-                # Flag if real
-                obj['real'] = True
-            data.extend(real_target_data)
-            has_real = True
-        except FileNotFoundError:
-            pass
-        need_add_flag = False
-        try:
-            # Loading data from new solver
-            if solver == 0:
-                solver_new = 1
-            else:
-                solver_new = 0
-            data_new = file_data[solver_new]['path']
-            data.append(data_new)
-            need_add_flag = True
-        except:
-            pass
-        new_format = True
-    except KeyError:
-        if DEBUG:
-            print('Format set to old')
-        data = file_data
-    # Sample initial position to anchor Frame
-    try:
-        sample = data[0]['items'][0]
-        if 'lat' in sample and 'lon' in sample:
-            key1, key2 = 'lat', 'lon'
-            frame = Frame(data[0]['items'][0][key1], data[0]['items'][0][key2])
-        else:
-            raise KeyError('No coords in maneuver')
-    except (TypeError, IndexError) as e:
-        if not has_maneuver:
-            with open(filename) as f:
-                file_data = json.loads(f.read())
-            if type(file_data) == dict:
-                file_data = [{'path': file_data}]
-            if len(file_data[0]['path']['items']) != 0:
-                lat, lon = file_data[0]['path']['items'][0]['lat'], file_data[0]['path']['items'][0]['lon']
-            else:
-                for rec in data:
-                    if len(rec['items']) > 0 and 'lat' in rec['items'][0] and 'lon' in rec['items'][0]:
-                        lat, lon = rec['items'][0]['lat'], rec['items'][0]['lon']
-                        break
-        frame = Frame(lat, lon)
-
-    # Prepare data
-    paths = []
-    for obj in data:
-        try:
-            new_data = prepare_path(obj, frame=frame)
-            paths.append(new_data)
-        except TypeError:
-            pass
-    if need_add_flag:
-        paths[-1]['second'] = True
-    if has_real:
-        for i in range(len(data)):
-            try:
-                # Copying 'real' flags from data
-                if data[i]['real']:
-                    paths[i]['real'] = True
-            except KeyError:
-                pass
-    return paths, frame, new_format
 
 
 def plot_maneuvers(ax, data, no_maneuver=False):
@@ -375,89 +367,59 @@ def plot_route(ax, file, frame):
         plot_path(path, ax, color='#fffffffa')
 
 
-def plot_poly(ax, file, frame):
-    with open(file) as f:
-        poly_data = json.loads(f.read())
-
-
 def get_positions(data, t):
     return [path_position(path, t) for path in data]
 
 
-def plot_nav_points(ax, nav_file, target_file, frame):
+def plot_nav_points(ax, case):
     """
     Plots current positions from nav-data file
-    :param frame: converter frame
-    :param target_file: target-data file
+    :param case: Case
     :param ax: mtplb axes
-    :param nav_file: nav-data file
     :return:
     """
-    with open(nav_file) as f:
-        nav_data = json.loads(f.read())
-    with open(target_file) as f:
-        target_data = json.loads(f.read())
-    target_data.append(nav_data)
+    target_data = [case.nav_data] + case.targets_data
     for obj in target_data:
-        out = frame.from_wgs(obj['lat'], obj['lon'])
+        out = case.frame.from_wgs(obj['lat'], obj['lon'])
         x, y = out[0], out[1]
         # Dummy fix:
         if abs(x) > 1500 or abs(y) > 1500:
-            out = frame.from_wgs(obj['lon'], obj['lat'])
+            out = case.frame.from_wgs(obj['lon'], obj['lat'])
             x, y = out[0], out[1]
         ax.scatter(y, x, color='black', marker='x')
-        ax.text(y, x, str(obj['timestamp']))
+        ax.text(y, x, str(obj['timestamp']), size=8)
 
 
-def plot_positions(ax, positions, radius=1.5, coords=False, frame=None, two_trajs=False,
-                   real_trajs=False, only_real=False, has_maneuver=True):
+def plot_positions(ax, positions, names=None, colors=None, radius=1.5, coords=False, frame=None):
     """
     Plots ships positions
-    :param has_maneuver: if has maneuver.json
-    :param only_real: flag if has only real-target-maneuvers
+    :param colors: list of colors
+    :param names: list of names
     :param ax: plot axes
     :param positions: array with positions
     :param radius: safe radius
     :param coords: if needs to konvert from local to WGS84
     :param frame: frame
-    :param two_trajs: if has two trajs from different solvers
-    :param real_trajs: if has real-target-maneuvers.json
     :return:
     """
+    if colors is None:
+        colors = [('red' if i == 0 else 'blue') for i in range(len(positions))]
+
+    if names is None:
+        names = ['#' + str(i) for i in range(len(positions))]
+
     for i, position in enumerate(positions):
-        if not has_maneuver:
-            i += 1
-        if position.x is not None:
-            if real_trajs and i > len(positions) / 2 and not only_real and i != 0:
-                label_text = 'real-#{}, {:.2f}knt,{:.2f}°'.format(int(i - len(positions) / 2 + 0.5),
-                                                                  position.vel * 3600, position.course)
-            else:
-                if only_real and i != 0:
-                    label_text = 'real-#{}, {:.2f}knt,{:.2f}°'.format(i, position.vel * 3600, position.course)
-                else:
-                    label_text = '#{}, {:.2f}knt,{:.2f}°'.format(i, position.vel * 3600, position.course)
+        if position.x is not None and position.y is not None:
+            label_text = '{}, {:.2f}knt,{:.2f}°'.format(names[i], position.vel * 3600, position.course)
             if coords:
                 if frame is not None:
                     lat, lon = frame.to_wgs(position.x, position.y)
                     label_text += '\n{:.4f}°, {:.4f}°'.format(lat, lon)
                 else:
                     label_text += '\n{:.4f}, {:.4f}'.format(position.x, position.y)
-            if two_trajs and i == len(positions) - 1:
-                plot_position(position.x, position.y, position.course, ax, radius=radius,
-                              color='darkCyan',
-                              label=label_text)
-            else:
-                plot_position(position.x, position.y, position.course, ax, radius=radius,
-                              color=('red' if i == 0 else 'blue'),
-                              label=label_text)
-
-            if real_trajs and i > len(positions) / 2 and not only_real and i != 0:
-                ax.text(position.y, position.x, 'real-#{}'.format(int(i - len(positions) / 2 + 0.5), size=8))
-            else:
-                if only_real and i != 0:
-                    ax.text(position.y, position.x, 'real-#{}'.format(i, size=8))
-                else:
-                    ax.text(position.y, position.x, '#{}'.format(i), size=8)
+            plot_position(position.x, position.y, position.course, ax, radius=radius,
+                          color=colors[i], label=(label_text if names[i] is not None else None))
+            ax.text(position.y, position.x, names[i], size=8)
 
 
 def plot_distances(ax, positions, distance=5.):
@@ -469,7 +431,7 @@ def plot_distances(ax, positions, distance=5.):
         if positions[i].x is not None:
             dist = (positions[i].x - x) ** 2 + (positions[i].y - y) ** 2
             if dist < max_dist_sq:
-                h = ax.plot((y, positions[i].y), (x, positions[i].x), color='red')
+                ax.plot((y, positions[i].y), (x, positions[i].x), color='red')
                 # Location to plot text
                 text_x, text_y = (positions[i].x + x) * .5, (positions[i].y + y) * .5
                 # Rotate angle
@@ -524,17 +486,17 @@ def plot_time_speed(ax, path):
     if len(path['items']) > 0:
         velocities = [item['length'] / item['duration'] * 3600 for item in path["items"]]
         times = [item['duration'] for item in path["items"]]
-        times = [0]+ times + times[-1:]
+        times = [0] + times + times[-1:]
         velocities = velocities[0:1] + velocities + velocities[-1:]
-        ax.step(np.cumsum(times), velocities, where='post')
+        ax.step(np.cumsum(times) + path['start_time'], velocities, where='post')
         ax.set_ylim(bottom=0)
         ax.set_ylim(top=max(velocities) * 1.1)
-        ax.set_xlabel('Time, s')
+        ax.set_xlabel('Timestamp, s')
         ax.set_ylabel('Speed, knt')
         ax.grid()
 
 
-def plot_from_files(maneuvers_file, route_file=None, poly_file=None, settings_file=None):
+def plot_from_files(maneuvers_file):
     if os.path.isfile(maneuvers_file):
         fig = plt.figure(figsize=(10, 7.5))
         gs1 = gridspec.GridSpec(5, 1)
@@ -544,63 +506,41 @@ def plot_from_files(maneuvers_file, route_file=None, poly_file=None, settings_fi
         ax_vel.clear()
         ax.set_facecolor((159 / 255, 212 / 255, 251 / 255))
 
-        data, frame, new_format = prepare_file(maneuvers_file)
-        if new_format:
-            has_two_trajs = plot.check_multiply_trajs(maneuvers_file)
-            data, frame, new_format = plot.prepare_file(maneuvers_file, solver=0)
-            if has_two_trajs:
-                data2, frame2, new_format = plot.prepare_file(maneuvers_file, solver=1)
+        case = load_case_from_directory(os.path.dirname(maneuvers_file))
 
-            solver_info, info_msg = plot.get_path_info(maneuvers_file, 0)
-        else:
-            has_two_trajs = False
-            solver_info, info_msg = "", ""
+        if case.route is not None:
+            plot_path(case.route, ax, color='#fffffffa')
 
-        if route_file is not None:
-            plot_route(ax, route_file, frame)
-
-        try:
-            if poly_file is not None:
-                plot.plot_limits(ax, poly_file, frame)
-        except FileNotFoundError:
-            pass
+        if case.constraints is not None:
+            plot_case_limits(ax, case)
 
         radius = 1.5
-        try:
-            if settings_file is not None:
-                settings_file = 'settings.json'
-                with open(settings_file) as f:
-                    settings_data = json.loads(f.read())
-                    radius = settings_data['maneuver_calculation']['safe_diverg_dist'] * .5
-        except FileNotFoundError:
-            pass
+        if case.settings is not None:
+            radius = case.settings['maneuver_calculation']['safe_diverg_dist'] * .5
 
-        plot_maneuvers(ax, data)
-        if has_two_trajs:
-            plot_path(data2[0], ax, 'red')
-        plot_speed(ax_vel, data[0])
-
+        plot_case_paths(ax, case)
         ax.axis('equal')
-        total_time = sum([x['duration'] for x in data[0]['items']])
-        t = total_time + data[0]['start_time']
+        if case.maneuvers is not None:
+            plot_speed(ax_vel, case.maneuvers[0]['path'])
+            total_time = path_time(case.maneuvers[0]['path'])
+            start_time = case.maneuvers[0]['path']['start_time']
+            t = total_time + start_time
+        else:
+            total_time = path_time(case.targets_maneuvers[0])
+            start_time = case.targets_maneuvers[0]['start_time']
+            t = total_time + start_time
+
         h, m, s = math.floor(total_time / 3600), math.floor(total_time % 3600 / 60), total_time % 60
         ax.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s))
         ax.grid()
 
-        start_time = data[0]['start_time']
-        try:
-            positions = get_positions(data, start_time)
-        except KeyError:
-            start_time = find_max_time(data)
-            positions = get_positions(data, start_time)
-        plot_positions(ax, positions, radius=radius)
+        plot_case_positions(ax, case, start_time, radius=radius)
         ax.legend()
 
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        xlim, ylim = plot.recalc_lims(xlim, ylim, data[0])
-        ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
+        if case.maneuvers is not None:
+            xlim, ylim = recalc_lims(case.maneuvers[0]['path'])
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
 
         return fig
     else:
@@ -623,5 +563,5 @@ if __name__ == "__main__":
     # parser.add_argument("-s", action="store_true", help="Show image")
     args = parser.parse_args()
 
-    figure = plot_from_files("maneuver.json", route_file="route-data.json")
+    figure = plot_from_files("maneuver.json")
     plt.show()

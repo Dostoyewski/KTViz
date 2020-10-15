@@ -3,17 +3,15 @@ import json
 import math
 import os
 from collections import namedtuple
+from math import sin, cos, radians, degrees
 
 import numpy as np
-from math import sin, cos, radians, degrees
 from matplotlib import pyplot as plt, gridspec
 from matplotlib.patches import Ellipse, Polygon
 
 from konverter import Frame
 
 Position = namedtuple('Position', ['x', 'y', 'course', 'vel'])
-
-DEBUG = False
 
 
 def load_json(filename):
@@ -74,13 +72,13 @@ def plot_case_paths(ax, case, maneuver_index=0, all_maneuvers=True, real_maneuve
     if case.route is not None:
         plot_path(case.route, ax, '#fffffffa')
 
-    if case.targets_maneuvers is not None:
-        for path in case.targets_maneuvers:
-            plot_path(path, ax, 'blue')
-
     if real_maneuvers and case.targets_real is not None:
         for path in case.targets_maneuvers:
             plot_path(path, ax, 'gray')
+
+    if case.targets_maneuvers is not None:
+        for path in case.targets_maneuvers:
+            plot_path(path, ax, 'blue')
 
     if case.maneuvers is not None:
         if all_maneuvers:
@@ -111,16 +109,17 @@ def plot_case_positions(ax, case, t, maneuver_index=0, all_maneuvers=True, real_
         if case.targets_data is not None:
             names += [target['id'] for target in case.targets_data]
             if case.analyse is not None:
+                statuses = {}
+                for status in case.analyse['target_statuses']:
+                    statuses[status['id']] = status['danger_level']
                 danger_levels = {0: 'blue', 1: 'orange', 2: 'red'}
                 for target in case.targets_data:
-                    statuses = {}
-                    for status in case.analyse['target_statuses']:
-                        statuses[status['id']] = status['danger_level']
-
                     if target['id'] in statuses:
                         colors.append(danger_levels[statuses[target['id']]])
                     else:
                         colors.append(danger_levels[0])
+            else:
+                colors += ['blue'] * len(case.targets_maneuvers)
 
         else:
             names += [str(i) for i, path in enumerate(case.targets_maneuvers)]
@@ -131,7 +130,7 @@ def plot_case_positions(ax, case, t, maneuver_index=0, all_maneuvers=True, real_
         if all_maneuvers:
             for i, maneuver in enumerate(case.maneuvers):
                 if i != maneuver_index:
-                    positions.append(path_position(maneuver, t))
+                    positions.append(path_position(maneuver['path'], t))
                     colors.append('darkGreen')
                     names.append(None)
 
@@ -216,7 +215,7 @@ def plot_path(path, ax, color):
 
 
 def plot_position(x, y, course, ax, radius=.0, color='red', label=None):
-    scatter = ax.scatter(y, x, color=color, marker=(3, 0, -course), label=label)
+    scatter = ax.scatter(y, x, color=color, marker=(3, 0, -course), label=label, zorder=5)
     if radius != 0:
         danger_r = plt.Circle((y, x), radius, color=color, fill=False)
         ax.add_artist(danger_r)
@@ -240,7 +239,11 @@ def prepare_path(data, frame=None):
     return new_data
 
 
-def plot_limits(ax, data, frame=None):
+def plot_case_limits(ax, case):
+    plot_limits(ax, case.constraints, case.frame)
+
+
+def plot_limits(ax, data, frame):
     """
     This function plots navigation limits
     :param frame: frame to convert
@@ -384,7 +387,7 @@ def plot_nav_points(ax, case):
             out = case.frame.from_wgs(obj['lon'], obj['lat'])
             x, y = out[0], out[1]
         ax.scatter(y, x, color='black', marker='x')
-        ax.text(y, x, str(obj['timestamp']))
+        ax.text(y, x, str(obj['timestamp']), size=8)
 
 
 def plot_positions(ax, positions, names=None, colors=None, radius=1.5, coords=False, frame=None):
@@ -509,7 +512,7 @@ def plot_from_files(maneuvers_file):
             plot_path(case.route, ax, color='#fffffffa')
 
         if case.constraints is not None:
-            plot_limits(ax, case.constraints, case.frame)
+            plot_case_limits(ax, case)
 
         radius = 1.5
         if case.settings is not None:
@@ -519,14 +522,13 @@ def plot_from_files(maneuvers_file):
         ax.axis('equal')
         if case.maneuvers is not None:
             plot_speed(ax_vel, case.maneuvers[0]['path'])
-
-            total_time = sum([x['duration'] for x in case.maneuvers[0]['path']['items']])
-            t = total_time + case.maneuvers[0]['path']['start_time']
+            total_time = path_time(case.maneuvers[0]['path'])
             start_time = case.maneuvers[0]['path']['start_time']
+            t = total_time + start_time
         else:
-            total_time = sum([x['duration'] for x in case.targets_maneuvers[0]['items']])
-            t = total_time + case.targets_maneuvers[0]['start_time']
+            total_time = path_time(case.targets_maneuvers[0])
             start_time = case.targets_maneuvers[0]['start_time']
+            t = total_time + start_time
 
         h, m, s = math.floor(total_time / 3600), math.floor(total_time % 3600 / 60), total_time % 60
         ax.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s))

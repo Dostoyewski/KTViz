@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-import json
+import math
 import os
 import sys
 
-import math
+import numpy as np
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QIcon
@@ -16,8 +16,6 @@ from matplotlib.figure import Figure
 import plot
 import poly_convert
 from paintall import DrawingApp
-
-DEBUG = False
 
 
 # For build:
@@ -95,8 +93,7 @@ class App(QMainWindow):
         try:
             screen_resolution = app.desktop().screenGeometry()
             width, height = screen_resolution.width(), screen_resolution.height()
-            if DEBUG:
-                print("Screen dimensions: ({}x{})".format(width, height))
+            print("Screen dimensions: ({}x{})".format(width, height))
             self.widthp = round(width * 0.7)
             self.heightp = round(height * 0.7)
             if self.heightp > 1000:
@@ -105,8 +102,7 @@ class App(QMainWindow):
             self.widthp = 1280
             self.heightp = 720
 
-        if DEBUG:
-            print("Window dimensions set to ({}x{})".format(self.widthp, self.heightp))
+        print("Window dimensions set to ({}x{})".format(self.widthp, self.heightp))
         self.scale_x = self.widthp / 1800
         self.scale_y = self.heightp / 900
         self.filename = ""
@@ -141,7 +137,7 @@ class App(QMainWindow):
         self.btnPolyFix.resize(35, 35)
 
         self.loaded = False
-        self.data = plot.Case()
+        self.case = plot.Case()
         self.frame = None
         self.route_file = None
         self.poly_file = None
@@ -307,9 +303,9 @@ class App(QMainWindow):
         self.redraw_plots()
 
     def redraw_plots(self):
-        self.m.plot_paths(self.data, self.maneuver_idx)
-        self.segments.plot_paths(self.data, self.maneuver_idx)
-        # self.time.plot_paths(self.data, self.maneuver_idx)
+        self.m.plot_paths(self.case, self.maneuver_idx)
+        self.segments.plot_paths(self.case, self.maneuver_idx)
+        # self.time.plot_paths(self.case, self.maneuver_idx)
         # self.update_time(self.time.time)
 
     def show_coords_changed(self):
@@ -322,26 +318,30 @@ class App(QMainWindow):
         :return:
         """
         if self.loaded:
-            time = self.data.start_time
-            if self.data.maneuvers is not None:
-                time += plot.path_time(
-                    self.data.maneuvers[self.maneuver_idx]['path']) * self.sl.value() * .01
-            self.update_time(time)
+            start_time = self.case.start_time
+            total_time = 0
+            if self.case.maneuvers is not None:
+                total_time += plot.path_time(self.case.maneuvers[self.maneuver_idx]['path'])
+            elif self.case.targets_maneuvers is not None:
+                total_time += np.max([plot.path_time(path) for path in self.case.targets_maneuvers])
+            elif self.case.targets_real is not None:
+                total_time += np.max([plot.path_time(path) for path in self.case.targets_real])
+            self.update_time(start_time + total_time * self.sl.value() * .01)
 
     def load_data(self, filename):
         self.loaded = True
-        self.data = plot.load_case_from_directory(os.path.dirname(filename))
+        self.case = plot.load_case_from_directory(os.path.dirname(filename))
 
-        if self.data.maneuvers is not None:
+        if self.case.maneuvers is not None:
             self.params.maneuver_select.clear()
-            self.params.maneuver_select.addItems([str(i) for i in range(1, len(self.data.maneuvers) + 1)])
+            self.params.maneuver_select.addItems([str(i) for i in range(1, len(self.case.maneuvers) + 1)])
 
-        self.params.maneuver_select.setDisabled(self.data.maneuvers is not None and len(self.data.maneuvers) > 1)
+        self.params.maneuver_select.setDisabled(self.case.maneuvers is not None and len(self.case.maneuvers) > 1)
 
-        self.params.spinBoxRadius.setValue(self.data.settings['maneuver_calculation']['safe_diverg_dist'] * .5)
+        self.params.spinBoxRadius.setValue(self.case.settings['maneuver_calculation']['safe_diverg_dist'] * .5)
 
     def update_time(self, time):
-        self.m.update_positions(self.data, time,
+        self.m.update_positions(self.case, time,
                                 distance=self.params.spinBoxDist.value() if self.params.cbDist.isChecked() else 0,
                                 radius=self.params.spinBoxRadius.value(),
                                 coords=self.params.cbCoords.isChecked(),
@@ -392,7 +392,7 @@ class PlotCanvas(FigureCanvas):
 
         plot.plot_nav_points(self.ax, case)
         plot.plot_case_paths(self.ax, case, maneuver_index=maneuver_idx)
-
+        plot.plot_case_limits(self.ax, case)
         self.ax.axis('equal')
         if case.maneuvers is not None:
             xlim, ylim = plot.recalc_lims(case.maneuvers[0]['path'])
@@ -411,7 +411,7 @@ class PlotCanvas(FigureCanvas):
         self.ax1.legend()
         self.ax1.set_ylim(self.ax.get_ylim())
         self.ax1.set_xlim(self.ax.get_xlim())
-        local_time = t - case.nav_data['timestamp']
+        local_time = t - case.start_time
         h, m, s = math.floor(local_time / 3600), math.floor(local_time % 3600 / 60), local_time % 60
         if solver_info != "":
             if msg != "":

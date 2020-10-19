@@ -3,7 +3,6 @@ import math
 import os
 import sys
 
-import numpy as np
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QIcon
@@ -19,7 +18,7 @@ from paintall import DrawingApp
 
 
 # For build:
-# pyinstaller --onefile --icon=Icon.ico --noconsole app.py --version-file=VersionResource.txt
+# pyinstaller --onefile --icon=Icon.ico --noconsole app.py --version-file=VersionResource.txt --add-data Icon.ico;.
 
 
 class ParamBar(QWidget):
@@ -151,7 +150,14 @@ class App(QMainWindow):
         self.solver_info = ""
         self.info_msg = ""
         # Adding icon
-        self.setWindowIcon(QIcon('Icon.ico'))
+        icon = 'Icon.ico'
+        try:
+            ico_path = sys._MEIPASS
+        except AttributeError:
+            ico_path = os.path.dirname(os.path.abspath(__file__))
+        icon_file = os.path.join(ico_path, icon)
+        self.setWindowIcon(QIcon(icon_file))
+
         # If has nav-data
         self.maneuver_idx = 0
         self.initUI()
@@ -322,9 +328,9 @@ class App(QMainWindow):
             if self.case.maneuvers is not None:
                 total_time += plot.path_time(self.case.maneuvers[self.maneuver_idx]['path'])
             elif self.case.targets_maneuvers is not None:
-                total_time += np.max([plot.path_time(path) for path in self.case.targets_maneuvers])
+                total_time += max([plot.path_time(path) for path in self.case.targets_maneuvers])
             elif self.case.targets_real is not None:
-                total_time += np.max([plot.path_time(path) for path in self.case.targets_real])
+                total_time += max([plot.path_time(path) for path in self.case.targets_real])
             self.update_time(start_time + total_time * self.sl.value() * .01)
 
     def load_data(self, filename):
@@ -362,8 +368,8 @@ class App(QMainWindow):
             self.filename = filename[0]
             self.loaded = False
             self.solver = 0
-            self.has_two_trajs = False
             self.reload()
+            self.setWindowTitle('{} - {}'.format(self.title, os.path.dirname(self.filename)))
 
 
 class PlotCanvas(FigureCanvas):

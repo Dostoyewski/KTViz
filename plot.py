@@ -6,7 +6,7 @@ from collections import namedtuple
 from math import sin, cos, radians, degrees
 
 import numpy as np
-from matplotlib import pyplot as plt, gridspec
+from matplotlib import pyplot as plt, gridspec, colors as mcolors
 from matplotlib.patches import Ellipse, Polygon
 
 from konverter import Frame
@@ -73,8 +73,8 @@ def plot_case_paths(ax, case, maneuver_index=0, all_maneuvers=True, real_maneuve
         plot_path(case.route, ax, '#fffffffa')
 
     if real_maneuvers and case.targets_real is not None:
-        for path in case.targets_maneuvers:
-            plot_path(path, ax, 'gray')
+        for path in case.targets_real:
+            plot_path(path, ax, mcolors.to_rgba('darkGray', .5))
 
     if case.targets_maneuvers is not None:
         for path in case.targets_maneuvers:
@@ -84,9 +84,9 @@ def plot_case_paths(ax, case, maneuver_index=0, all_maneuvers=True, real_maneuve
         if all_maneuvers:
             for i, maneuver in enumerate(case.maneuvers):
                 if i != maneuver_index:
-                    plot_path(case.maneuvers[maneuver_index]['path'], ax, 'darkCyan')
+                    plot_path(maneuver['path'], ax, mcolors.to_rgba('c', .4))
 
-        if maneuver_index <= len(case.maneuvers):
+        if maneuver_index < len(case.maneuvers):
             plot_path(case.maneuvers[maneuver_index]['path'], ax, 'brown')
 
 
@@ -131,7 +131,7 @@ def plot_case_positions(ax, case, t, maneuver_index=0, all_maneuvers=True, real_
             for i, maneuver in enumerate(case.maneuvers):
                 if i != maneuver_index:
                     positions.append(path_position(maneuver['path'], t))
-                    colors.append('darkGreen')
+                    colors.append(mcolors.to_rgba('darkGreen', .4))
                     names.append(None)
 
         if maneuver_index <= len(case.maneuvers):
@@ -274,7 +274,7 @@ def plot_lines(ax, lines, frame):
         coords = obj['geometry']['coordinates']
         coords_x = [frame.from_wgs(item[1], item[0])[1] for item in coords]
         coords_y = [frame.from_wgs(item[1], item[0])[0] for item in coords]
-        ax.plot(coords_x, coords_y, marker='D', color='r')
+        ax.plot(coords_x, coords_y, marker='D', color=mcolors.to_rgba('red', .6))
 
 
 def plot_points(ax, points, frame):
@@ -289,9 +289,9 @@ def plot_points(ax, points, frame):
         coords = obj['geometry']['coordinates']
         dist = obj['properties']['distance']
         coords = frame.from_wgs(coords[1], coords[0])
-        ax.plot(coords[1], coords[0], marker='*', color='r')
+        ax.plot(coords[1], coords[0], marker='*', color=mcolors.to_rgba('red', .6))
         ax.add_patch(Ellipse((coords[1], coords[0]), dist, dist, fill=False,
-                             hatch='/', color='red'))
+                             hatch='/', color=mcolors.to_rgba('red', .6)))
 
 
 def plot_polygons(ax, polygons, frame):
@@ -309,13 +309,13 @@ def plot_polygons(ax, polygons, frame):
         coords = [[obj[1], obj[0]] for obj in coords]
         if obj['properties']['limitation_type'] == "zone_entering_prohibition":
             ax.add_patch(Polygon(coords, closed=True,
-                                 fill=False, hatch='/', color='red'))
+                                 fill=False, hatch='/', color=mcolors.to_rgba('red', .6)))
         elif obj['properties']['limitation_type'] == "zone_leaving_prohibition":
             ax.add_patch(Polygon(coords, closed=True,
-                                 fill=False, hatch='/', color='blue'))
+                                 fill=False, hatch='/', color=mcolors.to_rgba('blue', .6)))
         elif obj['properties']['limitation_type'] == "movement_parameters_limitation":
             ax.add_patch(Polygon(coords, closed=True,
-                                 fill=False, hatch='|', color='orange'))
+                                 fill=False, hatch='|', color=mcolors.to_rgba('orange', .6)))
 
 
 def get_path_info(filename, solver):
@@ -424,9 +424,9 @@ def plot_positions(ax, positions, names=None, colors=None, radius=1.5, coords=Fa
 
 def plot_distances(ax, positions, distance=5.):
     max_dist_sq = distance ** 2
-    if positions[0].x is None:
+    if positions[-1].x is None:
         return
-    x, y = positions[0].x, positions[0].y
+    x, y = positions[-1].x, positions[-1].y
     for i in range(1, len(positions)):
         if positions[i].x is not None:
             dist = (positions[i].x - x) ** 2 + (positions[i].y - y) ** 2

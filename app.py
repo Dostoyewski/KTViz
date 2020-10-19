@@ -305,8 +305,7 @@ class App(QMainWindow):
     def redraw_plots(self):
         self.m.plot_paths(self.case, self.maneuver_idx)
         self.segments.plot_paths(self.case, self.maneuver_idx)
-        # self.time.plot_paths(self.case, self.maneuver_idx)
-        # self.update_time(self.time.time)
+        self.value_changed()
 
     def show_coords_changed(self):
         self.params.cbGc.setEnabled(self.params.cbCoords.isChecked())
@@ -334,9 +333,9 @@ class App(QMainWindow):
 
         if self.case.maneuvers is not None:
             self.params.maneuver_select.clear()
-            self.params.maneuver_select.addItems([str(i) for i in range(1, len(self.case.maneuvers) + 1)])
+            self.params.maneuver_select.addItems([i['solver_name'] for i in self.case.maneuvers])
 
-        self.params.maneuver_select.setDisabled(self.case.maneuvers is not None and len(self.case.maneuvers) > 1)
+        self.params.maneuver_select.setDisabled((self.case.maneuvers is None) or (len(self.case.maneuvers) < 1))
 
         self.params.spinBoxRadius.setValue(self.case.settings['maneuver_calculation']['safe_diverg_dist'] * .5)
 
@@ -345,8 +344,9 @@ class App(QMainWindow):
                                 distance=self.params.spinBoxDist.value() if self.params.cbDist.isChecked() else 0,
                                 radius=self.params.spinBoxRadius.value(),
                                 coords=self.params.cbCoords.isChecked(),
-                                solver_info=self.solver_info,
-                                msg=self.info_msg)
+                                solver_info=self.case.maneuvers[self.maneuver_idx]['solver_name'],
+                                msg=self.case.maneuvers[self.maneuver_idx]['msg'],
+                                maneuver_idx=self.maneuver_idx)
         self.m.draw()
 
     def openFileNameDialog(self):

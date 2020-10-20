@@ -24,15 +24,18 @@ def load_json(filename):
 
 
 def load_case_from_directory(dir_path):
-    return Case(nav_data=load_json(os.path.join(dir_path, 'nav-data.json')),
-                maneuvers=load_json(os.path.join(dir_path, 'maneuver.json')),
-                targets_data=load_json(os.path.join(dir_path, 'target-data.json')),
-                targets_maneuvers=load_json(os.path.join(dir_path, 'target-maneuvers.json')),
-                targets_real=load_json(os.path.join(dir_path, 'real-target-maneuvers.json')),
-                analyse=load_json(os.path.join(dir_path, 'analyse.json')),
-                constraints=load_json(os.path.join(dir_path, 'constraints.json')),
-                route=load_json(os.path.join(dir_path, 'route-data.json')),
-                settings=load_json(os.path.join(dir_path, 'settings.json')))
+    def load_file(dataname):
+        return load_json(os.path.join(dir_path, Case.CASE_FILENAMES[dataname]))
+
+    return Case(nav_data=load_file('nav_data'),
+                maneuvers=load_file('maneuvers'),
+                targets_data=load_file('targets_data'),
+                targets_maneuvers=load_file('targets_maneuvers'),
+                targets_real=load_file('targets_real'),
+                analyse=load_file('analyse'),
+                constraints=load_file('constraints'),
+                route=load_file('route'),
+                settings=load_file('settings'))
 
 
 def path_time(path):
@@ -40,6 +43,18 @@ def path_time(path):
 
 
 class Case:
+    CASE_FILENAMES = {'nav_data': 'nav-data.json',
+                      'maneuvers': 'maneuver.json',
+                      'targets_data': 'target-data.json',
+                      'target_settings': 'target-settings.json',
+                      'targets_maneuvers': 'target-maneuvers.json',
+                      'targets_real': 'real-target-maneuvers.json',
+                      'analyse': 'nav-report.json',
+                      'constraints': 'constraints.json',
+                      'route': 'route-data.json',
+                      'settings': 'settings.json',
+                      'hydrometeo': 'hmi-data.json'}
+
     def __init__(self, nav_data=None, maneuvers=None, targets_data=None, targets_maneuvers=None, targets_real=None,
                  analyse=None, constraints=None, route=None, settings=None):
         self.nav_data = nav_data

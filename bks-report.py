@@ -10,7 +10,7 @@ from datetime import datetime
 
 from matplotlib import pyplot as plt
 
-from plot import plot_from_files
+from plot import plot_from_files, Case
 
 
 def fix_returncode(code):
@@ -35,7 +35,7 @@ class Report:
         os.chdir(datadir)
 
         # Get a list of old results
-        file_list = glob.glob('maneuver*.json') + glob.glob('nav-report.json')
+        file_list = glob.glob(Case.CASE_FILENAMES['maneuvers']) + glob.glob(Case.CASE_FILENAMES['analyse'])
         for filePath in file_list:
             try:
                 os.remove(filePath)
@@ -44,16 +44,16 @@ class Report:
 
         # Print the exit code.
         exec_time = time.time()
-        completedProc = subprocess.run([usv, "--target-settings", "target-settings.json",
-                                        "--targets", "target-data.json",
-                                        "--settings", "settings.json",
-                                        "--nav-data", "nav-data.json",
-                                        "--hydrometeo", "hmi-data.json",
-                                        "--constraints", "constraints.json",
-                                        "--route", "route-data.json",
-                                        "--maneuver", "maneuver.json",
-                                        "--analyse", "analyse.json",
-                                        "--predict","target-maneuvers.json",
+        completedProc = subprocess.run([usv, "--target-settings", Case.CASE_FILENAMES['target_settings'],
+                                        "--targets", Case.CASE_FILENAMES['targets_data'],
+                                        "--settings", Case.CASE_FILENAMES['settings'],
+                                        "--nav-data", Case.CASE_FILENAMES['nav_data'],
+                                        "--hydrometeo", Case.CASE_FILENAMES['hydrometeo'],
+                                        "--constraints", Case.CASE_FILENAMES['constraints'],
+                                        "--route", Case.CASE_FILENAMES['route'],
+                                        "--maneuver", Case.CASE_FILENAMES['maneuvers'],
+                                        "--analyse", Case.CASE_FILENAMES['analyse'],
+                                        "--predict", Case.CASE_FILENAMES['targets_maneuvers'],
                                         ("--rvo" if rvo is True else "--no-rvo" if rvo is False else "")],
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time

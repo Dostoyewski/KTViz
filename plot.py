@@ -442,7 +442,7 @@ def plot_distances(ax, positions, distance=5.):
     if positions[-1].x is None:
         return
     x, y = positions[-1].x, positions[-1].y
-    for i in range(1, len(positions)):
+    for i in range(0, len(positions)-1):
         if positions[i].x is not None:
             dist = (positions[i].x - x) ** 2 + (positions[i].y - y) ** 2
             if dist < max_dist_sq:

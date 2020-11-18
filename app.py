@@ -350,9 +350,11 @@ class App(QMainWindow):
                                 distance=self.params.spinBoxDist.value() if self.params.cbDist.isChecked() else 0,
                                 radius=self.params.spinBoxRadius.value(),
                                 coords=self.params.cbCoords.isChecked(),
-                                solver_info=self.case.maneuvers[self.maneuver_idx]['solver_name'],
-                                msg=self.case.maneuvers[self.maneuver_idx]['msg'],
+                                solver_info="" if self.case.maneuvers is None else
+                                self.case.maneuvers[self.maneuver_idx]['solver_name'],
+                                msg="" if self.case.maneuvers is None else self.case.maneuvers[self.maneuver_idx]['msg'],
                                 maneuver_idx=self.maneuver_idx)
+
         self.m.draw()
 
     def openFileNameDialog(self):

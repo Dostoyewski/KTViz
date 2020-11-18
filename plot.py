@@ -120,25 +120,29 @@ def plot_case_positions(ax, case, t, maneuver_index=0, all_maneuvers=True, real_
     if case.targets_maneuvers is not None:
         for path in case.targets_maneuvers:
             positions.append(path_position(path, t))
+    else:
+        for target in case.targets_data:
+            x, y, dist, angle = case.frame.from_wgs(target['lat'], target['lon'])
+            positions.append(Position(x, y, target['COG'], target['SOG']))
 
-        if case.targets_data is not None:
-            names += [target['id'] for target in case.targets_data]
-            if case.analyse is not None:
-                statuses = {}
-                for status in case.analyse['target_statuses']:
-                    statuses[status['id']] = status['danger_level']
-                danger_levels = {0: 'blue', 1: 'orange', 2: 'red'}
-                for target in case.targets_data:
-                    if target['id'] in statuses:
-                        colors.append(danger_levels[statuses[target['id']]])
-                    else:
-                        colors.append(danger_levels[0])
-            else:
-                colors += ['blue'] * len(case.targets_maneuvers)
-
+    if case.targets_data is not None:
+        names += [target['id'] for target in case.targets_data]
+        if case.analyse is not None:
+            statuses = {}
+            for status in case.analyse['target_statuses']:
+                statuses[status['id']] = status['danger_level']
+            danger_levels = {0: 'blue', 1: 'orange', 2: 'red'}
+            for target in case.targets_data:
+                if target['id'] in statuses:
+                    colors.append(danger_levels[statuses[target['id']]])
+                else:
+                    colors.append(danger_levels[0])
         else:
-            names += [str(i) for i, path in enumerate(case.targets_maneuvers)]
             colors += ['blue'] * len(case.targets_maneuvers)
+
+    else:
+        names += [str(i) for i, path in enumerate(case.targets_maneuvers)]
+        colors += ['blue'] * len(case.targets_maneuvers)
 
     # Our
     if case.maneuvers is not None:
@@ -153,6 +157,11 @@ def plot_case_positions(ax, case, t, maneuver_index=0, all_maneuvers=True, real_
             positions.append(path_position(case.maneuvers[maneuver_index]['path'], t))
             colors.append('green')
             names.append('Our')
+    else:
+        x, y, dist, angle = case.frame.from_wgs(case.nav_data['lat'], case.nav_data['lon'])
+        positions.append(Position(x, y, case.nav_data['COG'], case.nav_data['SOG']))
+        colors.append('green')
+        names.append('Our')
 
     plot_positions(ax, positions, names, colors, radius=radius, coords=coords, frame=case.frame)
     return positions
@@ -438,21 +447,23 @@ def plot_positions(ax, positions, names=None, colors=None, radius=1.5, coords=Fa
 
 
 def plot_distances(ax, positions, distance=5.):
-    max_dist_sq = distance ** 2
-    if positions[-1].x is None:
-        return
-    x, y = positions[-1].x, positions[-1].y
-    for i in range(0, len(positions)-1):
-        if positions[i].x is not None:
-            dist = (positions[i].x - x) ** 2 + (positions[i].y - y) ** 2
-            if dist < max_dist_sq:
-                ax.plot((y, positions[i].y), (x, positions[i].x), color='red')
-                # Location to plot text
-                text_x, text_y = (positions[i].x + x) * .5, (positions[i].y + y) * .5
-                # Rotate angle
-                angle = (degrees(math.atan2(positions[i].x - x, positions[i].y - y)) - 90) % 180 - 90
-                # Plot text
-                ax.text(text_y, text_x, '{:.1f}'.format(dist ** .5), fontsize=8, rotation=angle, rotation_mode='anchor')
+    if len(positions) != 0:
+        max_dist_sq = distance ** 2
+        if positions[-1].x is None:
+            return
+        x, y = positions[-1].x, positions[-1].y
+        for i in range(0, len(positions) - 1):
+            if positions[i].x is not None:
+                dist = (positions[i].x - x) ** 2 + (positions[i].y - y) ** 2
+                if dist < max_dist_sq:
+                    ax.plot((y, positions[i].y), (x, positions[i].x), color='red')
+                    # Location to plot text
+                    text_x, text_y = (positions[i].x + x) * .5, (positions[i].y + y) * .5
+                    # Rotate angle
+                    angle = (degrees(math.atan2(positions[i].x - x, positions[i].y - y)) - 90) % 180 - 90
+                    # Plot text
+                    ax.text(text_y, text_x, '{:.1f}'.format(dist ** .5), fontsize=8, rotation=angle,
+                            rotation_mode='anchor')
 
 
 def plot_captions(ax, positions):

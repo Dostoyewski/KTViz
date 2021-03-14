@@ -55,6 +55,18 @@ class Case:
                       'settings': 'settings.json',
                       'hydrometeo': 'hmi-data.json'}
 
+    CASE_FILENAMES_KT = {'nav_data': 'navigation.json',
+                      'maneuvers': 'result-maneuver.json',
+                      'targets_data': 'targets.json',
+                      'target_settings': 'targets_settings.json',
+                      'targets_maneuvers': 'predicted_tracks.json',
+                      'targets_real': 'real-target-maneuvers.json',
+                      'analyse': 'evaluation.json',
+                      'constraints': 'constraints.json',
+                      'route': 'route.json',
+                      'settings': 'settings.json',
+                      'hydrometeo': 'hydrometeo.json'}
+
     def __init__(self, nav_data=None, maneuvers=None, targets_data=None, targets_maneuvers=None, targets_real=None,
                  analyse=None, constraints=None, route=None, settings=None):
         self.nav_data = nav_data

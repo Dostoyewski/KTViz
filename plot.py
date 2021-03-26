@@ -24,8 +24,13 @@ def load_json(filename):
 
 
 def load_case_from_directory(dir_path):
+    if os.path.exists(os.path.join(dir_path, Case.CASE_FILENAMES['nav_data'])):
+        case_filenames = Case.CASE_FILENAMES
+    else:
+        case_filenames = Case.CASE_FILENAMES_KT
+
     def load_file(dataname):
-        return load_json(os.path.join(dir_path, Case.CASE_FILENAMES[dataname]))
+        return load_json(os.path.join(dir_path, case_filenames[dataname]))
 
     return Case(nav_data=load_file('nav_data'),
                 maneuvers=load_file('maneuvers'),
@@ -56,16 +61,16 @@ class Case:
                       'hydrometeo': 'hmi-data.json'}
 
     CASE_FILENAMES_KT = {'nav_data': 'navigation.json',
-                      'maneuvers': 'result-maneuver.json',
-                      'targets_data': 'targets.json',
-                      'target_settings': 'targets_settings.json',
-                      'targets_maneuvers': 'predicted_tracks.json',
-                      'targets_real': 'real-target-maneuvers.json',
-                      'analyse': 'evaluation.json',
-                      'constraints': 'constraints.json',
-                      'route': 'route.json',
-                      'settings': 'settings.json',
-                      'hydrometeo': 'hydrometeo.json'}
+                         'maneuvers': 'result-maneuver.json',
+                         'targets_data': 'targets.json',
+                         'target_settings': 'targets_settings.json',
+                         'targets_maneuvers': 'predicted_tracks.json',
+                         'targets_real': 'real-target-maneuvers.json',
+                         'analyse': 'evaluation.json',
+                         'constraints': 'constraints.json',
+                         'route': 'route.json',
+                         'settings': 'settings.json',
+                         'hydrometeo': 'hydrometeo.json'}
 
     def __init__(self, nav_data=None, maneuvers=None, targets_data=None, targets_maneuvers=None, targets_real=None,
                  analyse=None, constraints=None, route=None, settings=None):

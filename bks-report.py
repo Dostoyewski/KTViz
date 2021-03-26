@@ -27,16 +27,24 @@ class Report:
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
 
     def generate(self, data_directory, rvo=None, nopic=False):
+        directories_list = []
         for root, dirs, files in os.walk(data_directory):
             if "nav-data.json" in files or 'navigation.json' in files:
-                self.run_case(os.path.join(data_directory, root), self.exe, rvo, nopic)
+                directories_list.append(os.path.join(data_directory, root))
+        directories_list.sort()
+        for directory in directories_list:
+            self.run_case(directory, self.exe, rvo, nopic)
 
     def run_case(self, datadir, usv, rvo=None, nopic=False):
         working_dir = os.path.abspath(os.getcwd())
         os.chdir(datadir)
 
+        if os.path.exists(Case.CASE_FILENAMES['nav_data']):
+            case_filenames = Case.CASE_FILENAMES
+        else:
+            case_filenames = Case.CASE_FILENAMES_KT
         # Get a list of old results
-        file_list = glob.glob(Case.CASE_FILENAMES['maneuvers']) + glob.glob(Case.CASE_FILENAMES['analyse'])
+        file_list = glob.glob(case_filenames['maneuvers']) + glob.glob(case_filenames['analyse'])
         for filePath in file_list:
             try:
                 os.remove(filePath)
@@ -45,16 +53,16 @@ class Report:
 
         # Print the exit code.
         exec_time = time.time()
-        completedProc = subprocess.run([usv, "--target-settings", Case.CASE_FILENAMES['target_settings'],
-                                        "--targets", Case.CASE_FILENAMES['targets_data'],
-                                        "--settings", Case.CASE_FILENAMES['settings'],
-                                        "--nav-data", Case.CASE_FILENAMES['nav_data'],
-                                        "--hydrometeo", Case.CASE_FILENAMES['hydrometeo'],
-                                        "--constraints", Case.CASE_FILENAMES['constraints'],
-                                        "--route", Case.CASE_FILENAMES['route'],
-                                        "--maneuver", Case.CASE_FILENAMES['maneuvers'],
-                                        "--analyse", Case.CASE_FILENAMES['analyse'],
-                                        "--predict", Case.CASE_FILENAMES['targets_maneuvers'],
+        completedProc = subprocess.run([usv, "--target-settings", case_filenames['target_settings'],
+                                        "--targets", case_filenames['targets_data'],
+                                        "--settings", case_filenames['settings'],
+                                        "--nav-data", case_filenames['nav_data'],
+                                        "--hydrometeo", case_filenames['hydrometeo'],
+                                        "--constraints", case_filenames['constraints'],
+                                        "--route", case_filenames['route'],
+                                        "--maneuver", case_filenames['maneuvers'],
+                                        "--analyse", case_filenames['analyse'],
+                                        "--predict", case_filenames['targets_maneuvers'],
                                         ("--rvo" if rvo is True else "--no-rvo" if rvo is False else "")],
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         exec_time = time.time() - exec_time

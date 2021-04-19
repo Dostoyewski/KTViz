@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 import base64
 import ctypes
-import glob
 import io
 import json
 import os
 import subprocess
 import time
 from datetime import datetime
+from pathlib import Path
 
 from matplotlib import pyplot as plt
 
@@ -26,11 +26,12 @@ class Report:
         self.work_dir = os.path.abspath(os.getcwd())
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
 
-    def generate(self, data_directory, rvo=None, nopic=False):
+    def generate(self, data_directory, glob='*', rvo=None, nopic=False):
         directories_list = []
-        for root, dirs, files in os.walk(data_directory):
-            if "nav-data.json" in files or 'navigation.json' in files:
-                directories_list.append(os.path.join(data_directory, root))
+        for path in Path(data_directory).glob(glob):
+            for root, dirs, files in os.walk(path):
+                if "nav-data.json" in files or 'navigation.json' in files:
+                    directories_list.append(os.path.join(data_directory, root))
         directories_list.sort()
         for directory in directories_list:
             self.run_case(directory, self.exe, rvo, nopic)
@@ -44,7 +45,10 @@ class Report:
         else:
             case_filenames = Case.CASE_FILENAMES_KT
         # Get a list of old results
-        file_list = glob.glob(case_filenames['maneuvers']) + glob.glob(case_filenames['analyse'])
+        cur_path = Path('.')
+        file_list = list(cur_path.glob(case_filenames['maneuvers'])) + \
+                    list(cur_path.glob(case_filenames['analyse']))
+
         for filePath in file_list:
             try:
                 os.remove(filePath)
@@ -157,8 +161,6 @@ class Report:
 <meta charset="utf-8">
 <title>Results from {datetime}</title>
 <style>{styles}</style>
-<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
-<script type="text/javascript" src="http://mpld3.github.io/js/mpld3.v0.3.js"></script>
 </head>
 <body>
 <h1>Report from {datetime}</h1>""".format(datetime=datetime.now(), styles=css)
@@ -200,9 +202,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="BKS report generator")
     parser.add_argument("executable", type=str, help="Path to USV executable")
+    parser.add_argument("--glob", type=str, default='*', help="Pattern for scanned directories")
+
     parser.add_argument("--rvo", action="store_true", help="Run USV with --rvo")
     parser.add_argument("--no-rvo", action="store_true", help="Run USV with --no-rvo")
     parser.add_argument("--nopic", action="store_true", help="")
+    parser.add_argument("--working_dir", type=str, help="Path to USV executable")
     args = parser.parse_args()
 
     use_rvo = None
@@ -211,8 +216,12 @@ if __name__ == "__main__":
     if args.no_rvo:
         use_rvo = False
 
-    cur_dir = os.path.abspath(os.getcwd())
+    if args.working_dir is not None:
+        cur_dir = os.path.abspath(parser.working_dir)
+    else:
+        cur_dir = os.path.abspath(os.getcwd())
+
     usv_executable = os.path.join(cur_dir, args.executable)
     report = Report(usv_executable)
-    report.generate(cur_dir, rvo=use_rvo, nopic=args.nopic)
+    report.generate(cur_dir, glob=args.glob, rvo=use_rvo, nopic=args.nopic)
     report.saveHTML("report.html")

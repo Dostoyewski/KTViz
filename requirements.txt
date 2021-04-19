@@ -1,7 +1,7 @@
-geographiclib==1.50
+geographiclib>=1.50
 numpy>=1.18.4
-matplotlib==3.2.1
-PyQt5==5.15.0
+PyQt5~=5.15.0
+matplotlib~=3.2.1
 Pillow~=7.1.2
 pandas~=1.1.1
 Shapely~=1.7.1

@@ -11,6 +11,7 @@ from pathlib import Path
 from multiprocessing import Pool
 from matplotlib import pyplot as plt
 from plot import plot_from_files, Case
+from natsort import natsorted
 
 
 def fix_returncode(code):
@@ -34,7 +35,7 @@ class ReportGenerator:
             for root, dirs, files in os.walk(path):
                 if "nav-data.json" in files or 'navigation.json' in files:
                     directories_list.append(os.path.join(data_directory, root))
-        directories_list.sort()
+        directories_list = natsorted(directories_list)
 
         with Pool() as p:
             cases = p.map(self.run_case, directories_list)
@@ -72,7 +73,7 @@ class ReportGenerator:
                                         "--maneuver", case_filenames['maneuvers'],
                                         "--analyse", case_filenames['analyse'],
                                         "--predict", case_filenames['targets_maneuvers'],
-                                        ("--rvo" if self.rvo is True else "--no-rvo" if self.rvo is False else "")]
+                                        ("--rvo-enable" if self.rvo is True else "")]
 
         completedProc = subprocess.run(command,
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -114,10 +115,12 @@ class Report:
 
     def save_html(self, filename):
         css = """
-        h2 {{margin-top: 2em;}}
+        *{font-family: sans-serif;}
+        h2 {margin-top: 2em;}
         .case {
             display: flex;
             max-height: 540pt;
+            font-family: sans-serif;
         }
         .case .pic {
             flex: 1;
@@ -128,39 +131,50 @@ class Report:
             padding: 0;
             display: flex;
             flex-direction: column;
+            background: #555;
+            overflow-y: auto;
         }
         .stdout pre {
             max-height: 100%;
             overflow-y: auto;
-            background: #555;
             color: #fff;
             margin: 0;
             padding: 1em;
+            white-space: pre-line;
+            font-family: monospace;
         }
+        .stdout pre.cmd::before {
+            content: '$ ';
+            font-weight: bold;
+        }
+        .stdout pre.cmd {background: #222;}
         .stdout p{
             border-bottom: 1px black solid;
             padding: 0.5em;
             margin: 0;
+            font: 400 13.3333px sans-serif;
         }
         .stdout input[type=checkbox] {
             visibility: visible;
             height: 2em;
             width: 100%;
+            margin: 0;
         }
-
-        .stdout input[type=checkbox]:after {
-            content: attr(text);
+        .stdout input[type=checkbox]:after, .stdout p{
             visibility: visible;
             display: block;
             padding: 0.5em;
+            background: #fff;
         }
 
-        .stdout input[type=checkbox] + pre {
+        .stdout input[type=checkbox] + div {
             display: none;
         }
-        .stdout input[type=checkbox]:checked + pre {
+        .stdout input[type=checkbox]:checked + div {
             display: block;
         }
+        .stdout input[type=checkbox]::after{content: '▸ ' attr(text);}
+        .stdout input[type=checkbox]:checked::after{content: '▾ ' attr(text);}
         img{
             image-rendering: -moz-crisp-edges;         /* Firefox */
             image-rendering:   -o-crisp-edges;         /* Opera */
@@ -192,16 +206,18 @@ class Report:
 <p>Return code: {return_code}</p>
 <p>Execution time: {exec_time} seconds</p>
 <input type="checkbox" text="Situation report">
-<pre>{nav_report}</pre>
-<input type="checkbox" text="STDOUT"{checked}>
-<pre>{stdout}</pre>
+<div><pre>{nav_report}</pre></div>
+<input type="checkbox" text="STDOUT"{checked}><div>
+<pre class="cmd">{command}</pre>
+<pre>{stdout}</pre></div>
 </div></div></div>""".format(casename=case["datadir"],
                              return_code=fix_returncode(case["proc"].returncode),
                              exec_time=case["exec_time"],
+                             command=str(' '.join(case["command"])),
                              stdout=str(case["proc"].stdout.decode("utf-8")),
                              nav_report=case["nav_report"],
                              image=img_tag,
-                             checked=" checked" if case["proc"].returncode in (0, 1) else "")
+                             checked=" checked")
 
         html += "</body></html>"
         with io.open(filename, "w", encoding="utf-8") as f:
@@ -216,7 +232,6 @@ if __name__ == "__main__":
     parser.add_argument("--glob", type=str, default='*', help="Pattern for scanned directories")
 
     parser.add_argument("--rvo", action="store_true", help="Run USV with --rvo")
-    parser.add_argument("--no-rvo", action="store_true", help="Run USV with --no-rvo")
     parser.add_argument("--nopic", action="store_true", help="")
     parser.add_argument("--working_dir", type=str, help="Path to USV executable")
     args = parser.parse_args()
@@ -224,8 +239,6 @@ if __name__ == "__main__":
     use_rvo = None
     if args.rvo:
         use_rvo = True
-    if args.no_rvo:
-        use_rvo = False
 
     if args.working_dir is not None:
         cur_dir = os.path.abspath(args.working_dir)

@@ -7,6 +7,7 @@ import os
 import subprocess
 import time
 from datetime import datetime
+from collections import Counter
 from pathlib import Path
 from multiprocessing import Pool
 from matplotlib import pyplot as plt
@@ -64,16 +65,16 @@ class ReportGenerator:
         # Print the exit code.
         exec_time = time.time()
         command = [self.exe, "--target-settings", case_filenames['target_settings'],
-                                        "--targets", case_filenames['targets_data'],
-                                        "--settings", case_filenames['settings'],
-                                        "--nav-data", case_filenames['nav_data'],
-                                        "--hydrometeo", case_filenames['hydrometeo'],
-                                        "--constraints", case_filenames['constraints'],
-                                        "--route", case_filenames['route'],
-                                        "--maneuver", case_filenames['maneuvers'],
-                                        "--analyse", case_filenames['analyse'],
-                                        "--predict", case_filenames['targets_maneuvers'],
-                                        ("--rvo-enable" if self.rvo is True else "")]
+                   "--targets", case_filenames['targets_data'],
+                   "--settings", case_filenames['settings'],
+                   "--nav-data", case_filenames['nav_data'],
+                   "--hydrometeo", case_filenames['hydrometeo'],
+                   "--constraints", case_filenames['constraints'],
+                   "--route", case_filenames['route'],
+                   "--maneuver", case_filenames['maneuvers'],
+                   "--analyse", case_filenames['analyse'],
+                   "--predict", case_filenames['targets_maneuvers'],
+                   ("--rvo-enable" if self.rvo is True else "")]
 
         completedProc = subprocess.run(command,
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -84,13 +85,16 @@ class ReportGenerator:
         image_data = ""
         nav_report = ""
         if not self.nopic:
-            fig = plot_from_files(case_filenames['nav_data'])
+            try:
+                fig = plot_from_files(os.path.join(datadir, case_filenames['nav_data']))
 
-            f = io.BytesIO()
-            fig.savefig(f, format="png", dpi=300)
-            image_data = '<img width="100%" src="data:image/png;base64,{}">'.format(
-                base64.b64encode(f.getvalue()).decode())
-            plt.close(fig)
+                f = io.BytesIO()
+                fig.savefig(f, format="png", dpi=300)
+                image_data = '<img width="100%" src="data:image/png;base64,{}">'.format(
+                    base64.b64encode(f.getvalue()).decode())
+                plt.close(fig)
+            except:
+                image_data = "Plot failed"
         try:
             with open("nav-report.json", "r") as f:
                 nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
@@ -103,7 +107,8 @@ class ReportGenerator:
                 "image_data": image_data,
                 "exec_time": exec_time,
                 "nav_report": nav_report,
-                "command": command}
+                "command": command,
+                "code": fix_returncode(completedProc.returncode)}
 
 
 class Report:
@@ -182,7 +187,34 @@ class Report:
             image-rendering: crisp-edges;
             -ms-interpolation-mode: nearest-neighbor;
         }
+        table.summary {
+            border-collapse: collapse;
+        }
+        
+        table.summary td[code="0"]{
+            background-color: green;
+            color: white;
+        }
+        table.summary td[code="1"]{
+            background-color: darkorange;
+            color: white;
+        }
+        table.summary td[code="2"]{
+            background-color: red;
+            color: white;
+        }
         """
+
+        tbody = ''.join([f'<tr><td>{case["datadir"]}</td><td code="{case["code"]}">{case["code"]}</td></tr>' for case in
+                         self.cases])
+        codes = dict(Counter([case["code"] for case in self.cases]))
+        table = """
+        <table class="summary" border="1">
+        <thead><tr><td>Case</td><td>Code</td></tr></thead>
+        <tbody>{tbody}</tbody>
+        <tfoot><tr><td></td><td>{code_summary}</td></tr></tfoot>
+        </table>
+        """.format(tbody=tbody, code_summary='<br>'.join(['{}: {}'.format(k, codes[k]) for k in sorted(codes)]))
 
         html = """<!DOCTYPE HTML>
 <html>
@@ -193,6 +225,7 @@ class Report:
 </head>
 <body>
 <h1>Report from {datetime}</h1>""".format(datetime=datetime.now(), styles=css)
+        html += table
 
         for case in self.cases:
             img_tag = case["image_data"]

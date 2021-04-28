@@ -41,7 +41,7 @@ class ReportGenerator:
         with Pool() as p:
             cases = p.map(self.run_case, directories_list)
 
-        return Report(cases, self.exe, self.work_dir)
+        return Report(cases, self.exe, self.work_dir, self.rvo)
 
     def run_case(self, datadir):
         working_dir = os.path.abspath(os.getcwd())
@@ -113,10 +113,11 @@ class ReportGenerator:
 
 class Report:
 
-    def __init__(self, cases, executable, work_dir):
+    def __init__(self, cases, executable, work_dir, rvo):
         self.cases = cases
         self.exe = executable
         self.work_dir = work_dir
+        self.rvo = rvo
 
     def save_html(self, filename):
         css = """
@@ -205,7 +206,7 @@ class Report:
         }
         """
 
-        tbody = ''.join([f'<tr><td>{case["datadir"]}</td><td code="{case["code"]}">{case["code"]}</td></tr>' for case in
+        tbody = ''.join([f'<tr><td>{os.path.relpath(case["datadir"], self.work_dir)}</td><td code="{case["code"]}">{case["code"]}</td></tr>' for case in
                          self.cases])
         codes = dict(Counter([case["code"] for case in self.cases]))
         table = """
@@ -224,7 +225,7 @@ class Report:
 <style>{styles}</style>
 </head>
 <body>
-<h1>Report from {datetime}</h1>""".format(datetime=datetime.now(), styles=css)
+<h1>Report from {datetime} {rvo}</h1>""".format(datetime=datetime.now(), styles=css, rvo='<b>rvo enabled</b>' if self.rvo else '')
         html += table
 
         for case in self.cases:

@@ -9,11 +9,10 @@ import time
 from datetime import datetime
 from collections import Counter
 from pathlib import Path
-from multiprocessing import Pool, Lock, Manager, Event
+from multiprocessing import Pool
 from matplotlib import pyplot as plt
 from plot import plot_from_files, Case
 from natsort import natsorted
-from functools import partial
 
 
 def fix_returncode(code):
@@ -26,7 +25,6 @@ class ReportGenerator:
         self.cases = []
         self.work_dir = os.path.abspath(os.getcwd())
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
-        self.r_codes = []
         self.rvo = None
         self.nopic = None
 
@@ -39,19 +37,13 @@ class ReportGenerator:
                 if "nav-data.json" in files or 'navigation.json' in files:
                     directories_list.append(os.path.join(data_directory, root))
         directories_list = natsorted(directories_list)
-        #m = Manager()
-        #self.l = m.Lock()
-   
+
         with Pool() as p:
             cases = p.map(self.run_case, directories_list)
 
-        for case in cases:
-            self.r_codes.append(fix_returncode(case["proc"].returncode))
-  
         return Report(cases, self.exe, self.work_dir, self.rvo)
 
     def run_case(self, datadir):
-        #self.e.wait()
         working_dir = os.path.abspath(os.getcwd())
         os.chdir(datadir)
 
@@ -90,11 +82,6 @@ class ReportGenerator:
 
         print("{} .Return code: {}. Exec time: {} sec"
               .format(datadir, fix_returncode(completedProc.returncode), exec_time))
-        #self.e.set()
-        print("Done")
-        rc = fix_returncode(completedProc.returncode)
-        self.r_codes.append(rc)
-        #self.e.clear()
         image_data = ""
         nav_report = ""
         if not self.nopic:
@@ -127,7 +114,6 @@ class ReportGenerator:
 class Report:
 
     def __init__(self, cases, executable, work_dir, rvo):
-
         self.cases = cases
         self.exe = executable
         self.work_dir = work_dir
@@ -270,40 +256,30 @@ class Report:
         html += "</body></html>"
         with io.open(filename, "w", encoding="utf-8") as f:
             f.write(html)
+
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="BKS report generator")
     parser.add_argument("executable", type=str, help="Path to USV executable")
     parser.add_argument("--glob", type=str, default='*', help="Pattern for scanned directories")
-   
+
     parser.add_argument("--rvo", action="store_true", help="Run USV with --rvo")
     parser.add_argument("--nopic", action="store_true", help="")
     parser.add_argument("--working_dir", type=str, help="Path to USV executable")
     args = parser.parse_args()
-   
+
     use_rvo = None
     if args.rvo:
         use_rvo = True
-    
+
     if args.working_dir is not None:
         cur_dir = os.path.abspath(args.working_dir)
     else:
         cur_dir = os.path.abspath(os.getcwd())
     t0 = time.time()
-   
-    #cur_dir = "/mnt/d/WORK/PROJ_KRNDT/KTViz/KTViz/bks_tests"#os.path.abspath(os.getcwd())
-    #usv_executable = "/mnt/d/WORK/PROJ_KRNDT/BKS-7.2.0/out/build/WSL-GCC-Debug/src/USV"#os.path.join(cur_dir, args.executable)
+    usv_executable = os.path.join(cur_dir, args.executable)
     report = ReportGenerator(usv_executable)
-    a = report.generate(cur_dir)
-    print(report.r_codes)
-    a.save_html("/mnt/d/WORK/PROJ_KRNDT/KTViz/KTViz/report75.html")
-    
-    import pickle
-
-    with open("return_codes.txt", 'wb') as fp:
-         pickle.dump(report.r_codes, fp)
-
-
-
-
+    report.generate(cur_dir, glob=args.glob, rvo=use_rvo, nopic=args.nopic).save_html("report.html")
+    print(f'Total time: {time.time() - t0}')

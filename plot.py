@@ -40,7 +40,8 @@ def load_case_from_directory(dir_path):
                 analyse=load_file('analyse'),
                 constraints=load_file('constraints'),
                 route=load_file('route'),
-                settings=load_file('settings'))
+                settings=load_file('settings'),
+                path=dir_path)
 
 
 def path_time(path):
@@ -73,17 +74,21 @@ class Case:
                          'hydrometeo': 'hydrometeo.json'}
 
     def __init__(self, nav_data=None, maneuvers=None, targets_data=None, targets_maneuvers=None, targets_real=None,
-                 analyse=None, constraints=None, route=None, settings=None):
+                 analyse=None, constraints=None, route=None, settings=None, path=None):
+        self.path = path
         self.nav_data = nav_data
         if self.nav_data is None:
             return
         self.frame = Frame(nav_data['lat'], nav_data['lon'])
         self.start_time = self.nav_data['timestamp']
         self.maneuvers = maneuvers
-        if self.maneuvers is not None:
-            self.start_time = maneuvers[0]['path']['start_time']
-            for maneuver in self.maneuvers:
-                maneuver['path'] = prepare_path(maneuver['path'], frame=self.frame)
+        try:
+            if self.maneuvers is not None:
+                self.start_time = maneuvers[0]['path']['start_time']
+                for maneuver in self.maneuvers:
+                    maneuver['path'] = prepare_path(maneuver['path'], frame=self.frame)
+        except IndexError:
+            raise Exception('Index Error', path)
         self.route = route
         if route is not None:
             self.route = prepare_path(route, frame=self.frame)
@@ -205,7 +210,7 @@ def item_position(item, time):
 def path_position(path, t):
     time = t - path['start_time']
     if time < 0:
-        raise KeyError('Time lower than path start time')
+        return Position(None, None, None, None)
     for item in path['items']:
         if time < item['duration']:
             return item_position(item, time)
@@ -576,8 +581,10 @@ def plot_from_files(maneuvers_file):
         h, m, s = math.floor(total_time / 3600), math.floor(total_time % 3600 / 60), total_time % 60
         ax.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s))
         ax.grid()
-
-        plot_case_positions(ax, case, start_time, radius=radius)
+        try:
+            plot_case_positions(ax, case, start_time, radius=radius)
+        except KeyError:
+            raise Exception("KeyError", case.path)
         ax.legend()
 
         if case.maneuvers is not None:

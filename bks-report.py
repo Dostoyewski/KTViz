@@ -8,12 +8,25 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from multiprocessing import Pool, Lock, Manager, Event
+from multiprocessing import Pool
 from matplotlib import pyplot as plt
 from plot import plot_from_files, Case
 from natsort import natsorted
 from functools import partial
 
+import report_table
+import tester_USV
+
+n_r =  ['1-1', '1-2', '1-3', '1-4', '1-5',
+        '2-1', '2-2', '2-3', '2-4', '2-5',
+        '3-1', '3-2', '3-3', '3-4', '3-5',
+        '4-1', '4-2', '4-3', '4-4', '4-5',
+        '5-1', '5-2', '5-3', '5-4', '5-5',
+        '6-1', '6-2', '6-3', '6-4', '6-5',
+        '7-1', '7-2', '7-3', '7-4', '7-5',
+        '8-1', '8-2', '8-3', '8-4', '8-5',
+        '9-1', '9-2', '9-3', '9-4', '9-5',
+        '10-1', '10-2', '10-3', '10-4', '10-5']
 
 def fix_returncode(code):
     return ctypes.c_int32(code).value
@@ -38,8 +51,7 @@ class ReportGenerator:
                 if "nav-data.json" in files or 'navigation.json' in files:
                     directories_list.append(os.path.join(data_directory, root))
         directories_list = natsorted(directories_list)
-        #m = Manager()
-        #self.l = m.Lock()
+
    
         with Pool() as p:
             cases = p.map(self.run_case, directories_list)
@@ -49,7 +61,6 @@ class ReportGenerator:
         return R 
  
     def run_case(self, datadir):
-        #self.e.wait()
         working_dir = os.path.abspath(os.getcwd())
         os.chdir(datadir)
 
@@ -68,7 +79,6 @@ class ReportGenerator:
             except OSError:
                 pass
 
-        # Print the exit code.
         exec_time = time.time()
         command = [self.exe, "--target-settings", case_filenames['target_settings'],
                                         "--targets", case_filenames['targets_data'],
@@ -88,11 +98,7 @@ class ReportGenerator:
 
         print("{} .Return code: {}. Exec time: {} sec"
               .format(datadir, fix_returncode(completedProc.returncode), exec_time))
-        #self.e.set()
-        print("Done")
-        rc = fix_returncode(completedProc.returncode)
-        self.r_codes.append(rc)
-        #self.e.clear()
+
         image_data = ""
         nav_report = ""
         if not self.nopic:
@@ -255,18 +261,18 @@ if __name__ == "__main__":
         cur_dir = os.path.abspath(os.getcwd())
     t0 = time.time()
    
-    #cur_dir = "/mnt/d/WORK/PROJ_KRNDT/KTViz/KTViz/bks_tests"#os.path.abspath(os.getcwd())
-    #usv_executable = "/mnt/d/WORK/PROJ_KRNDT/BKS-7.2.0/out/build/WSL-GCC-Debug/src/USV"#os.path.join(cur_dir, args.executable)
+    usv_executable = os.path.join(cur_dir, args.executable)
     report = ReportGenerator(usv_executable)
     a = report.generate(cur_dir)
     print(report.r_codes)
-    a.save_html("/mnt/d/WORK/PROJ_KRNDT/KTViz/KTViz/report75.html")
+    a.save_html("report.html")
     
-    import pickle
-
-    with open("return_codes.txt", 'wb') as fp:
-         pickle.dump(report.r_codes, fp)
-
-
+    # ПОСТРОЕНИЕ ТАБЛИЦЫ
+    T = tester_USV.tester_USV(cur_dir)
+    T.scenario_runner()  
+    a = report_table.excel_report(n_r, T.col1, T.col2, report.r_codes)
+    a.build_table()
+    a.save_file('report.xlsx')
+    print(a.table)
 
 

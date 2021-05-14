@@ -57,8 +57,7 @@ class ReportGenerator:
             cases = p.map(self.run_case, directories_list)
         for case in cases:
             self.r_codes.append(fix_returncode(case["proc"].returncode))
-        R = Report(cases, self.exe, self.work_dir)
-        return R 
+        return Report(cases, self.exe, self.work_dir, self.rvo)
  
     def run_case(self, datadir):
         working_dir = os.path.abspath(os.getcwd())
@@ -125,7 +124,7 @@ class ReportGenerator:
 
 
 class Report:
-    def __init__(self, cases, executable, work_dir):
+    def __init__(self, cases, executable, work_dir, rvo):
         self.cases = cases
         self.exe = executable
         self.work_dir = work_dir
@@ -263,9 +262,7 @@ if __name__ == "__main__":
    
     usv_executable = os.path.join(cur_dir, args.executable)
     report = ReportGenerator(usv_executable)
-    a = report.generate(cur_dir)
-    print(report.r_codes)
-    a.save_html("report.html")
+    report.generate(cur_dir, glob=args.glob, rvo=use_rvo, nopic=args.nopic).save_html("report.html")
     
     # ПОСТРОЕНИЕ ТАБЛИЦЫ
     T = tester_USV.tester_USV(cur_dir)

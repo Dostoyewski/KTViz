@@ -62,7 +62,7 @@ class Case:
                       'hydrometeo': 'hmi-data.json'}
 
     CASE_FILENAMES_KT = {'nav_data': 'navigation.json',
-                         'maneuvers': 'result-maneuver.json',
+                         'maneuvers': 'result_maneuver.json',
                          'targets_data': 'targets.json',
                          'target_settings': 'targets_settings.json',
                          'targets_maneuvers': 'predicted_tracks.json',

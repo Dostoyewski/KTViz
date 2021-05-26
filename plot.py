@@ -2,6 +2,7 @@ import argparse
 import json
 import math
 import os
+import warnings
 from collections import namedtuple
 from math import sin, cos, radians, degrees
 
@@ -258,6 +259,8 @@ def calculate_path_points(path):
 def plot_path(path, ax, color):
     xx, yy = calculate_path_points(path)
     ax.plot(yy, xx, color=color)
+    xx, yy = zip(*[(i['X'], i['Y']) for i in path['items']])
+    ax.scatter(yy, xx, color=color, s=3)
 
 
 def plot_position(x, y, course, ax, radius=.0, color='red', label=None):
@@ -493,13 +496,17 @@ def plot_captions(ax, positions):
         plot_position(position.x, position.y, position.course, ax, radius=1.5, color=('red' if i == 0 else 'blue'))
 
 
-def plot_speed(ax, path):
+def plot_speed(ax: plt.Axes, path, color='blue'):
     """
     Makes speed plot
     :param ax: axes
     :param path: path, contains trajectory items
+    :param color: Color of graph
     :return:
     """
+    ylim = ax.get_ylim()
+    xticks = ax.get_xticks()
+    xticks_count = len(xticks)
     if len(path['items']) > 0:
         velocities = [item['length'] / item['duration'] * 3600 for item in path["items"]]
         times = [item['duration'] / 3600 for item in path["items"]]
@@ -507,17 +514,18 @@ def plot_speed(ax, path):
         for i in range(len(times)):
             dtimes.append(sum(dtimes[0:i + 1]) + times[i])
         velocities.append(velocities[-1])
-        ax.step(np.arange(.5, len(velocities) + .5, 1), velocities, where='post')
+        ax.step(np.arange(.5, len(velocities) + .5, 1), velocities, where='post', color=color)
+        ax.scatter(np.arange(.5, len(velocities) + .5, 1), velocities, color=color, marker='o', s=3)
         # ax.step(dtimes, velocities, where='post')
         ax.set_ylim(bottom=0)
-        ax.set_ylim(top=max(velocities) * 1.1)
-        ax.set_xticks(np.arange(1, len(velocities), 1))
+        ax.set_ylim(top=max(max(velocities) * 1.1, ylim[1]))
+        ax.set_xticks(np.arange(1, max(xticks_count, len(velocities)), 1))
         # ax.set_xticks(dtimes)
         xticks = np.arange(.5, len(velocities) + .5, 1)
         for i in range(len(dtimes)):
             # Эта методика округления нужна для нормального отображения результатов!
             # Ее не трогать!!! Это НЕ костыль!!!
-            ax.text(xticks[i], velocities[i] - 1, str(round(dtimes[i], 2))[:-1])
+            ax.text(xticks[i], velocities[i] - 1, str(round(dtimes[i], 2))[:-1] + 'h', va='top')
         ax.set_xlabel('Number of segment')
         # ax.set_xlabel('Time, h')
         ax.set_ylabel('Speed, knt')
@@ -558,6 +566,7 @@ def plot_from_files(maneuvers_file):
 
         if case.route is not None:
             plot_path(case.route, ax, color='#fffffffa')
+            plot_speed(ax_vel, case.route, color='black')
 
         if case.constraints is not None:
             plot_case_limits(ax, case)
@@ -574,8 +583,8 @@ def plot_from_files(maneuvers_file):
             start_time = case.maneuvers[0]['path']['start_time']
             t = total_time + start_time
         else:
-            total_time = path_time(case.targets_maneuvers[0])
-            start_time = case.targets_maneuvers[0]['start_time']
+            total_time = path_time(case.route)
+            start_time = case.route['start_time']
             t = total_time + start_time
 
         h, m, s = math.floor(total_time / 3600), math.floor(total_time % 3600 / 60), total_time % 60
@@ -589,8 +598,9 @@ def plot_from_files(maneuvers_file):
 
         if case.maneuvers is not None:
             xlim, ylim = recalc_lims(case.maneuvers[0]['path'])
-            ax.set_xlim(xlim)
-            ax.set_ylim(ylim)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                ax.set_xlim(xlim), ax.set_ylim(ylim)
 
         return fig
     else:

@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import time
+import traceback
 from datetime import datetime
 from collections import Counter
 from pathlib import Path
@@ -93,8 +94,10 @@ class ReportGenerator:
                 image_data = '<img width="100%" src="data:image/png;base64,{}">'.format(
                     base64.b64encode(f.getvalue()).decode())
                 plt.close(fig)
-            except:
-                image_data = "Plot failed"
+            except Exception as ex:
+                template = "<pre>Plot failed: An exception of type {} occurred.\n{}</pre>"
+                message = template.format(type(ex).__name__, traceback.format_exc())
+                image_data = message
         try:
             with open("nav-report.json", "r") as f:
                 nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
@@ -206,8 +209,10 @@ class Report:
         }
         """
 
-        tbody = ''.join([f'<tr><td>{os.path.relpath(case["datadir"], self.work_dir)}</td><td code="{case["code"]}">{case["code"]}</td></tr>' for case in
-                         self.cases])
+        tbody = ''.join([
+            f'<tr><td><a href="#case_{i}">{os.path.relpath(case["datadir"], self.work_dir)}</a></td><td code="{case["code"]}">{case["code"]}</td></tr>'
+            for i,case in
+            enumerate(self.cases)])
         codes = dict(Counter([case["code"] for case in self.cases]))
         table = """
         <table class="summary" border="1">
@@ -225,13 +230,14 @@ class Report:
 <style>{styles}</style>
 </head>
 <body>
-<h1>Report from {datetime} {rvo}</h1>""".format(datetime=datetime.now(), styles=css, rvo='<b>rvo enabled</b>' if self.rvo else '')
+<h1>Report from {datetime} {rvo}</h1>""".format(datetime=datetime.now(), styles=css,
+                                                rvo='<b>rvo enabled</b>' if self.rvo else '')
         html += table
 
-        for case in self.cases:
+        for i, case in enumerate(self.cases):
             img_tag = case["image_data"]
             html += """<div>
-<h2>{casename}</h2>
+<h2 id="case_{case_i}">{casename}</h2>
 <div class="case">
 <div class="pic">
 <picture>{image}</picture>
@@ -251,7 +257,8 @@ class Report:
                              stdout=str(case["proc"].stdout.decode("utf-8")),
                              nav_report=case["nav_report"],
                              image=img_tag,
-                             checked=" checked")
+                             checked=" checked",
+                             case_i = i)
 
         html += "</body></html>"
         with io.open(filename, "w", encoding="utf-8") as f:

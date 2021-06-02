@@ -590,14 +590,20 @@ def plot_from_files(maneuvers_file):
         h, m, s = math.floor(total_time / 3600), math.floor(total_time % 3600 / 60), total_time % 60
         ax.set_title('t=({:.0f}): {:.0f} h {:.0f} min {:.0f} sec'.format(t, h, m, s))
         ax.grid()
+        positions = []
         try:
-            plot_case_positions(ax, case, start_time, radius=radius)
+            positions = plot_case_positions(ax, case, start_time, radius=radius)
         except KeyError:
             raise Exception("KeyError", case.path)
         ax.legend()
 
         if case.maneuvers is not None:
             xlim, ylim = recalc_lims(case.maneuvers[0]['path'])
+            positions_xx = [p.x for p in positions]
+            positions_yy = [p.y for p in positions]
+            p_xlim, p_ylim = (np.min(positions_xx), np.max(positions_xx)), (np.min(positions_yy), np.max(positions_yy))
+            xlim = (min(xlim[0], p_xlim[0]), max(xlim[1], p_xlim[1]))
+            ylim = (min(ylim[0], p_ylim[0]), max(ylim[1], p_ylim[1]))
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", UserWarning)
                 ax.set_xlim(xlim), ax.set_ylim(ylim)

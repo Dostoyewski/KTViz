@@ -14,7 +14,21 @@ from multiprocessing import Pool
 from matplotlib import pyplot as plt
 from plot import plot_from_files, Case
 from natsort import natsorted
+from functools import partial
 
+import report_table
+import tester_USV
+
+n_r =  ['1-1', '1-2', '1-3', '1-4', '1-5',
+        '2-1', '2-2', '2-3', '2-4', '2-5',
+        '3-1', '3-2', '3-3', '3-4', '3-5',
+        '4-1', '4-2', '4-3', '4-4', '4-5',
+        '5-1', '5-2', '5-3', '5-4', '5-5',
+        '6-1', '6-2', '6-3', '6-4', '6-5',
+        '7-1', '7-2', '7-3', '7-4', '7-5',
+        '8-1', '8-2', '8-3', '8-4', '8-5',
+        '9-1', '9-2', '9-3', '9-4', '9-5',
+        '10-1', '10-2', '10-3', '10-4', '10-5']
 
 def fix_returncode(code):
     return ctypes.c_int32(code).value
@@ -26,6 +40,7 @@ class ReportGenerator:
         self.cases = []
         self.work_dir = os.path.abspath(os.getcwd())
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
+        self.r_codes = []
         self.rvo = None
         self.nopic = None
 
@@ -39,9 +54,12 @@ class ReportGenerator:
                     directories_list.append(os.path.join(data_directory, root))
         directories_list = natsorted(directories_list)
 
+   
         with Pool() as p:
             cases = p.map(self.run_case, directories_list)
-
+        
+        for case in cases:
+            self.r_codes.append(fix_returncode(case["proc"].returncode))
         return Report(cases, self.exe, self.work_dir, self.rvo)
 
     def run_case(self, datadir):
@@ -63,7 +81,6 @@ class ReportGenerator:
             except OSError:
                 pass
 
-        # Print the exit code.
         exec_time = time.time()
         command = [self.exe, "--target-settings", case_filenames['target_settings'],
                    "--targets", case_filenames['targets_data'],
@@ -83,6 +100,7 @@ class ReportGenerator:
 
         print("{} .Return code: {}. Exec time: {} sec"
               .format(datadir, fix_returncode(completedProc.returncode), exec_time))
+
         image_data = ""
         nav_report = ""
         if not self.nopic:
@@ -263,30 +281,38 @@ class Report:
         html += "</body></html>"
         with io.open(filename, "w", encoding="utf-8") as f:
             f.write(html)
-
-
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="BKS report generator")
     parser.add_argument("executable", type=str, help="Path to USV executable")
     parser.add_argument("--glob", type=str, default='*', help="Pattern for scanned directories")
-
+   
     parser.add_argument("--rvo", action="store_true", help="Run USV with --rvo")
     parser.add_argument("--nopic", action="store_true", help="")
     parser.add_argument("--working_dir", type=str, help="Path to USV executable")
     args = parser.parse_args()
-
+   
     use_rvo = None
     if args.rvo:
         use_rvo = True
-
+    
     if args.working_dir is not None:
         cur_dir = os.path.abspath(args.working_dir)
     else:
         cur_dir = os.path.abspath(os.getcwd())
     t0 = time.time()
+   
     usv_executable = os.path.join(cur_dir, args.executable)
     report = ReportGenerator(usv_executable)
     report.generate(cur_dir, glob=args.glob, rvo=use_rvo, nopic=args.nopic).save_html("report.html")
-    print(f'Total time: {time.time() - t0}')
+    
+    # ПОСТРОЕНИЕ ТАБЛИЦЫ
+    T = tester_USV.tester_USV(cur_dir)
+    T.scenario_runner()  
+    a = report_table.excel_report(n_r, T.col1, T.col2, report.r_codes)
+    a.build_table()
+    a.save_file('report.xlsx')
+    print(a.table)
+
+

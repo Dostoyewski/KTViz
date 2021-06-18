@@ -81,42 +81,54 @@ class ReportGenerator:
                    ("--rvo-enable" if self.rvo is True else "")]
 
         # Added to prevent freezing
-        completedProc = subprocess.run(command,
-                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
-        exec_time = time.time() - exec_time
-
-        print("{} .Return code: {}. Exec time: {} sec"
-              .format(datadir, fix_returncode(completedProc.returncode), exec_time))
-        image_data = ""
-        nav_report = ""
-        if not self.nopic:
-            try:
-                fig = plot_from_files(os.path.join(datadir, case_filenames['nav_data']))
-
-                f = io.BytesIO()
-                fig.savefig(f, format="png", dpi=300)
-                image_data = '<img width="100%" src="data:image/png;base64,{}">'.format(
-                    base64.b64encode(f.getvalue()).decode())
-                plt.close(fig)
-            except Exception as ex:
-                template = "<pre>Plot failed: An exception of type {} occurred.\n{}</pre>"
-                message = template.format(type(ex).__name__, traceback.format_exc())
-                image_data = message
         try:
-            with open("nav-report.json", "r") as f:
-                nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
-        except FileNotFoundError:
-            pass
+            completedProc = subprocess.run(command,
+                                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                           stdin=subprocess.PIPE, timeout=10)
+            exec_time = time.time() - exec_time
+            print("{} .Return code: {}. Exec time: {} sec"
+                  .format(datadir, fix_returncode(completedProc.returncode), exec_time))
+            image_data = ""
+            nav_report = ""
+            if not self.nopic:
+                try:
+                    fig = plot_from_files(os.path.join(datadir, case_filenames['nav_data']))
 
-        os.chdir(working_dir)
-        return {"datadir": datadir,
-                "proc": completedProc,
-                # "image_data": image_data,
-                "image_data": "",
-                "exec_time": exec_time,
-                "nav_report": nav_report,
-                "command": command,
-                "code": fix_returncode(completedProc.returncode)}
+                    f = io.BytesIO()
+                    fig.savefig(f, format="png", dpi=300)
+                    image_data = '<img width="100%" src="data:image/png;base64,{}">'.format(
+                        base64.b64encode(f.getvalue()).decode())
+                    plt.close(fig)
+                except Exception as ex:
+                    template = "<pre>Plot failed: An exception of type {} occurred.\n{}</pre>"
+                    message = template.format(type(ex).__name__, traceback.format_exc())
+                    image_data = message
+            try:
+                with open("nav-report.json", "r") as f:
+                    nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
+            except FileNotFoundError:
+                pass
+            os.chdir(working_dir)
+            return {"datadir": datadir,
+                    "proc": completedProc,
+                    # "image_data": image_data,
+                    "image_data": "",
+                    "exec_time": exec_time,
+                    "nav_report": nav_report,
+                    "command": command,
+                    "code": fix_returncode(completedProc.returncode)}
+        except subprocess.TimeoutExpired:
+            print("TEST TIMEOUT ERR")
+            exec_time = time.time() - exec_time
+            os.chdir(working_dir)
+            return {"datadir": datadir,
+                    "proc": None,
+                    # "image_data": image_data,
+                    "image_data": "",
+                    "exec_time": exec_time,
+                    "nav_report": None,
+                    "command": command,
+                    "code": 6}
 
 
 class Report:
@@ -304,6 +316,7 @@ if __name__ == "__main__":
     print("Starting converstion...")
     report_out = report.generate(cur_dir, glob=args.glob, rvo=use_rvo, nopic=args.nopic)
     print("Starting saving to HTML")
-    # report_out.save_html("report.html")
+    report_out.save_html("report.html")
+    print("Starting saving to EXCEL")
     report_out.save_excel("report.xlsx")
     print(f'Total time: {time.time() - t0}')

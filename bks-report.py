@@ -47,6 +47,12 @@ class ReportGenerator:
 
         return Report(cases, self.exe, self.work_dir, self.rvo)
 
+    def generate_for_list(self, list, nopic=False):
+        self.nopic = nopic
+        with Pool() as p:
+            cases = p.map(self.run_case, list)
+        return Report(cases, self.exe, self.work_dir, self.rvo)
+
     def run_case(self, datadir):
         working_dir = os.path.abspath(os.getcwd())
         os.chdir(datadir)
@@ -84,7 +90,7 @@ class ReportGenerator:
         try:
             completedProc = subprocess.run(command,
                                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                           stdin=subprocess.PIPE, timeout=10)
+                                           stdin=subprocess.PIPE, timeout=6)
             exec_time = time.time() - exec_time
             print("{} .Return code: {}. Exec time: {} sec"
                   .format(datadir, fix_returncode(completedProc.returncode), exec_time))
@@ -111,8 +117,7 @@ class ReportGenerator:
             os.chdir(working_dir)
             return {"datadir": datadir,
                     "proc": completedProc,
-                    # "image_data": image_data,
-                    "image_data": "",
+                    "image_data": image_data,
                     "exec_time": exec_time,
                     "nav_report": nav_report,
                     "command": command,
@@ -253,41 +258,70 @@ class Report:
 
         for i, case in enumerate(self.cases):
             img_tag = case["image_data"]
-            html += """<div>
-<h2 id="case_{case_i}">{casename}</h2>
-<div class="case">
-<div class="pic">
-<picture>{image}</picture>
-</div>
-<div class="stdout">
-<p>Return code: {return_code}</p>
-<p>Execution time: {exec_time} seconds</p>
-<input type="checkbox" text="Situation report">
-<div><pre>{nav_report}</pre></div>
-<input type="checkbox" text="STDOUT"{checked}><div>
-<pre class="cmd">{command}</pre>
-<pre>{stdout}</pre></div>
-</div></div></div>""".format(casename=case["datadir"],
-                             return_code=fix_returncode(case["proc"].returncode),
-                             exec_time=case["exec_time"],
-                             command=str(' '.join(case["command"])),
-                             stdout=str(case["proc"].stdout.decode("utf-8")),
-                             nav_report=case["nav_report"],
-                             image=img_tag,
-                             checked=" checked",
-                             case_i=i)
+            try:
+                html += """<div>
+    <h2 id="case_{case_i}">{casename}</h2>
+    <div class="case">
+    <div class="pic">
+    <picture>{image}</picture>
+    </div>
+    <div class="stdout">
+    <p>Return code: {return_code}</p>
+    <p>Execution time: {exec_time} seconds</p>
+    <input type="checkbox" text="Situation report">
+    <div><pre>{nav_report}</pre></div>
+    <input type="checkbox" text="STDOUT"{checked}><div>
+    <pre class="cmd">{command}</pre>
+    <pre>{stdout}</pre></div>
+    </div></div></div>""".format(casename=case["datadir"],
+                                 return_code=fix_returncode(case["proc"].returncode),
+                                 exec_time=case["exec_time"],
+                                 command=str(' '.join(case["command"])),
+                                 stdout=str(case["proc"].stdout.decode("utf-8")),
+                                 nav_report=case["nav_report"],
+                                 image=img_tag,
+                                 checked=" checked",
+                                 case_i=i)
+            except AttributeError:
+                html += """<div>
+                    <h2 id="case_{case_i}">{casename}</h2>
+                    <div class="case">
+                    <div class="pic">
+                    <picture>{image}</picture>
+                    </div>
+                    <div class="stdout">
+                    <p>Return code: {return_code}</p>
+                    <p>Execution time: {exec_time} seconds</p>
+                    <input type="checkbox" text="Situation report">
+                    <div><pre>{nav_report}</pre></div>
+                    <input type="checkbox" text="STDOUT"{checked}><div>
+                    <pre class="cmd">{command}</pre>
+                    <pre>{stdout}</pre></div>
+                    </div></div></div>""".format(casename=case["datadir"],
+                                                 return_code=6,
+                                                 exec_time=case["exec_time"],
+                                                 command=str(' '.join(case["command"])),
+                                                 stdout="TIME_ERR",
+                                                 nav_report=case["nav_report"],
+                                                 image="",
+                                                 checked=" checked",
+                                                 case_i=i)
 
         html += "</body></html>"
         with io.open(filename, "w", encoding="utf-8") as f:
             f.write(html)
 
     def save_excel(self, filename='report.xlsx'):
-        df = pd.DataFrame()
-        df['datadir'] = self.cases['datadir']
-        df['nav_report'] = self.cases['nav_report']
-        df['command'] = self.cases['command']
-        df['code'] = self.cases['command']
+        df = pd.DataFrame(columns=['datadir', 'nav_report', 'command', 'code'])
+        for rec in self.cases:
+            df = df.append({'datadir': rec['datadir'],
+                            'nav_report': rec['nav_report'],
+                            'command': rec['command'],
+                            'code': rec['code']}, ignore_index=True)
         df.to_excel(filename)
+
+    def get_danger_params(self, statuses):
+        return [rec['datadir'] for rec in self.cases if rec['code'] in statuses]
 
 
 if __name__ == "__main__":
@@ -319,4 +353,7 @@ if __name__ == "__main__":
     report_out.save_html("report.html")
     print("Starting saving to EXCEL")
     report_out.save_excel("report.xlsx")
+    print("Creating report for danger scenarios")
+    report_d_out = report.generate_for_list(report_out.get_danger_params([2, 4]))
+    report_d_out.save_html("report_status_2_4.html")
     print(f'Total time: {time.time() - t0}')

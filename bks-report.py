@@ -7,13 +7,16 @@ import os
 import subprocess
 import time
 import traceback
-from datetime import datetime
 from collections import Counter
-from pathlib import Path
+from datetime import datetime
 from multiprocessing import Pool
+from pathlib import Path
+
+import pandas as pd
 from matplotlib import pyplot as plt
-from plot import plot_from_files, Case
 from natsort import natsorted
+
+from plot import plot_from_files, Case
 
 
 def fix_returncode(code):
@@ -77,8 +80,9 @@ class ReportGenerator:
                    "--predict", case_filenames['targets_maneuvers'],
                    ("--rvo-enable" if self.rvo is True else "")]
 
+        # Added to prevent freezing
         completedProc = subprocess.run(command,
-                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
         exec_time = time.time() - exec_time
 
         print("{} .Return code: {}. Exec time: {} sec"
@@ -107,7 +111,8 @@ class ReportGenerator:
         os.chdir(working_dir)
         return {"datadir": datadir,
                 "proc": completedProc,
-                "image_data": image_data,
+                # "image_data": image_data,
+                "image_data": "",
                 "exec_time": exec_time,
                 "nav_report": nav_report,
                 "command": command,
@@ -208,10 +213,10 @@ class Report:
             color: white;
         }
         """
-
+        print("Creating report file in HTML format")
         tbody = ''.join([
             f'<tr><td><a href="#case_{i}">{os.path.relpath(case["datadir"], self.work_dir)}</a></td><td code="{case["code"]}">{case["code"]}</td></tr>'
-            for i,case in
+            for i, case in
             enumerate(self.cases)])
         codes = dict(Counter([case["code"] for case in self.cases]))
         table = """
@@ -258,11 +263,19 @@ class Report:
                              nav_report=case["nav_report"],
                              image=img_tag,
                              checked=" checked",
-                             case_i = i)
+                             case_i=i)
 
         html += "</body></html>"
         with io.open(filename, "w", encoding="utf-8") as f:
             f.write(html)
+
+    def save_excel(self, filename='report.xlsx'):
+        df = pd.DataFrame()
+        df['datadir'] = self.cases['datadir']
+        df['nav_report'] = self.cases['nav_report']
+        df['command'] = self.cases['command']
+        df['code'] = self.cases['command']
+        df.to_excel(filename)
 
 
 if __name__ == "__main__":
@@ -288,5 +301,9 @@ if __name__ == "__main__":
     t0 = time.time()
     usv_executable = os.path.join(cur_dir, args.executable)
     report = ReportGenerator(usv_executable)
-    report.generate(cur_dir, glob=args.glob, rvo=use_rvo, nopic=args.nopic).save_html("report.html")
+    print("Starting converstion...")
+    report_out = report.generate(cur_dir, glob=args.glob, rvo=use_rvo, nopic=args.nopic)
+    print("Starting saving to HTML")
+    # report_out.save_html("report.html")
+    report_out.save_excel("report.xlsx")
     print(f'Total time: {time.time() - t0}')

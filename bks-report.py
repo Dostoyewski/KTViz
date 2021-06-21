@@ -316,8 +316,8 @@ class Report:
                                    'course1', 'course2'])
         for rec in self.cases:
             st = rec['datadir'].split(sep='_')
-            dist1, dist2 = float(st[1]), float(st[2])
-            course1, course2 = float(st[3]), float(st[4])
+            dist1, dist2 = float(st[3]), float(st[4])
+            course1, course2 = float(st[5]), float(st[6])
             df = df.append({'datadir': rec['datadir'],
                             'nav_report': rec['nav_report'],
                             'command': rec['command'],

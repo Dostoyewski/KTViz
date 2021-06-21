@@ -312,12 +312,20 @@ class Report:
             f.write(html)
 
     def save_excel(self, filename='report.xlsx'):
-        df = pd.DataFrame(columns=['datadir', 'nav_report', 'command', 'code'])
+        df = pd.DataFrame(columns=['datadir', 'nav_report', 'command', 'code', 'dist1', 'dist2',
+                                   'course1', 'course2'])
         for rec in self.cases:
+            st = rec['datadir'].split(sep='_')
+            dist1, dist2 = float(st[1]), float(st[2])
+            course1, course2 = float(st[3]), float(st[4])
             df = df.append({'datadir': rec['datadir'],
                             'nav_report': rec['nav_report'],
                             'command': rec['command'],
-                            'code': rec['code']}, ignore_index=True)
+                            'code': rec['code'],
+                            'dist1': dist1,
+                            'dist2': dist2,
+                            'course1': course1,
+                            'course2': course2}, ignore_index=True)
         df.to_excel(filename)
 
     def get_danger_params(self, statuses):

@@ -315,9 +315,13 @@ class Report:
         df = pd.DataFrame(columns=['datadir', 'nav_report', 'command', 'code', 'dist1', 'dist2',
                                    'course1', 'course2'])
         for rec in self.cases:
-            st = rec['datadir'].split(sep='_')
-            dist1, dist2 = float(st[3]), float(st[4])
-            course1, course2 = float(st[5]), float(st[6])
+            try:
+                st = rec['datadir'].split(sep='_')
+                dist1, dist2 = float(st[3]), float(st[4])
+                course1, course2 = float(st[5]), float(st[6])
+            except IndexError:
+                dist1, dist2 = 0, 0
+                course1, course2 = 0, 0
             df = df.append({'datadir': rec['datadir'],
                             'nav_report': rec['nav_report'],
                             'command': rec['command'],

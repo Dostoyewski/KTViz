@@ -14,6 +14,7 @@ class Generator(object):
         self.sdd = safe_div_dist
         self.danger_points = []
         self.n_targets = n_targets
+        self.our_vel = 0
         self.frame = Frame(lat, lon)
 
     def create_tests(self):
@@ -104,6 +105,139 @@ class Generator(object):
             }
             t_data.append(payload)
         return t_data
+
+    @staticmethod
+    def construct_constrains():
+        payload = {
+            "type": "FeatureCollection",
+            "features": []
+        }
+        return payload
+
+    @staticmethod
+    def construct_hmi_data():
+        payload = {
+            "wind_direction": 189.0,
+            "wind_speed": 1.1,
+            "tide_direction": 0,
+            "tide_speed": 0,
+            "swell": 1,
+            "visibility": 13.0
+        }
+        return payload
+
+    def construct_nav_data(self):
+        payload = {
+            "cat": 0,
+            "lat": self.frame.lat,
+            "lon": self.frame.lon,
+            "SOG": self.our_vel,
+            "STW": self.our_vel,
+            "COG": 0.0,
+            "width": 16.0,
+            "length": 100.0,
+            "width_offset": 10.0,
+            "length_offset": 15.0,
+            "timestamp": 1594730134
+        }
+        return payload
+
+    def construct_route_data(self):
+        payload = {
+            "items": [
+                {
+                    "begin_angle": 0,
+                    "curve": 0,
+                    "duration": 120 / self.our_vel * 3600,
+                    "lat": self.frame.lat,
+                    "lon": self.frame.lon,
+                    "length": 72.0,
+                    "port_dev": 1.5,
+                    "starboard_dev": 1.5,
+                }
+            ],
+            "start_time": 1594730134
+        }
+        return payload
+
+    @staticmethod
+    def construct_settings():
+        payload = {
+            "maneuver_calculation": {
+                "priority": 0,
+                "maneuver_way": 0,
+                "safe_diverg_dist": 2.0,
+                "minimal_speed": 3,
+                "maximal_speed": 30,
+                "max_course_delta": 180,
+                "time_advance": 300,
+                "can_leave_route": 'true',
+                "max_route_deviation": 4,
+                "forward_speed1": 3.0,
+                "forward_speed2": 9.75,
+                "forward_speed3": 16.5,
+                "forward_speed4": 23.25,
+                "forward_speed5": 30.0,
+                "reverse_speed1": 15.0,
+                "reverse_speed2": 30.0,
+                "max_circulation_radius": 0.3,
+                "min_circulation_radius": 0.3,
+                "breaking_distance": 0,
+                "run_out_distance": 0,
+                "forecast_time": 14400,
+                "min_diverg_dist": 1.8
+            },
+            "safety_control": {
+                "cpa": 2.0,
+                "tcpa": 900,
+                "min_detect_dist": 9.0,
+                "last_moment_dist": 2.0,
+                "safety_zone": {
+                    "safety_zone_type": 0,
+                    "radius": 1.0
+                }
+            }
+        }
+        return payload
+
+    @staticmethod
+    def construct_target_settings():
+        payload = {
+            "maneuver_calculation": {
+                "priority": 0,
+                "maneuver_way": 2,
+                "safe_diverg_dist": 2.4,
+                "minimal_speed": 3,
+                "maximal_speed": 30,
+                "max_course_delta": 180,
+                "time_advance": 1,
+                "can_leave_route": 'true',
+                "max_route_deviation": 8,
+                "forward_speed1": 3.0,
+                "forward_speed2": 9.75,
+                "forward_speed3": 16.5,
+                "forward_speed4": 23.25,
+                "forward_speed5": 30.0,
+                "reverse_speed1": 15.0,
+                "reverse_speed2": 30.0,
+                "max_circulation_radius": 0.1,
+                "min_circulation_radius": 0.1,
+                "breaking_distance": 0,
+                "run_out_distance": 0,
+                "forecast_time": 14400,
+            },
+            "safety_control": {
+                "cpa": 2.0,
+                "tcpa": 900,
+                "min_detect_dist": 9.0,
+                "last_moment_dist": 2.0,
+                "safety_zone": {
+                    "safety_zone_type": 0,
+                    "radius": 1.0
+                }
+            }
+        }
+        return payload
 
 
 if __name__ == "__main__":

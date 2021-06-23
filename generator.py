@@ -73,6 +73,7 @@ class Generator(object):
                         json.dump(self.construct_target_data(targets), fp)
                     with open(f_name + '/target-settings.json', "w") as fp:
                         json.dump(self.construct_target_settings(), fp)
+                    del targets[1]
 
     def create_danger_points(self, dist):
         """

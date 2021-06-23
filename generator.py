@@ -56,8 +56,10 @@ class Generator(object):
                               "TCPA": TCPA}
                     targets.append(record)
                     f_name = ("./sc_" + str(targets[0]['dist']) + "_" + str(targets[1]['dist']) + "_" +
-                              str(targets[0]['v_target']) + "_" + str(targets[1]['v_target']) + "_" +
-                              str(self.our_vel) + "_" + str(targets[0]['c_diff']) + "_" + str(targets[1]['c_diff']))
+                              str(round(targets[0]['v_target'], 1)) + "_" +
+                              str(round(targets[1]['v_target'], 1)) + "_" +
+                              str(round(self.our_vel, 1)) + "_" + str(round(targets[0]['c_diff'], 1)) + "_" +
+                              str(round(targets[1]['c_diff'], 1)))
                     os.makedirs(f_name, exist_ok=True)
                     with open(f_name + '/constraints.json', "w") as fp:
                         json.dump(self.construct_constrains(), fp)
@@ -293,6 +295,6 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 100, 3000, 2)
+    gen = Generator(12, 100, 5000, 2)
     gen.create_tests()
     print(len(gen.danger_points))

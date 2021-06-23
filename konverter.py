@@ -37,7 +37,7 @@ def coords_relative(s_lat, s_lon, e_lat, e_lon):
     :param e_lon: end longitude
     :return: relative coords X and Y
     """
-    path = Geodesic.Inverse(s_lat, s_lon, e_lat, e_lon)
+    path = Geodesic.WGS84.Inverse(s_lat, s_lon, e_lat, e_lon)
     return positions(path['azi1'], path['s12'] / 1852)
 
 
@@ -52,7 +52,7 @@ def coords_global(x, y, lat, lon):
     """
     azi1 = math.degrees(math.atan2(y, x))
     dist = (x ** 2 + y ** 2) ** .5
-    path = Geodesic.Direct(lat, lon, azi1, dist * 1852)
+    path = Geodesic.WGS84.Direct(lat, lon, azi1, dist * 1852)
     return path['lat2'], path['lon2']
 
 
@@ -68,7 +68,7 @@ class Frame:
         :param lon:
         :return: x, y, distance, bearing
         """
-        path = Geodesic.Inverse(self.lat, self.lon, lat, lon)
+        path = Geodesic.WGS84.Inverse(self.lat, self.lon, lat, lon)
 
         angle = math.radians(path['azi1'])
         dist = path['s12'] / 1852
@@ -83,9 +83,9 @@ class Frame:
         """
         azi1 = math.degrees(math.atan2(y, x))
         dist = (x ** 2 + y ** 2) ** .5
-        path = Geodesic.Direct(self.lat, self.lon, azi1, dist * 1852)
+        path = Geodesic.WGS84.Direct(self.lat, self.lon, azi1, dist * 1852)
         return path['lat2'], path['lon2']
 
     def to_wgs_azi(self, azi1, dist):
-        path = Geodesic.Direct(self.lat, self.lon, azi1, dist * 1852)
+        path = Geodesic.WGS84.Direct(self.lat, self.lon, azi1, dist * 1852)
         return path['lat2'], path['lon2']

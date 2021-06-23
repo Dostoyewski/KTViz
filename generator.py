@@ -1,3 +1,5 @@
+import json
+import os
 import time
 from math import pi, sin, cos, sqrt, degrees
 from multiprocessing import Pool
@@ -7,7 +9,7 @@ from konverter import Frame
 
 
 class Generator(object):
-    def __init__(self, max_dist, N_dp, N_rand, safe_div_dist, n_targets=1, lat=56.6857, lon=19.6321):
+    def __init__(self, max_dist, N_dp, N_rand, safe_div_dist, n_targets=2, lat=56.6857, lon=19.632):
         self.dist = max_dist
         self.n_dp = N_dp
         self.n_rand = N_rand
@@ -16,6 +18,8 @@ class Generator(object):
         self.n_targets = n_targets
         self.our_vel = 0
         self.frame = Frame(lat, lon)
+        os.makedirs("./scenars", exist_ok=True)
+        os.chdir("./scenars")
 
     def create_tests(self):
         step = 0.5
@@ -27,7 +31,48 @@ class Generator(object):
             res = p.map(self.create_danger_points, dists)
         for r in res:
             self.danger_points.extend(r)
+        self.create_targets(500)
         print(f'Total time: {time.time() - exec_time}')
+
+    def create_targets(self, i):
+        self.our_vel = self.danger_points[i]['v_our']
+        targets = []
+        targets.append(self.danger_points[i])
+        if self.n_targets == 2:
+            for j in range(i, len(self.danger_points)):
+                [dang, v1, v2, CPA, TCPA] = self.dangerous(self.danger_points[j]['dist'],
+                                                           self.danger_points[j]['course'],
+                                                           self.danger_points[j]['c_diff'],
+                                                           self.our_vel)
+                if not dang:
+                    continue
+                else:
+                    record = {"course": self.danger_points[j]['course'],
+                              "dist": self.danger_points[j]['dist'],
+                              "c_diff": self.danger_points[j]['c_diff'],
+                              "v_our": v1,
+                              "v_target": v2,
+                              "CPA": CPA,
+                              "TCPA": TCPA}
+                    targets.append(record)
+                    f_name = ("./sc_" + str(targets[0]['dist']) + "_" + str(targets[1]['dist']) + "_" +
+                              str(targets[0]['v_target']) + "_" + str(targets[1]['v_target']) + "_" +
+                              str(self.our_vel) + "_" + str(targets[0]['c_diff']) + "_" + str(targets[1]['c_diff']))
+                    os.makedirs(f_name, exist_ok=True)
+                    with open(f_name + '/constraints.json', "w") as fp:
+                        json.dump(self.construct_constrains(), fp)
+                    with open(f_name + '/hmi-data.json', "w") as fp:
+                        json.dump(self.construct_hmi_data(), fp)
+                    with open(f_name + '/nav-data.json', "w") as fp:
+                        json.dump(self.construct_nav_data(), fp)
+                    with open(f_name + '/route-data.json', "w") as fp:
+                        json.dump(self.construct_route_data(), fp)
+                    with open(f_name + '/settings.json', "w") as fp:
+                        json.dump(self.construct_settings(), fp)
+                    with open(f_name + '/target-data.json', "w") as fp:
+                        json.dump(self.construct_target_data(targets), fp)
+                    with open(f_name + '/target-settings.json', "w") as fp:
+                        json.dump(self.construct_target_settings(), fp)
 
     def create_danger_points(self, dist):
         """
@@ -58,9 +103,10 @@ class Generator(object):
                     danger_points.append(record)
         return danger_points
 
-    def dangerous(self, dist, course, diff):
+    def dangerous(self, dist, course, diff, v1=None):
         """
         Checks, if point is dangerous.
+        @param v1: our velocity
         @param dist: distance to target
         @param course: target course
         @param diff: course diff
@@ -70,11 +116,16 @@ class Generator(object):
         v_max = 20
         alpha = course
         beta = diff
-        is_dang = False
-        v1, v2 = 0, 0
+        fix_sp = False
+        v2 = 0
+        if v1 is not None:
+            fix_sp = True
+        else:
+            v1 = 0
         for i in range(self.n_rand):
             try:
-                v1 = v_min + (v_max - v_min) * random()
+                if not fix_sp:
+                    v1 = v_min + (v_max - v_min) * random()
                 v2 = v_min + (v_max - v_min) * random()
                 v_rel = sqrt(v1 ** 2 - 2 * v1 * v2 * cos(beta) + v2 ** 2)
                 TCPA = -dist * (v2 * cos(alpha - beta) - v1 * cos(alpha)) / v_rel ** 2

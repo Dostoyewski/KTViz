@@ -1,4 +1,5 @@
 import math
+
 from geographiclib.geodesic import Geodesic
 
 
@@ -85,3 +86,6 @@ class Frame:
         path = Geodesic.WGS84.Direct(self.lat, self.lon, azi1, dist * 1852)
         return path['lat2'], path['lon2']
 
+    def to_wgs_azi(self, azi1, dist):
+        path = Geodesic.WGS84.Direct(self.lat, self.lon, azi1, dist * 1852)
+        return path['lat2'], path['lon2']

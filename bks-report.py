@@ -368,4 +368,5 @@ if __name__ == "__main__":
     print("Creating report for danger scenarios")
     report_d_out = report.generate_for_list(report_out.get_danger_params([2, 4]))
     report_d_out.save_html("report_status_2_4.html")
+    report_d_out.save_excel("report_2_4.xlsx")
     print(f'Total time: {time.time() - t0}')

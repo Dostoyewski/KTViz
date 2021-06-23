@@ -25,14 +25,20 @@ class Generator(object):
         step = 0.5
         N = int((self.dist - 5) / step)
         dists = [self.dist - i * step for i in range(N)]
-        print("Start generating tests...")
+        print("Start generating danger points...")
         exec_time = time.time()
         with Pool() as p:
             res = p.map(self.create_danger_points, dists)
         for r in res:
             self.danger_points.extend(r)
+        print(f'Danger Point generated.\nTotal time: {time.time() - exec_time}')
+        exec_time1 = time.time()
+        print("Start generating tests...")
+        ns = [i for i in range(len(self.danger_points))]
+        with Pool() as p:
+            p.map(self.create_targets)
         self.create_targets(500)
-        print(f'Total time: {time.time() - exec_time}')
+        print(f'Tests generated.\nTime: {time.time() - exec_time1},\n Total time: {time.time() - exec_time}')
 
     def create_targets(self, i):
         self.our_vel = self.danger_points[i]['v_our']

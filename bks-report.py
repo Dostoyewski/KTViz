@@ -317,6 +317,7 @@ class Report:
         for rec in self.cases:
             try:
                 st = rec['datadir'].split(sep='_')
+                print(rec['datadir'], st)
                 dist1, dist2 = float(st[1]), float(st[2])
                 course1, course2 = float(st[6]), float(st[7])
             except IndexError:

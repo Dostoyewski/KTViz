@@ -8,6 +8,8 @@ from random import random
 from konverter import Frame
 
 
+# TODO: cythonize it!
+
 class Generator(object):
     def __init__(self, max_dist, N_dp, N_rand, safe_div_dist, n_targets=2, lat=56.6857, lon=19.632):
         self.dist = max_dist
@@ -34,10 +36,9 @@ class Generator(object):
         print(f'Danger Point generated.\nTotal time: {time.time() - exec_time}')
         exec_time1 = time.time()
         print("Start generating tests...")
-        ns = [i for i in range(len(self.danger_points))]
+        ns = [i for i in range(0, len(self.danger_points), 5)]
         with Pool() as p:
-            p.map(self.create_targets)
-        self.create_targets(500)
+            p.map(self.create_targets, ns)
         print(f'Tests generated.\nTime: {time.time() - exec_time1},\n Total time: {time.time() - exec_time}')
 
     def create_targets(self, i):
@@ -65,7 +66,9 @@ class Generator(object):
                               str(round(targets[0]['v_target'], 1)) + "_" +
                               str(round(targets[1]['v_target'], 1)) + "_" +
                               str(round(self.our_vel, 1)) + "_" + str(round(targets[0]['c_diff'], 1)) + "_" +
-                              str(round(targets[1]['c_diff'], 1)))
+                              str(round(targets[1]['c_diff'], 1)) + "_" + str(round(targets[0]['CPA'], 1)) +
+                              "_" + str(round(targets[1]['CPA'], 1)) + "_" + str(round(targets[0]['TCPA'], 1)) +
+                              "_" + str(round(targets[1]['TCPA'], 1)))
                     os.makedirs(f_name, exist_ok=True)
                     with open(f_name + '/constraints.json', "w") as fp:
                         json.dump(self.construct_constrains(), fp)
@@ -117,10 +120,11 @@ class Generator(object):
         Checks, if point is dangerous.
         @param v1: our velocity
         @param dist: distance to target
-        @param course: target course
+        @param course: target peleng
         @param diff: course diff
         @return: [is_dangerous, our_vel, tar_vel]
         """
+        # TODO: Fix CPA and TCPA calc
         v_min = 3
         v_max = 20
         alpha = course
@@ -139,7 +143,7 @@ class Generator(object):
                 v_rel = sqrt(v1 ** 2 - 2 * v1 * v2 * cos(beta) + v2 ** 2)
                 TCPA = -dist * (v2 * cos(alpha - beta) - v1 * cos(alpha)) / v_rel ** 2
                 CPA = dist * abs(v2 * sin(alpha - beta) - v1 * sin(alpha)) / v_rel
-                if CPA <= self.sdd and 0 <= TCPA < 0.3333333:
+                if CPA <= self.sdd and 0 <= TCPA < 0.28:
                     return [True, v1, v2, CPA, TCPA]
             except ZeroDivisionError or ValueError:
                 continue
@@ -157,6 +161,8 @@ class Generator(object):
                 "SOG": target['v_target'],
                 "COG": target['c_diff'],
                 "heading": target['c_diff'],
+                "first_detect_dist": 5.0,
+                "cross_dist": 0,
                 "width": 16.0,
                 "length": 100.0,
                 "width_offset": 10.0,
@@ -179,9 +185,9 @@ class Generator(object):
         payload = {
             "wind_direction": 189.0,
             "wind_speed": 1.1,
-            "tide_direction": 0,
-            "tide_speed": 0,
-            "swell": 1,
+            "tide_direction": 0.0,
+            "tide_speed": 0.0,
+            "swell": 1.0,
             "visibility": 13.0
         }
         return payload
@@ -194,6 +200,7 @@ class Generator(object):
             "SOG": self.our_vel,
             "STW": self.our_vel,
             "COG": 0.0,
+            "heading": 0.0,
             "width": 16.0,
             "length": 100.0,
             "width_offset": 10.0,
@@ -206,7 +213,7 @@ class Generator(object):
         payload = {
             "items": [
                 {
-                    "begin_angle": 0,
+                    "begin_angle": 0.0,
                     "curve": 0,
                     "duration": 120 / self.our_vel * 3600,
                     "lat": self.frame.lat,
@@ -227,11 +234,11 @@ class Generator(object):
                 "priority": 0,
                 "maneuver_way": 0,
                 "safe_diverg_dist": 2.0,
-                "minimal_speed": 3,
-                "maximal_speed": 30,
+                "minimal_speed": 3.0,
+                "maximal_speed": 30.0,
                 "max_course_delta": 180,
                 "time_advance": 300,
-                "can_leave_route": 'true',
+                "can_leave_route": True,
                 "max_route_deviation": 4,
                 "forward_speed1": 3.0,
                 "forward_speed2": 9.75,
@@ -267,11 +274,11 @@ class Generator(object):
                 "priority": 0,
                 "maneuver_way": 2,
                 "safe_diverg_dist": 2.4,
-                "minimal_speed": 3,
-                "maximal_speed": 30,
+                "minimal_speed": 3.0,
+                "maximal_speed": 30.0,
                 "max_course_delta": 180,
                 "time_advance": 1,
-                "can_leave_route": 'true',
+                "can_leave_route": True,
                 "max_route_deviation": 8,
                 "forward_speed1": 3.0,
                 "forward_speed2": 9.75,

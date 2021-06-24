@@ -7,7 +7,6 @@ from random import random
 
 from konverter import Frame
 
-
 # TODO: cythonize it!
 
 class Generator(object):
@@ -17,16 +16,20 @@ class Generator(object):
         self.n_rand = N_rand
         self.sdd = safe_div_dist
         self.danger_points = []
+        self.boost = int(1e1)
         self.n_targets = n_targets
         self.our_vel = 0
         self.frame = Frame(lat, lon)
-        os.makedirs("./scenars", exist_ok=True)
-        os.chdir("./scenars")
+        os.makedirs("./scenars1", exist_ok=True)
+        os.chdir("./scenars1")
 
     def create_tests(self):
         step = 0.5
         N = int((self.dist - 5) / step)
         dists = [self.dist - i * step for i in range(N)]
+        for i in range(N):
+            if dists[i] == 12:
+                dists[i] = 11.9
         print("Start generating danger points...")
         exec_time = time.time()
         with Pool() as p:
@@ -34,9 +37,10 @@ class Generator(object):
         for r in res:
             self.danger_points.extend(r)
         print(f'Danger Point generated.\nTotal time: {time.time() - exec_time}')
+        print(f'Total points: {len(self.danger_points)}')
         exec_time1 = time.time()
         print("Start generating tests...")
-        ns = [i for i in range(0, len(self.danger_points), 5)]
+        ns = [i for i in range(0, len(self.danger_points), self.boost)]
         with Pool() as p:
             p.map(self.create_targets, ns)
         print(f'Tests generated.\nTime: {time.time() - exec_time1},\n Total time: {time.time() - exec_time}')
@@ -46,7 +50,7 @@ class Generator(object):
         targets = []
         targets.append(self.danger_points[i])
         if self.n_targets == 2:
-            for j in range(i, len(self.danger_points)):
+            for j in range(i, len(self.danger_points), self.boost):
                 [dang, v1, v2, CPA, TCPA] = self.dangerous(self.danger_points[j]['dist'],
                                                            self.danger_points[j]['course'],
                                                            self.danger_points[j]['c_diff'],
@@ -140,14 +144,26 @@ class Generator(object):
                 if not fix_sp:
                     v1 = v_min + (v_max - v_min) * random()
                 v2 = v_min + (v_max - v_min) * random()
-                v_rel = sqrt(v1 ** 2 - 2 * v1 * v2 * cos(beta) + v2 ** 2)
-                TCPA = -dist * (v2 * cos(alpha - beta) - v1 * cos(alpha)) / v_rel ** 2
-                CPA = dist * abs(v2 * sin(alpha - beta) - v1 * sin(alpha)) / v_rel
+                CPA, TCPA = self.get_CPA_TCPA(v1, v2, alpha, beta, dist)
                 if CPA <= self.sdd and 0 <= TCPA < 0.28:
                     return [True, v1, v2, CPA, TCPA]
             except ZeroDivisionError or ValueError:
                 continue
         return [False, v1, v2, -1, -1]
+
+    def get_CPA_TCPA(self, v1, v2, course, diff, dist, method='default'):
+        if method == 'default':
+            v_rel = sqrt(v1 ** 2 - 2 * v1 * v2 * cos(diff) + v2 ** 2)
+            TCPA = -dist * (v2 * cos(course - diff) - v1 * cos(course)) / v_rel ** 2
+            CPA = dist * abs(v2 * sin(course - diff) - v1 * sin(course)) / v_rel
+            return CPA, TCPA
+        elif method == 'KT':
+            v_our = [v1, 0]
+            v_target = [v2 * cos(diff), v2 * sin(diff)]
+            w = [v_target[0] - v_our[0], v_target[1] - v_our[1]]
+            # TODO: fix it
+            return 0, 0
+            
 
     def construct_target_data(self, targets):
         t_data = []
@@ -308,6 +324,6 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 100, 5000, 2)
+    gen = Generator(12, 100, 3500, 2)
     gen.create_tests()
     print(len(gen.danger_points))

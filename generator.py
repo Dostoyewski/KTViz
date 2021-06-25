@@ -6,8 +6,35 @@ from multiprocessing import Pool
 from random import random
 
 from konverter import Frame
+from paintall import Vector2
+
 
 # TODO: cythonize it!
+
+
+def det(a, b):
+    """
+    Pseudoscalar multiply of vectors
+    :param a: 2D vector
+    :param b: 2D vector
+    :return: pseudoscalar multiply
+    """
+    return a.x * b.y - b.x * a.y
+
+
+def calc_cpa_params(v, v0, R):
+    """
+    Calculating of CPA and tCPA criterions
+    :param v: target speed, vector
+    :param v0: our speed, vector
+    :param R: relative position, vector
+    :return:
+    """
+    w = v - v0
+    cpa = abs(det(R, w) / abs(w))
+    tcpa = - (R * w) / (w * w)
+    return cpa, tcpa
+
 
 class Generator(object):
     def __init__(self, max_dist, N_dp, N_rand, safe_div_dist, n_targets=2, lat=56.6857, lon=19.632):
@@ -25,7 +52,7 @@ class Generator(object):
 
     def create_tests(self):
         step = 0.5
-        N = int((self.dist - 5) / step)
+        N = int((self.dist - 4.5) / step)
         dists = [self.dist - i * step for i in range(N)]
         for i in range(N):
             if dists[i] == 12:
@@ -73,22 +100,38 @@ class Generator(object):
                               str(round(targets[1]['c_diff'], 1)) + "_" + str(round(targets[0]['CPA'], 1)) +
                               "_" + str(round(targets[1]['CPA'], 1)) + "_" + str(round(targets[0]['TCPA'], 1)) +
                               "_" + str(round(targets[1]['TCPA'], 1)))
-                    os.makedirs(f_name, exist_ok=True)
-                    with open(f_name + '/constraints.json', "w") as fp:
-                        json.dump(self.construct_constrains(), fp)
-                    with open(f_name + '/hmi-data.json', "w") as fp:
-                        json.dump(self.construct_hmi_data(), fp)
-                    with open(f_name + '/nav-data.json', "w") as fp:
-                        json.dump(self.construct_nav_data(), fp)
-                    with open(f_name + '/route-data.json', "w") as fp:
-                        json.dump(self.construct_route_data(), fp)
-                    with open(f_name + '/settings.json', "w") as fp:
-                        json.dump(self.construct_settings(), fp)
-                    with open(f_name + '/target-data.json', "w") as fp:
-                        json.dump(self.construct_target_data(targets), fp)
-                    with open(f_name + '/target-settings.json', "w") as fp:
-                        json.dump(self.construct_target_settings(), fp)
+                    self.construct_files(f_name, targets)
                     del targets[1]
+        elif self.n_targets == 1:
+            f_name = ("./sc_" + str(targets[0]['dist']) + "_0_" +
+                      str(round(targets[0]['v_target'], 1)) + "_0_" +
+                      str(round(self.our_vel, 1)) + "_" + str(round(targets[0]['c_diff'], 1)) + "_0_" +
+                      str(round(targets[0]['CPA'], 1)) +
+                      "_0_" + str(round(targets[0]['TCPA'], 1)) + "_0")
+            self.construct_files(f_name, targets)
+
+    def construct_files(self, f_name, targets):
+        """
+        Constructs all json files
+        @param f_name:
+        @param targets:
+        @return:
+        """
+        os.makedirs(f_name, exist_ok=True)
+        with open(f_name + '/constraints.json', "w") as fp:
+            json.dump(self.construct_constrains(), fp)
+        with open(f_name + '/hmi-data.json', "w") as fp:
+            json.dump(self.construct_hmi_data(), fp)
+        with open(f_name + '/nav-data.json', "w") as fp:
+            json.dump(self.construct_nav_data(), fp)
+        with open(f_name + '/route-data.json', "w") as fp:
+            json.dump(self.construct_route_data(), fp)
+        with open(f_name + '/settings.json', "w") as fp:
+            json.dump(self.construct_settings(), fp)
+        with open(f_name + '/target-data.json', "w") as fp:
+            json.dump(self.construct_target_data(targets), fp)
+        with open(f_name + '/target-settings.json', "w") as fp:
+            json.dump(self.construct_target_settings(), fp)
 
     def create_danger_points(self, dist):
         """
@@ -128,9 +171,8 @@ class Generator(object):
         @param diff: course diff
         @return: [is_dangerous, our_vel, tar_vel]
         """
-        # TODO: Fix CPA and TCPA calc
         v_min = 3
-        v_max = 20
+        v_max = 30
         alpha = course
         beta = diff
         fix_sp = False
@@ -151,19 +193,17 @@ class Generator(object):
                 continue
         return [False, v1, v2, -1, -1]
 
-    def get_CPA_TCPA(self, v1, v2, course, diff, dist, method='default'):
+    def get_CPA_TCPA(self, v1, v2, course, diff, dist, method='KT'):
         if method == 'default':
             v_rel = sqrt(v1 ** 2 - 2 * v1 * v2 * cos(diff) + v2 ** 2)
             TCPA = -dist * (v2 * cos(course - diff) - v1 * cos(course)) / v_rel ** 2
             CPA = dist * abs(v2 * sin(course - diff) - v1 * sin(course)) / v_rel
             return CPA, TCPA
         elif method == 'KT':
-            v_our = [v1, 0]
-            v_target = [v2 * cos(diff), v2 * sin(diff)]
-            w = [v_target[0] - v_our[0], v_target[1] - v_our[1]]
-            # TODO: fix it
-            return 0, 0
-            
+            v_our = Vector2(v1, 0)
+            v_target = Vector2(v2 * cos(diff), v2 * sin(diff))
+            R = Vector2(dist * cos(course), dist * sin(course))
+            return calc_cpa_params(v_target, v_our, R)
 
     def construct_target_data(self, targets):
         t_data = []
@@ -324,6 +364,6 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 100, 3500, 2)
+    gen = Generator(12, 30, 3500, 2)
     gen.create_tests()
     print(len(gen.danger_points))

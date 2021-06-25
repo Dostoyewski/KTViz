@@ -15,7 +15,6 @@ from pathlib import Path
 import pandas as pd
 from matplotlib import pyplot as plt
 from natsort import natsorted
-
 from plot import plot_from_files, Case
 
 
@@ -238,9 +237,9 @@ class Report:
         codes = dict(Counter([case["code"] for case in self.cases]))
         table = """
         <table class="summary" border="1">
-        <thead><tr><td>Case</td><td>Code</td></tr></thead>
+        <thead><tr><td></td><td>{code_summary}</td></tr><br>
+        <tr><td>Case</td><td>Code</td></tr></thead>
         <tbody>{tbody}</tbody>
-        <tfoot><tr><td></td><td>{code_summary}</td></tr></tfoot>
         </table>
         """.format(tbody=tbody, code_summary='<br>'.join(['{}: {}'.format(k, codes[k]) for k in sorted(codes)]))
 

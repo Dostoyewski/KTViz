@@ -217,6 +217,7 @@ class Generator(object):
                 "SOG": target['v_target'],
                 "COG": target['c_diff'],
                 "heading": target['c_diff'],
+                "peleng": target['course'],
                 "first_detect_dist": 5.0,
                 "cross_dist": 0,
                 "width": 16.0,
@@ -364,6 +365,6 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 30, 3500, 2)
+    gen = Generator(12, 30, 3500, safe_div_dist=2, n_targets=2)
     gen.create_tests()
     print(len(gen.danger_points))

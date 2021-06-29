@@ -6,6 +6,7 @@ import pandas as pd
 vel_param = [4, 6.5, 8.5, 9.8, 12.2, 16, 19, 20]
 vel_param_x = [4, 4.333, 4.666, 5, 6, 7, 8, 8.333]
 
+vel_func = lambda x: 3.06 * x - 5.502
 
 def build_percent_diag(filename, dist_max, dist_min, step):
     df = pd.read_excel(filename)
@@ -22,10 +23,11 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     code5 = [0 for i in range(N + 1)]
     vel2 = []
     dist2 = []
+    f_names2 = []
     for i, name in enumerate(names):
         foldername = name.split(sep="\\")[6]
-        foldername = foldername.split(sep="_")
-        dist = max(float(foldername[1]), float(foldername[2]))
+        foldername2 = foldername.split(sep="_")
+        dist = max(float(foldername2[1]), float(foldername2[2]))
         if codes[i] == 0 or codes[i] == 5 or codes[i] == 1:
             code0[round((dist - dist_min) / step)] += 1
             N_dists[round((dist - dist_min) / step)] += 1
@@ -35,8 +37,10 @@ def build_percent_diag(filename, dist_max, dist_min, step):
         elif codes[i] == 2:
             code2[round((dist - dist_min) / step)] += 1
             N_dists[round((dist - dist_min) / step)] += 1
-            vel2.append(float(foldername[3]))
+            vel2.append(float(foldername2[3]))
             dist2.append(dist)
+            if float(foldername2[3]) < vel_func(dist):
+                f_names2.append(foldername)
         elif codes[i] == 4:
             code4[round((dist - dist_min) / step)] += 1
             N_dists[round((dist - dist_min) / step)] += 1
@@ -48,6 +52,9 @@ def build_percent_diag(filename, dist_max, dist_min, step):
         if N_dists[i] == 0:
             N_dists[i] = 1
     plt.figure(figsize=(10, 6), dpi=200)
+    ddf = pd.DataFrame()
+    ddf['critical'] = f_names2
+    ddf.to_excel("critical.xlsx")
     code0_p = [code0[i] / N_dists[i] * 100 for i in range(N + 1)]
     code1_p = [code1[i] / N_dists[i] * 100 for i in range(N + 1)]
     code2_p = [code2[i] / N_dists[i] * 100 for i in range(N + 1)]

@@ -37,7 +37,8 @@ def calc_cpa_params(v, v0, R):
 
 
 class Generator(object):
-    def __init__(self, max_dist, N_dp, N_rand, safe_div_dist, n_targets=2, lat=56.6857, lon=19.632):
+    def __init__(self, max_dist, N_dp, N_rand, safe_div_dist, n_targets=2, foldername="./scenars1", lat=56.6857,
+                 lon=19.632):
         self.dist = max_dist
         self.n_dp = N_dp
         self.n_rand = N_rand
@@ -47,8 +48,9 @@ class Generator(object):
         self.n_targets = n_targets
         self.our_vel = 0
         self.frame = Frame(lat, lon)
-        os.makedirs("./scenars1", exist_ok=True)
-        os.chdir("./scenars1")
+        self.foldername = foldername
+        os.makedirs(self.foldername, exist_ok=True)
+        os.chdir(self.foldername)
 
     def create_tests(self):
         step = 0.5
@@ -172,7 +174,7 @@ class Generator(object):
         @return: [is_dangerous, our_vel, tar_vel]
         """
         v_min = 3
-        v_max = 30
+        v_max = 20
         alpha = course
         beta = diff
         fix_sp = False
@@ -365,6 +367,6 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 30, 3500, safe_div_dist=2, n_targets=2)
+    gen = Generator(12, 300, 5000, safe_div_dist=2, n_targets=2, foldername="./scenars1")
     gen.create_tests()
     print(len(gen.danger_points))

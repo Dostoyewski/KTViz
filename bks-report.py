@@ -11,6 +11,7 @@ from collections import Counter
 from datetime import datetime
 from multiprocessing import Pool
 from pathlib import Path
+import tqdm
 
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -313,7 +314,7 @@ class Report:
     def save_excel(self, filename='report.xlsx'):
         df = pd.DataFrame(columns=['datadir', 'nav_report', 'command', 'code', 'dist1', 'dist2',
                                    'course1', 'course2'])
-        for rec in self.cases:
+        for rec in tqdm.tqdm(self.cases):
             try:
                 st = rec['datadir'].split(sep='_')
                 dist1, dist2 = float(st[1]), float(st[2])
@@ -360,8 +361,8 @@ if __name__ == "__main__":
     report = ReportGenerator(usv_executable)
     print("Starting converstion...")
     report_out = report.generate(cur_dir, glob=args.glob, rvo=use_rvo, nopic=args.nopic)
-    print("Starting saving to HTML")
-    report_out.save_html("report.html")
+    # print("Starting saving to HTML")
+    # report_out.save_html("report.html")
     print("Starting saving to EXCEL")
     report_out.save_excel("report.xlsx")
     print("Creating report for danger scenarios")

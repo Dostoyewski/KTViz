@@ -11,11 +11,11 @@ from collections import Counter
 from datetime import datetime
 from multiprocessing import Pool
 from pathlib import Path
-import tqdm
 
 import pandas as pd
 from matplotlib import pyplot as plt
 from natsort import natsorted
+
 from plot import plot_from_files, Case
 
 
@@ -115,17 +115,35 @@ class ReportGenerator:
             except FileNotFoundError:
                 pass
             os.chdir(working_dir)
+            try:
+                st = datadir.split(sep='_')
+                dist1, dist2 = float(st[1]), float(st[2])
+                course1, course2 = float(st[6]), float(st[7])
+            except IndexError:
+                dist1, dist2 = 0, 0
+                course1, course2 = 0, 0
             return {"datadir": datadir,
                     "proc": completedProc,
                     "image_data": image_data,
                     "exec_time": exec_time,
                     "nav_report": nav_report,
                     "command": command,
-                    "code": fix_returncode(completedProc.returncode)}
+                    "code": fix_returncode(completedProc.returncode),
+                    "dist1": dist1,
+                    "dist2": dist2,
+                    "course1": course1,
+                    "course2": course2}
         except subprocess.TimeoutExpired:
             print("TEST TIMEOUT ERR")
             exec_time = time.time() - exec_time
             os.chdir(working_dir)
+            try:
+                st = datadir.split(sep='_')
+                dist1, dist2 = float(st[1]), float(st[2])
+                course1, course2 = float(st[6]), float(st[7])
+            except IndexError:
+                dist1, dist2 = 0, 0
+                course1, course2 = 0, 0
             return {"datadir": datadir,
                     "proc": None,
                     # "image_data": image_data,
@@ -133,7 +151,12 @@ class ReportGenerator:
                     "exec_time": exec_time,
                     "nav_report": None,
                     "command": command,
-                    "code": 6}
+                    "code": 6,
+                    "dist1": dist1,
+                    "dist2": dist2,
+                    "course1": course1,
+                    "course2": course2
+                    }
 
 
 class Report:
@@ -312,24 +335,7 @@ class Report:
             f.write(html)
 
     def save_excel(self, filename='report.xlsx'):
-        df = pd.DataFrame(columns=['datadir', 'nav_report', 'command', 'code', 'dist1', 'dist2',
-                                   'course1', 'course2'])
-        for rec in tqdm.tqdm(self.cases):
-            try:
-                st = rec['datadir'].split(sep='_')
-                dist1, dist2 = float(st[1]), float(st[2])
-                course1, course2 = float(st[6]), float(st[7])
-            except IndexError:
-                dist1, dist2 = 0, 0
-                course1, course2 = 0, 0
-            df = df.append({'datadir': rec['datadir'],
-                            'nav_report': rec['nav_report'],
-                            'command': rec['command'],
-                            'code': rec['code'],
-                            'dist1': dist1,
-                            'dist2': dist2,
-                            'course1': course1,
-                            'course2': course2}, ignore_index=True)
+        df = pd.json_normalize(self.cases)
         df.to_excel(filename)
 
     def get_danger_params(self, statuses):

@@ -1,3 +1,5 @@
+import datetime
+import os
 from math import cos, sin, radians
 
 import matplotlib.pyplot as plt
@@ -8,7 +10,30 @@ vel_param_x = [4, 4.333, 4.666, 5, 6, 7, 8, 8.333]
 
 vel_func = lambda x: 3.06 * x - 5.502
 
+
+def get_n_targets(name):
+    """
+    Detects number of targets in case
+    @param name: foldername with path
+    @return:
+    """
+    foldername = os.path.split(name)[1]
+    foldername2 = foldername.split(sep="_")
+    if float(foldername2[1]) == 0 or float(foldername2[2]) == 0:
+        return 1
+    else:
+        return 2
+
+
 def build_percent_diag(filename, dist_max, dist_min, step):
+    """
+    Builds percent diagram with codes and errors to velocities graph
+    @param filename:
+    @param dist_max:
+    @param dist_min:
+    @param step:
+    @return:
+    """
     df = pd.read_excel(filename)
     names = df['datadir']
     codes = df['code']
@@ -25,9 +50,13 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     dist2 = []
     f_names2 = []
     for i, name in enumerate(names):
-        foldername = name.split(sep="\\")[6]
+        foldername = os.path.split(name)[1]
+        n_targ = get_n_targets(foldername)
         foldername2 = foldername.split(sep="_")
-        dist = max(float(foldername2[1]), float(foldername2[2]))
+        if n_targ == 1:
+            dist = max(float(foldername2[1]), float(foldername2[2]))
+        elif n_targ == 2:
+            dist = min(float(foldername2[1]), float(foldername2[2]))
         if codes[i] == 0 or codes[i] == 5 or codes[i] == 1:
             code0[round((dist - dist_min) / step)] += 1
             N_dists[round((dist - dist_min) / step)] += 1
@@ -70,6 +99,8 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     plt.xlabel('Дистанция до ближайшей цели, мили', fontsize=20)
     plt.ylabel('Маневр построен, %', fontsize=20)
     plt.legend(loc='upper left', shadow=True)
+    plt.title("Дата тестирования: " + str(datetime.date.today()))
+    plt.savefig(str(datetime.date.today()) + "_stats.png")
     plt.show()
     fig, ax = plt.subplots()
     plt.scatter(dist2, vel2, alpha=0.5)
@@ -77,11 +108,13 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     plt.xlabel('Дистанция до цели, мили')
     plt.ylabel('Скорость цели, узлы')
     plt.grid()
+    plt.title("Дата тестирования: " + str(datetime.date.today()))
+    plt.savefig(str(datetime.date.today()) + "_vels.png")
     plt.show()
 
 
 if __name__ == "__main__":
-    build_percent_diag('report.xlsx', 12, 6, 0.5)
+    build_percent_diag('report_2021-07-02.xlsx', 12, 6, 0.5)
     df = pd.read_excel('report_2_4.xlsx')
     names = df['datadir']
     x1, y1, c1 = [], [], []

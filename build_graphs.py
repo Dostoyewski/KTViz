@@ -66,7 +66,7 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     plt.plot(dists, code4_p, 'o--', label="Код 4")
     plt.plot(dists, code5_p, 'g', label="Код 5")
     plt.grid()
-    plt.axis([5, dist_max, 0, 100])
+    plt.axis([dist_min, dist_max, 0, 100])
     plt.xlabel('Дистанция до ближайшей цели, мили', fontsize=20)
     plt.ylabel('Маневр построен, %', fontsize=20)
     plt.legend(loc='upper left', shadow=True)
@@ -81,7 +81,7 @@ def build_percent_diag(filename, dist_max, dist_min, step):
 
 
 if __name__ == "__main__":
-    build_percent_diag('report.xlsx', 11, 4.5, 0.5)
+    build_percent_diag('report.xlsx', 12, 6, 0.5)
     df = pd.read_excel('report_2_4.xlsx')
     names = df['datadir']
     x1, y1, c1 = [], [], []

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import base64
 import ctypes
+import datetime
 import io
 import json
 import os
@@ -139,6 +140,7 @@ class ReportGenerator:
             os.chdir(working_dir)
             try:
                 st = datadir.split(sep='_')
+                # TODO: fix it to `nav-report` reading
                 dist1, dist2 = float(st[1]), float(st[2])
                 course1, course2 = float(st[6]), float(st[7])
             except IndexError:
@@ -370,9 +372,9 @@ if __name__ == "__main__":
     # print("Starting saving to HTML")
     # report_out.save_html("report.html")
     print("Starting saving to EXCEL")
-    report_out.save_excel("report.xlsx")
-    print("Creating report for danger scenarios")
-    report_d_out = report.generate_for_list(report_out.get_danger_params([2, 4]))
-    report_d_out.save_html("report_status_2_4.html")
-    report_d_out.save_excel("report_2_4.xlsx")
+    report_out.save_excel("report_" + str(datetime.date.today()) + ".xlsx")
+    # print("Creating report for danger scenarios")
+    # report_d_out = report.generate_for_list(report_out.get_danger_params([2, 4]))
+    # report_d_out.save_html("report_status_2_4_" + str(datetime.date.today()) + ".html")
+    # report_d_out.save_excel("report_2_4_" + str(datetime.date.today()) + ".xlsx")
     print(f'Total time: {time.time() - t0}')

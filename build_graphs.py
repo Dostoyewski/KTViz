@@ -99,8 +99,8 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     plt.xlabel('Дистанция до ближайшей цели, мили', fontsize=20)
     plt.ylabel('Маневр построен, %', fontsize=20)
     plt.legend(loc='upper left', shadow=True)
-    plt.title("Дата тестирования: " + str(datetime.date.today()))
-    plt.savefig(str(datetime.date.today()) + "_stats.png")
+    plt.title("Дата: " + str(datetime.date.today()) + ", цели: " + str(n_targ))
+    plt.savefig("./images/" + str(datetime.date.today()) + "_" + str(n_targ) + "_stats.png")
     plt.show()
     fig, ax = plt.subplots()
     plt.scatter(dist2, vel2, alpha=0.5)
@@ -108,8 +108,8 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     plt.xlabel('Дистанция до цели, мили')
     plt.ylabel('Скорость цели, узлы')
     plt.grid()
-    plt.title("Дата тестирования: " + str(datetime.date.today()))
-    plt.savefig(str(datetime.date.today()) + "_vels.png")
+    plt.title("Дата: " + str(datetime.date.today()) + ", цели: " + str(n_targ))
+    plt.savefig("./images/" + str(datetime.date.today()) + "_" + str(n_targ) + "_vels.png")
     plt.show()
 
 

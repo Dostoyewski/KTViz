@@ -367,6 +367,6 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 300, 5000, safe_div_dist=2, n_targets=2, foldername="./scenars1")
+    gen = Generator(12, 150, 5000, safe_div_dist=2, n_targets=2, foldername="./scenars1")
     gen.create_tests()
     print(len(gen.danger_points))

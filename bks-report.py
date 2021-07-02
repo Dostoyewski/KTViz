@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import base64
 import ctypes
-import datetime
 import io
 import json
 import os
@@ -9,7 +8,7 @@ import subprocess
 import time
 import traceback
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, date
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -372,9 +371,9 @@ if __name__ == "__main__":
     # print("Starting saving to HTML")
     # report_out.save_html("report.html")
     print("Starting saving to EXCEL")
-    report_out.save_excel("report_" + str(datetime.date.today()) + ".xlsx")
+    report_out.save_excel("report_" + str(date.today()) + ".xlsx")
     # print("Creating report for danger scenarios")
     # report_d_out = report.generate_for_list(report_out.get_danger_params([2, 4]))
-    # report_d_out.save_html("report_status_2_4_" + str(datetime.date.today()) + ".html")
-    # report_d_out.save_excel("report_2_4_" + str(datetime.date.today()) + ".xlsx")
+    # report_d_out.save_html("report_status_2_4_" + str(date.today()) + ".html")
+    # report_d_out.save_excel("report_2_4_" + str(date.today()) + ".xlsx")
     print(f'Total time: {time.time() - t0}')

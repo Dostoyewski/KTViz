@@ -37,9 +37,11 @@ def calc_cpa_params(v, v0, R):
 
 
 class Generator(object):
-    def __init__(self, max_dist, N_dp, N_rand, safe_div_dist, n_targets=2, foldername="./scenars1", lat=56.6857,
+    def __init__(self, max_dist, min_dist, N_dp, N_rand, safe_div_dist, n_targets=2, foldername="./scenars1",
+                 lat=56.6857,
                  lon=19.632):
         self.dist = max_dist
+        self.min_dist = min_dist
         self.n_dp = N_dp
         self.n_rand = N_rand
         self.sdd = safe_div_dist
@@ -54,7 +56,7 @@ class Generator(object):
 
     def create_tests(self):
         step = 0.5
-        N = int((self.dist - 4.5) / step)
+        N = int((self.dist - self.min_dist) / step)
         dists = [self.dist - i * step for i in range(N)]
         for i in range(N):
             if dists[i] == 12:
@@ -174,7 +176,7 @@ class Generator(object):
         @return: [is_dangerous, our_vel, tar_vel]
         """
         v_min = 3
-        v_max = 20
+        v_max = 25
         alpha = course
         beta = diff
         fix_sp = False
@@ -189,7 +191,7 @@ class Generator(object):
                     v1 = v_min + (v_max - v_min) * random()
                 v2 = v_min + (v_max - v_min) * random()
                 CPA, TCPA = self.get_CPA_TCPA(v1, v2, alpha, beta, dist)
-                if CPA <= self.sdd and 0 <= TCPA < 0.28:
+                if CPA <= self.sdd and 0 <= TCPA < 0.33333:
                     return [True, v1, v2, CPA, TCPA]
             except ZeroDivisionError or ValueError:
                 continue
@@ -367,6 +369,6 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 150, 5000, safe_div_dist=2, n_targets=2, foldername="./scenars1")
+    gen = Generator(11.5, 11, 100, 3000, safe_div_dist=2, n_targets=1, foldername="./scenars11")
     gen.create_tests()
     print(len(gen.danger_points))

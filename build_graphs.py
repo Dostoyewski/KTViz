@@ -46,6 +46,7 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     code2 = [0 for i in range(N + 1)]
     code4 = [0 for i in range(N + 1)]
     code5 = [0 for i in range(N + 1)]
+    code4_fnmes = []
     vel2 = []
     dist2 = []
     f_names2 = []
@@ -73,6 +74,7 @@ def build_percent_diag(filename, dist_max, dist_min, step):
         elif codes[i] == 4:
             code4[round((dist - dist_min) / step)] += 1
             N_dists[round((dist - dist_min) / step)] += 1
+            code4_fnmes.append(foldername)
         # elif codes[i] == 5:
         #     code5[int((dist - dist_min) / step)] += 1
         #     N_dists[int((dist - dist_min) / step)] += 1
@@ -80,6 +82,9 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     for i in range(N + 1):
         if N_dists[i] == 0:
             N_dists[i] = 1
+    df4 = pd.DataFrame()
+    df4['names_4'] = code4_fnmes
+    df4.to_excel("4code_tests.xlsx")
     plt.figure(figsize=(10, 6), dpi=200)
     ddf = pd.DataFrame()
     ddf['critical'] = f_names2
@@ -114,7 +119,7 @@ def build_percent_diag(filename, dist_max, dist_min, step):
 
 
 if __name__ == "__main__":
-    build_percent_diag('report_2021-07-02.xlsx', 12, 6, 0.5)
+    build_percent_diag('report1_2021-07-07.xlsx', 12, 5, 0.5)
     df = pd.read_excel('report_2_4.xlsx')
     names = df['datadir']
     x1, y1, c1 = [], [], []

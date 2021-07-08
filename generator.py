@@ -282,10 +282,10 @@ class Generator(object):
                 {
                     "begin_angle": 0.0,
                     "curve": 0,
-                    "duration": 120 / self.our_vel * 3600,
+                    "duration": 120.0 / self.our_vel * 3600,
                     "lat": self.frame.lat,
                     "lon": self.frame.lon,
-                    "length": 72.0,
+                    "length": 120.0,
                     "port_dev": 1.5,
                     "starboard_dev": 1.5,
                 }

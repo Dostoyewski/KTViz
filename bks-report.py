@@ -116,6 +116,7 @@ class ReportGenerator:
                 pass
             os.chdir(working_dir)
             try:
+                datadir = os.path.split(datadir)[1]
                 st = datadir.split(sep='_')
                 dist1, dist2 = float(st[1]), float(st[2])
                 course1, course2 = float(st[6]), float(st[7])
@@ -371,9 +372,9 @@ if __name__ == "__main__":
     # print("Starting saving to HTML")
     # report_out.save_html("report.html")
     print("Starting saving to EXCEL")
-    report_out.save_excel("report_" + str(date.today()) + ".xlsx")
+    report_out.save_excel("report1_" + str(date.today()) + ".xlsx")
     # print("Creating report for danger scenarios")
-    # report_d_out = report.generate_for_list(report_out.get_danger_params([2, 4]))
+    # report_d_out = report.generate_for_list(report_out00.get_danger_params([2, 4]))
     # report_d_out.save_html("report_status_2_4_" + str(date.today()) + ".html")
     # report_d_out.save_excel("report_2_4_" + str(date.today()) + ".xlsx")
     print(f'Total time: {time.time() - t0}')

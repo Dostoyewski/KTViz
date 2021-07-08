@@ -89,3 +89,7 @@ class Frame:
     def to_wgs_azi(self, azi1, dist):
         path = Geodesic.WGS84.Direct(self.lat, self.lon, azi1, dist * 1852)
         return path['lat2'], path['lon2']
+
+    def dist_azi_to_point(self, lat, lon):
+        path = Geodesic.WGS84.Inverse(self.lat, self.lon, lat, lon)
+        return path['s12'] / 1852, path['azi1']

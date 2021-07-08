@@ -5,7 +5,9 @@ from math import pi, sin, cos, sqrt, degrees
 from multiprocessing import Pool
 from pathlib import Path
 from random import random
+from shutil import copyfile
 
+from geographiclib.geodesic import Geodesic
 from natsort import natsorted
 
 from konverter import Frame
@@ -54,7 +56,9 @@ class Generator(object):
         self.our_vel = 0
         self.frame = Frame(lat, lon)
         self.t2_folder = None
+        self.abs_t2_folder = None
         self.foldername = foldername
+        self.abs_foldername = None
         self.dirlist = None
         self.cwd = os.getcwd()
         os.makedirs(self.foldername, exist_ok=True)
@@ -375,22 +379,32 @@ class Generator(object):
 
     def stack_1t_scenarios(self, new_foldername):
         self.t2_folder = new_foldername
+        os.chdir(self.cwd)
+        os.makedirs(self.t2_folder, exist_ok=True)
+        os.chdir(self.foldername)
+        self.abs_foldername = os.path.abspath(os.getcwd())
+        os.chdir(self.cwd)
+        os.chdir(self.t2_folder)
+        self.abs_t2_folder = os.path.abspath(os.getcwd())
         self.get_dir_list()
         targets_list = [self.get_target_data(dir) for dir in self.dirlist]
-        for target in targets_list:
-            self.create_2t_scenarios(target)
+        with Pool() as p:
+            p.map(self.create_2t_scenarios, targets_list)
 
     def get_dir_list(self, typo=1):
         directories_list = []
         if typo == 1:
-            cur_dir = os.path.abspath(self.foldername)
+            os.chdir(self.cwd)
+            os.chdir(self.foldername)
         else:
-            cur_dir = os.path.abspath(self.t2_folder)
-        for path in Path(os.path.dirname(cur_dir)).glob('*'):
+            os.chdir(self.cwd)
+            os.chdir(self.t2_folder)
+        for path in Path(os.getcwd()).glob('*'):
             for root, dirs, files in os.walk(path):
                 if "nav-data.json" in files or 'navigation.json' in files:
                     directories_list.append(os.path.join(self.foldername, root))
         self.dirlist = natsorted(directories_list)
+        os.chdir(self.cwd)
 
     @staticmethod
     def get_target_data(dirname):
@@ -400,18 +414,40 @@ class Generator(object):
             data = json.load(fp)
         return data[0]
 
+    def build_foldername(self, dir, target):
+        dir = dir.split(sep='_')
+        dir[2] = str(round(self.frame.dist_azi_to_point(target['lat'], target['lon'])[0], 1))
+        dir[4] = str(round(target['SOG'], 1))
+        dir[7] = str(round(target['COG'], 1))
+        strs = ''
+        for s in dir:
+            strs += s + '_'
+        return strs[:-1]
+
     def create_2t_scenarios(self, target):
         target['id'] = 'target1'
-        self.get_dir_list(typo=2)
+        # self.get_dir_list(typo=2)
         for dir in self.dirlist:
-            with open(dir + '/target-data.json', 'rw') as fp:
+            with open(dir + '/target-data.json', 'r') as fp:
                 data = json.load(fp)
-                data.append(target)
-                json.dump(data, fp)
+                path = Geodesic.WGS84.Inverse(data[0]['lat'], data[0]['lon'], target['lat'], target['lon'])
+                if path['s12'] / 1852 > 5:
+                    data.append(target)
+                    os.chdir(self.cwd)
+                    os.chdir(self.t2_folder)
+                    # TODO: Fix foldername building
+                    dname = os.path.split(dir)[1]
+                    dname = self.build_foldername(dname, target)
+                    os.makedirs(dname)
+                    with open(dname + '/target-data.json', 'w+') as f:
+                        json.dump(data, f)
+                    for name in os.listdir(dir):
+                        if name != 'target-data.json':
+                            copyfile(dir + '/' + name, dname + '/' + name)
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 10, 200, 3000, safe_div_dist=2, n_targets=1, foldername="./scenars_new_n2")
-    gen.stack_1t_scenarios("./scenars_new_n2")
-    # gen.create_tests()
+    gen = Generator(12, 4.5, 200, 3000, safe_div_dist=2, n_targets=1, foldername="./scenars_new_n1")
+    gen.create_tests()
+    # gen.stack_1t_scenarios("./scenars_new_n2")
     print(len(gen.danger_points))

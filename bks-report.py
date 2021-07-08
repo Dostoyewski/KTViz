@@ -96,6 +96,7 @@ class ReportGenerator:
                   .format(datadir, fix_returncode(completedProc.returncode), exec_time))
             image_data = ""
             nav_report = ""
+            target_data = None
             if not self.nopic:
                 try:
                     fig = plot_from_files(os.path.join(datadir, case_filenames['nav_data']))
@@ -114,8 +115,14 @@ class ReportGenerator:
                     nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
             except FileNotFoundError:
                 pass
+            try:
+                with open("target-data.json", "r") as f:
+                    target_data = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
+            except FileNotFoundError:
+                pass
             os.chdir(working_dir)
             try:
+                # TODO: rewrite it
                 datadir = os.path.split(datadir)[1]
                 st = datadir.split(sep='_')
                 dist1, dist2 = float(st[1]), float(st[2])

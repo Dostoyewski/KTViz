@@ -3,7 +3,10 @@ import os
 import time
 from math import pi, sin, cos, sqrt, degrees
 from multiprocessing import Pool
+from pathlib import Path
 from random import random
+
+from natsort import natsorted
 
 from konverter import Frame
 from paintall import Vector2
@@ -50,7 +53,10 @@ class Generator(object):
         self.n_targets = n_targets
         self.our_vel = 0
         self.frame = Frame(lat, lon)
+        self.t2_folder = None
         self.foldername = foldername
+        self.dirlist = None
+        self.cwd = os.getcwd()
         os.makedirs(self.foldername, exist_ok=True)
         os.chdir(self.foldername)
 
@@ -176,7 +182,7 @@ class Generator(object):
         @return: [is_dangerous, our_vel, tar_vel]
         """
         v_min = 3
-        v_max = 25
+        v_max = 20
         alpha = course
         beta = diff
         fix_sp = False
@@ -191,7 +197,7 @@ class Generator(object):
                     v1 = v_min + (v_max - v_min) * random()
                 v2 = v_min + (v_max - v_min) * random()
                 CPA, TCPA = self.get_CPA_TCPA(v1, v2, alpha, beta, dist)
-                if CPA <= self.sdd and 0 <= TCPA < 0.33333:
+                if CPA <= self.sdd and 0 <= TCPA < 0.25:
                     return [True, v1, v2, CPA, TCPA]
             except ZeroDivisionError or ValueError:
                 continue
@@ -367,8 +373,45 @@ class Generator(object):
         }
         return payload
 
+    def stack_1t_scenarios(self, new_foldername):
+        self.t2_folder = new_foldername
+        self.get_dir_list()
+        targets_list = [self.get_target_data(dir) for dir in self.dirlist]
+        for target in targets_list:
+            self.create_2t_scenarios(target)
+
+    def get_dir_list(self, typo=1):
+        directories_list = []
+        if typo == 1:
+            cur_dir = os.path.abspath(self.foldername)
+        else:
+            cur_dir = os.path.abspath(self.t2_folder)
+        for path in Path(os.path.dirname(cur_dir)).glob('*'):
+            for root, dirs, files in os.walk(path):
+                if "nav-data.json" in files or 'navigation.json' in files:
+                    directories_list.append(os.path.join(self.foldername, root))
+        self.dirlist = natsorted(directories_list)
+
+    @staticmethod
+    def get_target_data(dirname):
+        os.chdir(dirname)
+        data = None
+        with open('target-data.json', 'r') as fp:
+            data = json.load(fp)
+        return data[0]
+
+    def create_2t_scenarios(self, target):
+        target['id'] = 'target1'
+        self.get_dir_list(typo=2)
+        for dir in self.dirlist:
+            with open(dir + '/target-data.json', 'rw') as fp:
+                data = json.load(fp)
+                data.append(target)
+                json.dump(data, fp)
+
 
 if __name__ == "__main__":
-    gen = Generator(11.5, 11, 100, 3000, safe_div_dist=2, n_targets=1, foldername="./scenars11")
-    gen.create_tests()
+    gen = Generator(12, 10, 200, 3000, safe_div_dist=2, n_targets=1, foldername="./scenars_new_n2")
+    gen.stack_1t_scenarios("./scenars_new_n2")
+    # gen.create_tests()
     print(len(gen.danger_points))

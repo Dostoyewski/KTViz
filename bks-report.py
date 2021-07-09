@@ -31,16 +31,22 @@ class ReportGenerator:
         self.tmpdir = os.path.join(self.work_dir, ".bks_report\\")
         self.rvo = None
         self.nopic = None
+        self.fast = False
 
     def generate(self, data_directory, glob='*', rvo=None, nopic=False):
         self.rvo = rvo
         self.nopic = nopic
         directories_list = []
-        for path in Path(data_directory).glob(glob):
-            for root, dirs, files in os.walk(path):
-                if "nav-data.json" in files or 'navigation.json' in files:
-                    directories_list.append(os.path.join(data_directory, root))
-        directories_list = natsorted(directories_list)
+        if not self.fast:
+            for path in Path(data_directory).glob(glob):
+                for root, dirs, files in os.walk(path):
+                    if "nav-data.json" in files or 'navigation.json' in files:
+                        directories_list.append(os.path.join(data_directory, root))
+            directories_list = natsorted(directories_list)
+
+        else:
+            dirs = os.listdir(data_directory)
+            directories_list = [os.path.abspath(p) for p in dirs]
 
         with Pool() as p:
             cases = p.map(self.run_case, directories_list)
@@ -379,7 +385,7 @@ if __name__ == "__main__":
     # print("Starting saving to HTML")
     # report_out.save_html("report.html")
     print("Starting saving to EXCEL")
-    report_out.save_excel("report1_" + str(date.today()) + ".xlsx")
+    report_out.save_excel("report2_" + str(date.today()) + ".xlsx")
     # print("Creating report for danger scenarios")
     # report_d_out = report.generate_for_list(report_out00.get_danger_params([2, 4]))
     # report_d_out.save_html("report_status_2_4_" + str(date.today()) + ".html")

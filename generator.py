@@ -387,7 +387,7 @@ class Generator(object):
         os.chdir(self.t2_folder)
         self.abs_t2_folder = os.path.abspath(os.getcwd())
         self.get_dir_list()
-        targets_list = [self.get_target_data(dir) for dir in self.dirlist]
+        targets_list = [(self.get_target_data(dir), i) for i, dir in enumerate(self.dirlist)]
         with Pool() as p:
             p.map(self.create_2t_scenarios, targets_list)
 
@@ -424,10 +424,12 @@ class Generator(object):
             strs += s + '_'
         return strs[:-1]
 
-    def create_2t_scenarios(self, target):
+    def create_2t_scenarios(self, data):
+        target, n = data[0], data[1]
         target['id'] = 'target1'
         # self.get_dir_list(typo=2)
-        for dir in self.dirlist:
+        for i in range(n, len(self.dirlist)):
+            dir = self.dirlist[i]
             with open(dir + '/target-data.json', 'r') as fp:
                 data = json.load(fp)
                 path = Geodesic.WGS84.Inverse(data[0]['lat'], data[0]['lon'], target['lat'], target['lon'])
@@ -447,7 +449,7 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 4.5, 200, 3000, safe_div_dist=2, n_targets=1, foldername="./scenars_new_n1")
+    gen = Generator(12, 9.5, 400, 10000, safe_div_dist=2, n_targets=1, foldername="./scenars_new_n1")
     gen.create_tests()
     # gen.stack_1t_scenarios("./scenars_new_n2")
     print(len(gen.danger_points))

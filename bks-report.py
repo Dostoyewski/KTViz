@@ -13,6 +13,7 @@ from multiprocessing import Pool
 from pathlib import Path
 
 import pandas as pd
+from geographiclib.geodesic import Geodesic
 from matplotlib import pyplot as plt
 from natsort import natsorted
 
@@ -37,16 +38,22 @@ class ReportGenerator:
         self.rvo = rvo
         self.nopic = nopic
         directories_list = []
-        if not self.fast:
-            for path in Path(data_directory).glob(glob):
-                for root, dirs, files in os.walk(path):
-                    if "nav-data.json" in files or 'navigation.json' in files:
-                        directories_list.append(os.path.join(data_directory, root))
-            directories_list = natsorted(directories_list)
-
-        else:
-            dirs = os.listdir(data_directory)
-            directories_list = [os.path.abspath(p) for p in dirs]
+        try:
+            df = pd.read_csv(data_directory + '/metainfo.csv', index_col=False)
+            directories_list = df['datadirs'].values
+        except FileNotFoundError:
+            if not self.fast:
+                for path in Path(data_directory).glob(glob):
+                    for root, dirs, files in os.walk(path):
+                        if "nav-data.json" in files or 'navigation.json' in files:
+                            directories_list.append(os.path.join(data_directory, root))
+                directories_list = natsorted(directories_list)
+                df = pd.DataFrame()
+                df['datadirs'] = directories_list
+                df.to_csv(data_directory + '/metainfo.csv')
+            else:
+                dirs = os.listdir(data_directory)
+                directories_list = [os.path.abspath(p) for p in dirs]
 
         with Pool() as p:
             cases = p.map(self.run_case, directories_list)
@@ -127,16 +134,29 @@ class ReportGenerator:
             except FileNotFoundError:
                 pass
             os.chdir(working_dir)
+
+            target_data = json.loads(target_data)
+            datadir_i = os.path.split(datadir)[1]
+            dist1, dist2 = 0, 0
+            course1, course2 = 0, 0
+            peleng1, peleng2 = 0, 0
+            lat, lon = 0, 0
             try:
-                # TODO: rewrite it
-                datadir = os.path.split(datadir)[1]
-                st = datadir.split(sep='_')
-                dist1, dist2 = float(st[1]), float(st[2])
-                course1, course2 = float(st[6]), float(st[7])
-            except IndexError:
-                dist1, dist2 = 0, 0
-                course1, course2 = 0, 0
-            return {"datadir": datadir,
+                with open(datadir + "/nav-data.json", "r") as f:
+                    nav_d = json.loads(f.read())
+                    lat, lon = nav_d['lat'], nav_d['lon']
+            except FileNotFoundError:
+                pass
+            try:
+                dist1, course1, peleng1 = self.get_target_params(lat, lon, target_data[0])
+            except IndexError or TypeError:
+                dist1, course1, peleng1 = 0, 0, 0
+            try:
+                dist2, course2, peleng2 = self.get_target_params(lat, lon, target_data[1])
+            except IndexError or TypeError:
+                dist2, course2, peleng2 = 0, 0, 0
+
+            return {"datadir": datadir_i,
                     "proc": completedProc,
                     "image_data": image_data,
                     "exec_time": exec_time,
@@ -146,20 +166,41 @@ class ReportGenerator:
                     "dist1": dist1,
                     "dist2": dist2,
                     "course1": course1,
-                    "course2": course2}
+                    "course2": course2,
+                    "peleng1": peleng1,
+                    "peleng2": peleng2}
         except subprocess.TimeoutExpired:
             print("TEST TIMEOUT ERR")
             exec_time = time.time() - exec_time
             os.chdir(working_dir)
+            target_data = None
             try:
-                st = datadir.split(sep='_')
-                # TODO: fix it to `nav-report` reading
-                dist1, dist2 = float(st[1]), float(st[2])
-                course1, course2 = float(st[6]), float(st[7])
-            except IndexError:
-                dist1, dist2 = 0, 0
-                course1, course2 = 0, 0
-            return {"datadir": datadir,
+                with open("target-data.json", "r") as f:
+                    target_data = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
+            except FileNotFoundError:
+                pass
+
+            datadir_i = os.path.split(datadir)[1]
+            dist1, dist2 = 0, 0
+            course1, course2 = 0, 0
+            peleng1, peleng2 = 0, 0
+            lat, lon = 0, 0
+            try:
+                with open(datadir + "/nav-data.json", "r") as f:
+                    nav_d = json.loads(f.read())
+                    lat, lon = nav_d['lat'], nav_d['lon']
+            except FileNotFoundError:
+                pass
+            try:
+                dist1, course1, peleng1 = self.get_target_params(lat, lon, target_data[0])
+            except IndexError or TypeError:
+                dist1, course1, peleng1 = 0, 0, 0
+            try:
+                dist2, course2, peleng2 = self.get_target_params(lat, lon, target_data[1])
+            except IndexError or TypeError:
+                dist2, course2, peleng2 = 0, 0, 0
+
+            return {"datadir": datadir_i,
                     "proc": None,
                     # "image_data": image_data,
                     "image_data": "",
@@ -170,8 +211,18 @@ class ReportGenerator:
                     "dist1": dist1,
                     "dist2": dist2,
                     "course1": course1,
-                    "course2": course2
+                    "course2": course2,
+                    "peleng1": peleng1,
+                    "peleng2": peleng2
                     }
+
+    def get_target_params(self, lat, lon, target_data):
+        lat_t, lon_t = target_data["lat"], target_data["lon"]
+        path = Geodesic.WGS84.Inverse(lat, lon, lat_t, lon_t)
+        dist = path['s12'] / 1852
+        course = target_data["COG"]
+        peleng = path['azi1']
+        return dist, course, peleng
 
 
 class Report:

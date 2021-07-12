@@ -185,7 +185,7 @@ class Generator(object):
         @param diff: course diff
         @return: [is_dangerous, our_vel, tar_vel]
         """
-        v_min = 3
+        v_min = 2
         v_max = 20
         alpha = course
         beta = diff
@@ -201,7 +201,7 @@ class Generator(object):
                     v1 = v_min + (v_max - v_min) * random()
                 v2 = v_min + (v_max - v_min) * random()
                 CPA, TCPA = self.get_CPA_TCPA(v1, v2, alpha, beta, dist)
-                if CPA <= self.sdd and 0 <= TCPA < 0.25:
+                if CPA <= self.sdd and 0 <= TCPA < 0.333333:
                     return [True, v1, v2, CPA, TCPA]
             except ZeroDivisionError or ValueError:
                 continue
@@ -433,23 +433,27 @@ class Generator(object):
             with open(dir + '/target-data.json', 'r') as fp:
                 data = json.load(fp)
                 path = Geodesic.WGS84.Inverse(data[0]['lat'], data[0]['lon'], target['lat'], target['lon'])
-                if path['s12'] / 1852 > 5:
+                if path['s12'] / 1852 > 5000:
                     data.append(target)
                     os.chdir(self.cwd)
                     os.chdir(self.t2_folder)
                     # TODO: Fix foldername building
                     dname = os.path.split(dir)[1]
                     dname = self.build_foldername(dname, target)
-                    os.makedirs(dname)
-                    with open(dname + '/target-data.json', 'w+') as f:
-                        json.dump(data, f)
-                    for name in os.listdir(dir):
-                        if name != 'target-data.json':
-                            copyfile(dir + '/' + name, dname + '/' + name)
+                    try:
+                        os.makedirs(dname)
+                        with open(dname + '/target-data.json', 'w+') as f:
+                            json.dump(data, f)
+                        for name in os.listdir(dir):
+                            if name != 'target-data.json':
+                                copyfile(dir + '/' + name, dname + '/' + name)
+                    except FileExistsError:
+                        continue
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 9.5, 400, 10000, safe_div_dist=2, n_targets=1, foldername="./scenars_new_n1")
-    gen.create_tests()
-    # gen.stack_1t_scenarios("./scenars_new_n2")
+    gen = Generator(10, 7.5, 800, 1000, safe_div_dist=2, n_targets=1, foldername="./sc_8_10")
+    # gen.create_tests()
+    print("Start stacking...")
+    gen.stack_1t_scenarios("./sc_new_n2")
     print(len(gen.danger_points))

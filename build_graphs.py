@@ -10,6 +10,9 @@ vel_param_x = [4, 4.333, 4.666, 5, 6, 7, 8, 8.333]
 
 vel_func = lambda x: 3.06 * x - 5.502
 
+unsolved_x = [5, 6, 7, 8, 9, 10, 11, 11.5]
+unsolved_y = [81, 91, 96, 100, 100, 100, 100, 100]
+
 
 def get_n_targets(name):
     """
@@ -54,30 +57,41 @@ def build_percent_diag(filename, dist_max, dist_min, step):
         foldername = os.path.split(name)[1]
         n_targ = get_n_targets(foldername)
         foldername2 = foldername.split(sep="_")
+        dist = 0
         if n_targ == 1:
             dist = max(float(foldername2[1]), float(foldername2[2]))
         elif n_targ == 2:
             dist = min(float(foldername2[1]), float(foldername2[2]))
-        if codes[i] == 0 or codes[i] == 5 or codes[i] == 1:
-            code0[round((dist - dist_min) / step)] += 1
-            N_dists[round((dist - dist_min) / step)] += 1
-        # elif codes[i] == 1:
-        #     code1[int((dist - dist_min) / step)] += 1
-        #     N_dists[int((dist - dist_min) / step)] += 1
+        if codes[i] == 0:
+            ind = round((dist - dist_min) / step)
+            if N_dists[ind] > -1:
+                code0[ind] += 1
+                N_dists[ind] += 1
         elif codes[i] == 2:
-            code2[round((dist - dist_min) / step)] += 1
-            N_dists[round((dist - dist_min) / step)] += 1
+            ind = round((dist - dist_min) / step)
+            if N_dists[ind] > -1:
+                code2[ind] += 1
+                N_dists[ind] += 1
             vel2.append(float(foldername2[3]))
             dist2.append(dist)
             if float(foldername2[3]) < vel_func(dist):
                 f_names2.append(foldername)
         elif codes[i] == 4:
-            code4[round((dist - dist_min) / step)] += 1
-            N_dists[round((dist - dist_min) / step)] += 1
+            ind = round((dist - dist_min) / step)
+            if N_dists[ind] > -1:
+                code4[ind] += 1
+                N_dists[ind] += 1
             code4_fnmes.append(foldername)
-        # elif codes[i] == 5:
-        #     code5[int((dist - dist_min) / step)] += 1
-        #     N_dists[int((dist - dist_min) / step)] += 1
+        elif codes[i] == 1:
+            ind = round((dist - dist_min) / step)
+            if N_dists[ind] > -1:
+                code1[ind] += 1
+                N_dists[ind] += 1
+        elif codes[i] == 5:
+            ind = round((dist - dist_min) / step)
+            if N_dists[ind] > -1:
+                code5[ind] += 1
+                N_dists[ind] += 1
     fig, ax = plt.subplots()
     for i in range(N + 1):
         if N_dists[i] == 0:
@@ -94,7 +108,11 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     code2_p = [code2[i] / N_dists[i] * 100 for i in range(N + 1)]
     code4_p = [code4[i] / N_dists[i] * 100 for i in range(N + 1)]
     code5_p = [code5[i] / N_dists[i] * 100 for i in range(N + 1)]
+    print(N_dists)
     plt.plot(dists, code0_p, 'b', label="Код 0", linewidth=3)
+    print(code0_p)
+    # plt.fill_between(dists, code0_p, 100, color='orange', alpha=0.5)
+    # plt.fill_between(dists, code0_p, 0, color='green', alpha=0.5)
     plt.plot(dists, code1_p, 'r', label="Код 1")
     plt.plot(dists, code2_p, 'y--', label="Код 2")
     plt.plot(dists, code4_p, 'o--', label="Код 4")
@@ -103,6 +121,7 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     plt.axis([dist_min, dist_max, 0, 100])
     plt.xlabel('Дистанция до ближайшей цели, мили', fontsize=20)
     plt.ylabel('Маневр построен, %', fontsize=20)
+    # plt.plot(unsolved_x, unsolved_y, 'o--')
     plt.legend(loc='upper left', shadow=True)
     plt.title("Дата: " + str(datetime.date.today()) + ", цели: " + str(n_targ))
     plt.savefig("./images/" + str(datetime.date.today()) + "_" + str(n_targ) + "_stats.png")
@@ -119,7 +138,7 @@ def build_percent_diag(filename, dist_max, dist_min, step):
 
 
 if __name__ == "__main__":
-    build_percent_diag('report1_2021-07-07.xlsx', 12, 5, 0.5)
+    build_percent_diag('report1_2021-07-13.xlsx', 12, 4, 0.5)
     df = pd.read_excel('report_2_4.xlsx')
     names = df['datadir']
     x1, y1, c1 = [], [], []

@@ -7,6 +7,7 @@ from pathlib import Path
 from random import random
 from shutil import copyfile
 
+import pandas as pd
 from geographiclib.geodesic import Geodesic
 from natsort import natsorted
 
@@ -51,7 +52,7 @@ class Generator(object):
         self.n_rand = N_rand
         self.sdd = safe_div_dist
         self.danger_points = []
-        self.boost = int(1e1)
+        self.boost = int(1e0)
         self.n_targets = n_targets
         self.our_vel = 0
         self.frame = Frame(lat, lon)
@@ -61,6 +62,7 @@ class Generator(object):
         self.abs_foldername = None
         self.dirlist = None
         self.cwd = os.getcwd()
+        self.metainfo = pd.DataFrame(columns=['datadir'])
         os.makedirs(self.foldername, exist_ok=True)
         os.chdir(self.foldername)
 
@@ -68,9 +70,10 @@ class Generator(object):
         step = 0.5
         N = int((self.dist - self.min_dist) / step)
         dists = [self.dist - i * step for i in range(N)]
-        for i in range(N):
-            if dists[i] == 12:
-                dists[i] = 11.9
+        # Is used to provide algorithm to work more correctly
+        # for i in range(N):
+        #     if dists[i] == 12:
+        #         dists[i] = 11.9
         print("Start generating danger points...")
         exec_time = time.time()
         with Pool() as p:
@@ -201,6 +204,7 @@ class Generator(object):
                     v1 = v_min + (v_max - v_min) * random()
                 v2 = v_min + (v_max - v_min) * random()
                 CPA, TCPA = self.get_CPA_TCPA(v1, v2, alpha, beta, dist)
+                # TODO: fix it to non-eq operators
                 if CPA <= self.sdd and 0 <= TCPA < 0.333333:
                     return [True, v1, v2, CPA, TCPA]
             except ZeroDivisionError or ValueError:
@@ -390,6 +394,7 @@ class Generator(object):
         targets_list = [(self.get_target_data(dir), i) for i, dir in enumerate(self.dirlist)]
         with Pool() as p:
             p.map(self.create_2t_scenarios, targets_list)
+        self.metainfo.to_csv('metainfo.csv')
 
     def get_dir_list(self, typo=1):
         directories_list = []
@@ -433,7 +438,7 @@ class Generator(object):
             with open(dir + '/target-data.json', 'r') as fp:
                 data = json.load(fp)
                 path = Geodesic.WGS84.Inverse(data[0]['lat'], data[0]['lon'], target['lat'], target['lon'])
-                if path['s12'] / 1852 > 5000:
+                if path['s12'] / 1852 > 5:
                     data.append(target)
                     os.chdir(self.cwd)
                     os.chdir(self.t2_folder)
@@ -447,13 +452,15 @@ class Generator(object):
                         for name in os.listdir(dir):
                             if name != 'target-data.json':
                                 copyfile(dir + '/' + name, dname + '/' + name)
+                        self.metainfo.append({'datadir': os.path.join(self.cwd, self.t2_folder, dname)},
+                                             ignore_index=True)
                     except FileExistsError:
                         continue
 
 
 if __name__ == "__main__":
-    gen = Generator(10, 7.5, 800, 1000, safe_div_dist=2, n_targets=1, foldername="./sc_8_10")
-    # gen.create_tests()
+    gen = Generator(12, 3.5, 150, 500, safe_div_dist=1, n_targets=1, foldername="./scenars_div1_1tar")
+    gen.create_tests()
     print("Start stacking...")
-    gen.stack_1t_scenarios("./sc_new_n2")
+    # gen.stack_1t_scenarios("sc_stack2")
     print(len(gen.danger_points))

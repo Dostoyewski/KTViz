@@ -193,11 +193,11 @@ class ReportGenerator:
                 pass
             try:
                 dist1, course1, peleng1 = self.get_target_params(lat, lon, target_data[0])
-            except IndexError or TypeError:
+            except:
                 dist1, course1, peleng1 = 0, 0, 0
             try:
                 dist2, course2, peleng2 = self.get_target_params(lat, lon, target_data[1])
-            except IndexError or TypeError:
+            except:
                 dist2, course2, peleng2 = 0, 0, 0
 
             return {"datadir": datadir_i,
@@ -402,7 +402,10 @@ class Report:
 
     def save_excel(self, filename='report.xlsx'):
         df = pd.json_normalize(self.cases)
-        df.to_excel(filename)
+        try:
+            df.to_excel(filename)
+        except ValueError:
+            df.to_csv(filename)
 
     def get_danger_params(self, statuses):
         return [rec['datadir'] for rec in self.cases if rec['code'] in statuses]
@@ -436,7 +439,7 @@ if __name__ == "__main__":
     # print("Starting saving to HTML")
     # report_out.save_html("report.html")
     print("Starting saving to EXCEL")
-    report_out.save_excel("report2_" + str(date.today()) + ".xlsx")
+    report_out.save_excel("./reports/report1_" + str(date.today()) + ".xlsx")
     # print("Creating report for danger scenarios")
     # report_d_out = report.generate_for_list(report_out00.get_danger_params([2, 4]))
     # report_d_out.save_html("report_status_2_4_" + str(date.today()) + ".html")

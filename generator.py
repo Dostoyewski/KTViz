@@ -52,7 +52,7 @@ class Generator(object):
         self.n_rand = N_rand
         self.sdd = safe_div_dist
         self.danger_points = []
-        self.boost = int(1e0)
+        self.boost = int(1e2)
         self.n_targets = n_targets
         self.our_vel = 0
         self.frame = Frame(lat, lon)
@@ -302,13 +302,12 @@ class Generator(object):
         }
         return payload
 
-    @staticmethod
-    def construct_settings():
+    def construct_settings(self):
         payload = {
             "maneuver_calculation": {
                 "priority": 0,
                 "maneuver_way": 0,
-                "safe_diverg_dist": 2.0,
+                "safe_diverg_dist": self.sdd,
                 "minimal_speed": 3.0,
                 "maximal_speed": 30.0,
                 "max_course_delta": 180,
@@ -342,17 +341,16 @@ class Generator(object):
         }
         return payload
 
-    @staticmethod
-    def construct_target_settings():
+    def construct_target_settings(self):
         payload = {
             "maneuver_calculation": {
                 "priority": 0,
                 "maneuver_way": 2,
-                "safe_diverg_dist": 2.4,
+                "safe_diverg_dist": self.sdd,
                 "minimal_speed": 3.0,
                 "maximal_speed": 30.0,
                 "max_course_delta": 180,
-                "time_advance": 1,
+                "time_advance": 300,
                 "can_leave_route": True,
                 "max_route_deviation": 8,
                 "forward_speed1": 3.0,
@@ -433,12 +431,12 @@ class Generator(object):
         target, n = data[0], data[1]
         target['id'] = 'target1'
         # self.get_dir_list(typo=2)
-        for i in range(n, len(self.dirlist)):
+        for i in range(n, len(self.dirlist), self.boost):
             dir = self.dirlist[i]
             with open(dir + '/target-data.json', 'r') as fp:
                 data = json.load(fp)
                 path = Geodesic.WGS84.Inverse(data[0]['lat'], data[0]['lon'], target['lat'], target['lon'])
-                if path['s12'] / 1852 > 5:
+                if path['s12'] / 1852 > 8:
                     data.append(target)
                     os.chdir(self.cwd)
                     os.chdir(self.t2_folder)
@@ -459,8 +457,8 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 3.5, 150, 500, safe_div_dist=1, n_targets=1, foldername="./scenars_div1_1tar")
-    gen.create_tests()
+    gen = Generator(12, 10, 300, 1000, safe_div_dist=1, n_targets=1, foldername="./scenars_div1_1tar")
+    # gen.create_tests()
     print("Start stacking...")
-    # gen.stack_1t_scenarios("sc_stack2")
+    gen.stack_1t_scenarios("scenars_div1_2tar")
     print(len(gen.danger_points))

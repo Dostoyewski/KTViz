@@ -135,7 +135,10 @@ class ReportGenerator:
                 pass
             os.chdir(working_dir)
 
-            target_data = json.loads(target_data)
+            try:
+                target_data = json.loads(target_data)
+            except:
+                return
             datadir_i = os.path.split(datadir)[1]
             dist1, dist2 = 0, 0
             course1, course2 = 0, 0
@@ -439,7 +442,7 @@ if __name__ == "__main__":
     # print("Starting saving to HTML")
     # report_out.save_html("report.html")
     print("Starting saving to EXCEL")
-    report_out.save_excel("./reports/report1_" + str(date.today()) + ".xlsx")
+    report_out.save_excel("./reports/report2_" + str(date.today()) + ".xlsx")
     # print("Creating report for danger scenarios")
     # report_d_out = report.generate_for_list(report_out00.get_danger_params([2, 4]))
     # report_d_out.save_html("report_status_2_4_" + str(date.today()) + ".html")

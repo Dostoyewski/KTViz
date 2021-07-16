@@ -44,8 +44,7 @@ def calc_cpa_params(v, v0, R):
 
 class Generator(object):
     def __init__(self, max_dist, min_dist, N_dp, N_rand, safe_div_dist, n_targets=2, foldername="./scenars1",
-                 lat=56.6857,
-                 lon=19.632):
+                 lat=56.6857, lon=19.632, n_stack=3000):
         self.dist = max_dist
         self.min_dist = min_dist
         self.n_dp = N_dp
@@ -62,7 +61,10 @@ class Generator(object):
         self.abs_foldername = None
         self.dirlist = None
         self.cwd = os.getcwd()
+        self.n_stack = n_stack
         self.metainfo = pd.DataFrame(columns=['datadir'])
+        N = int((max_dist - min_dist) / 0.5)
+        self.dists = [0 for i in range(N + 1)]
         os.makedirs(self.foldername, exist_ok=True)
         os.chdir(self.foldername)
 
@@ -440,9 +442,15 @@ class Generator(object):
                     data.append(target)
                     os.chdir(self.cwd)
                     os.chdir(self.t2_folder)
-                    # TODO: Fix foldername building
                     dname = os.path.split(dir)[1]
                     dname = self.build_foldername(dname, target)
+                    dist2 = round(self.frame.dist_azi_to_point(data[1]['lat'], data[1]['lon'])[0], 1)
+                    dist1 = round(self.frame.dist_azi_to_point(data[0]['lat'], data[0]['lon'])[0], 1)
+                    ind = round((min(dist1, dist2) - self.min_dist) / 0.5)
+                    if self.dists[ind] < self.n_stack:
+                        self.dists[ind] += 1
+                    else:
+                        continue
                     try:
                         os.makedirs(dname)
                         with open(dname + '/target-data.json', 'w+') as f:
@@ -457,8 +465,8 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 10, 300, 1000, safe_div_dist=1, n_targets=1, foldername="./scenars_div1_1tar")
+    gen = Generator(12, 3.5, 300, 1000, safe_div_dist=1, n_targets=1, foldername="./scenars_div1_1tar", n_stack=1000)
     # gen.create_tests()
     print("Start stacking...")
-    gen.stack_1t_scenarios("scenars_div1_2tar")
+    gen.stack_1t_scenarios("scenars_div1_2tar_")
     print(len(gen.danger_points))

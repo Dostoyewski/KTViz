@@ -390,7 +390,7 @@ class Report:
                     <pre class="cmd">{command}</pre>
                     <pre>{stdout}</pre></div>
                     </div></div></div>""".format(casename=case["datadir"],
-                                                 return_code=6,
+                                                 return_code=10,
                                                  exec_time=case["exec_time"],
                                                  command=str(' '.join(case["command"])),
                                                  stdout="TIME_ERR",
@@ -442,7 +442,9 @@ if __name__ == "__main__":
     # print("Starting saving to HTML")
     # report_out.save_html("report.html")
     print("Starting saving to EXCEL")
-    report_out.save_excel("./reports/report2_" + str(date.today()) + ".xlsx")
+    name = "./reports/report1_" + str(date.today()) + ".xlsx"
+    report_out.save_excel(name)
+    # build_percent_diag(name, 12, 4, 0.5)
     # print("Creating report for danger scenarios")
     # report_d_out = report.generate_for_list(report_out00.get_danger_params([2, 4]))
     # report_d_out.save_html("report_status_2_4_" + str(date.today()) + ".html")

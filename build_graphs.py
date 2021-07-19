@@ -138,8 +138,9 @@ def build_percent_diag(filename, dist_max, dist_min, step):
 
 
 if __name__ == "__main__":
-    build_percent_diag('report1_2021-07-13.xlsx', 12, 4, 0.5)
-    df = pd.read_excel('report_2_4.xlsx')
+    build_percent_diag('./reports/report1_2021-07-16.xlsx', 12, 4, 0.5)
+    build_percent_diag('./reports/report2_2021-07-16.xlsx', 12, 4, 0.5)
+    df = pd.read_excel('./reports/report_2_4.xlsx')
     names = df['datadir']
     x1, y1, c1 = [], [], []
     x2, y2, c2 = [], [], []

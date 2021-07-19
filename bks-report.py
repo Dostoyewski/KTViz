@@ -159,6 +159,10 @@ class ReportGenerator:
             except IndexError or TypeError:
                 dist2, course2, peleng2 = 0, 0, 0
 
+            types, right = self.load_maneuver(datadir)
+            if len(types) == 1:
+                types.append(None)
+
             return {"datadir": datadir_i,
                     "proc": completedProc,
                     "image_data": image_data,
@@ -171,7 +175,12 @@ class ReportGenerator:
                     "course1": course1,
                     "course2": course2,
                     "peleng1": peleng1,
-                    "peleng2": peleng2}
+                    "peleng2": peleng2,
+                    "right": right,
+                    "type1": types[0],
+                    "type2": types[1]
+                    }
+
         except subprocess.TimeoutExpired:
             print("TEST TIMEOUT ERR")
             exec_time = time.time() - exec_time
@@ -205,7 +214,6 @@ class ReportGenerator:
 
             return {"datadir": datadir_i,
                     "proc": None,
-                    # "image_data": image_data,
                     "image_data": "",
                     "exec_time": exec_time,
                     "nav_report": None,
@@ -216,8 +224,39 @@ class ReportGenerator:
                     "course1": course1,
                     "course2": course2,
                     "peleng1": peleng1,
-                    "peleng2": peleng2
+                    "peleng2": peleng2,
+                    "right": None,
+                    "type1": None,
+                    "type2": None
                     }
+
+    def load_maneuver(self, datadir):
+        """
+        Returns turn direction and scenarios types.
+        @param datadir: data directory.
+        @return: array with target types and turn direction.
+        """
+        try:
+            c_dif = 0
+            with open(datadir + "/maneuver.json", "r") as f:
+                maneuver = json.loads(f.read())
+                parts = maneuver[0]['path']['items']
+                start_angle = parts[0]['begin_angle']
+                for part in parts:
+                    if part['begin_angle'] != start_angle:
+                        c_dif = part['begin_angle'] - start_angle
+                        break
+            #         if c_dif < 0 -> left, else right
+            #         right = True
+            types = []
+            with open(datadir + "/nav-report.json", "r") as f:
+                report = json.loads(f.read())
+                targets = report['target_statuses']
+                for target in targets:
+                    types.append(target['scenario_type'])
+            return types, c_dif > 0
+        except FileNotFoundError:
+            return [None], None
 
     def get_target_params(self, lat, lon, target_data):
         lat_t, lon_t = target_data["lat"], target_data["lon"]

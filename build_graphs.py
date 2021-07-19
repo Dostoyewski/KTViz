@@ -40,7 +40,6 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     df = pd.read_excel(filename)
     names = df['datadir']
     codes = df['code']
-    all_tests = len(names)
     N = int((dist_max - dist_min) / step)
     dists = [dist_min + i * step for i in range(N + 1)]
     N_dists = [0 for i in range(N + 1)]
@@ -137,9 +136,57 @@ def build_percent_diag(filename, dist_max, dist_min, step):
     plt.show()
 
 
+def build_turn_diagram(filename, dist_max, dist_min, step):
+    df = pd.read_excel(filename)
+    names = df['datadir']
+    turns = df['right']
+    N = int((dist_max - dist_min) / step)
+    dists = [dist_min + i * step for i in range(N + 1)]
+    N_dists = [0 for i in range(N + 1)]
+    left = [0 for i in range(N + 1)]
+    right = [0 for i in range(N + 1)]
+    for i, name in enumerate(names):
+        foldername = os.path.split(name)[1]
+        n_targ = get_n_targets(foldername)
+        foldername2 = foldername.split(sep="_")
+        dist = 0
+        if n_targ == 1:
+            dist = max(float(foldername2[1]), float(foldername2[2]))
+        elif n_targ == 2:
+            dist = min(float(foldername2[1]), float(foldername2[2]))
+        ind = round((dist - dist_min) / step)
+        if turns[i] == True:
+            right[ind] += 1
+            N_dists[ind] += 1
+        elif turns[i] == False:
+            left[ind] += 1
+            N_dists[ind] += 1
+    fig, ax = plt.subplots()
+    for i in range(N + 1):
+        if N_dists[i] == 0:
+            N_dists[i] = 1
+    plt.figure(figsize=(10, 6), dpi=200)
+    right_p = [right[i] / N_dists[i] * 100 for i in range(N + 1)]
+    left_p = [left[i] / N_dists[i] * 100 for i in range(N + 1)]
+
+    plt.plot(dists, right_p, 'b', label="Поворот вправо", linewidth=3)
+    plt.plot(dists, left_p, 'r', label="Поворот влево", linewidth=3)
+
+    plt.grid()
+    plt.axis([dist_min, dist_max, 0, 100])
+    plt.xlabel('Дистанция до ближайшей цели, мили', fontsize=20)
+    plt.ylabel('Поворот в сторону, %', fontsize=20)
+
+    plt.legend(loc='upper left', shadow=True)
+    plt.title("Дата: " + str(datetime.date.today()) + ", цели: " + str(n_targ))
+    plt.savefig("./images/" + str(datetime.date.today()) + "_" + str(n_targ) + "_turns.png")
+    plt.show()
+
+
 if __name__ == "__main__":
-    build_percent_diag('./reports/report1_2021-07-16.xlsx', 12, 4, 0.5)
-    build_percent_diag('./reports/report2_2021-07-16.xlsx', 12, 4, 0.5)
+    build_percent_diag('./reports/report1_2021-07-19.xlsx', 12, 4, 0.5)
+    build_turn_diagram('./reports/report1_2021-07-19.xlsx', 12, 4, 0.5)
+    # build_percent_diag('./reports/report2_2021-07-16.xlsx', 12, 4, 0.5)
     df = pd.read_excel('./reports/report_2_4.xlsx')
     names = df['datadir']
     x1, y1, c1 = [], [], []

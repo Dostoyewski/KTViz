@@ -145,6 +145,8 @@ def build_turn_diagram(filename, dist_max, dist_min, step):
     N_dists = [0 for i in range(N + 1)]
     left = [0 for i in range(N + 1)]
     right = [0 for i in range(N + 1)]
+    left_names = []
+
     for i, name in enumerate(names):
         foldername = os.path.split(name)[1]
         n_targ = get_n_targets(foldername)
@@ -161,6 +163,10 @@ def build_turn_diagram(filename, dist_max, dist_min, step):
         elif turns[i] == False:
             left[ind] += 1
             N_dists[ind] += 1
+            left_names.append(foldername)
+    df = pd.DataFrame()
+    df['dirnames'] = left_names
+    df.to_excel('./reports/left_maneuvers.xlsx')
     fig, ax = plt.subplots()
     for i in range(N + 1):
         if N_dists[i] == 0:

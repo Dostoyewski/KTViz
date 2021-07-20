@@ -166,7 +166,7 @@ def build_turn_diagram(filename, dist_max, dist_min, step):
             left_names.append(foldername)
     df = pd.DataFrame()
     df['dirnames'] = left_names
-    df.to_excel('./reports/left_maneuvers.xlsx')
+    df.to_excel('./reports/' + str(n_targ) + '_left_maneuvers.xlsx')
     fig, ax = plt.subplots()
     for i in range(N + 1):
         if N_dists[i] == 0:
@@ -190,9 +190,10 @@ def build_turn_diagram(filename, dist_max, dist_min, step):
 
 
 if __name__ == "__main__":
-    build_percent_diag('./reports/report1_2021-07-19.xlsx', 12, 4, 0.5)
-    build_turn_diagram('./reports/report1_2021-07-19.xlsx', 12, 4, 0.5)
-    # build_percent_diag('./reports/report2_2021-07-16.xlsx', 12, 4, 0.5)
+    build_percent_diag('./reports/report1_2021-07-20.xlsx', 12, 4, 0.5)
+    build_turn_diagram('./reports/report1_2021-07-20.xlsx', 12, 4, 0.5)
+    build_percent_diag('./reports/report2_2021-07-20.xlsx', 12, 4, 0.5)
+    build_turn_diagram('./reports/report2_2021-07-20.xlsx', 12, 4, 0.5)
     df = pd.read_excel('./reports/report_2_4.xlsx')
     names = df['datadir']
     x1, y1, c1 = [], [], []

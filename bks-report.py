@@ -17,6 +17,7 @@ from geographiclib.geodesic import Geodesic
 from matplotlib import pyplot as plt
 from natsort import natsorted
 
+from build_graphs import build_percent_diag
 from plot import plot_from_files, Case
 
 
@@ -483,7 +484,7 @@ if __name__ == "__main__":
     print("Starting saving to EXCEL")
     name = "./reports/report1_" + str(date.today()) + ".xlsx"
     report_out.save_excel(name)
-    # build_percent_diag(name, 12, 4, 0.5)
+    build_percent_diag(name, 12, 4, 0.5)
     # print("Creating report for danger scenarios")
     # report_d_out = report.generate_for_list(report_out00.get_danger_params([2, 4]))
     # report_d_out.save_html("report_status_2_4_" + str(date.today()) + ".html")

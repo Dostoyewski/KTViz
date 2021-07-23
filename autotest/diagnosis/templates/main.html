@@ -16,13 +16,11 @@
 
 <body>
 <h1>Отчеты по тестированию алгоритма:</h1><br>
-<a href="{% url 'upload' %}" class="btn-floating btn-large waves-effect waves-light red"><i
-        class="material-icons">add</i></a>
+ <a href="{% url 'upload' %}" class="btn-floating btn-large waves-effect waves-light red"><i class="material-icons">add</i></a>
 <ul class="collapsible expandable">
     {% for rec in data %}
         <li>
-            <div class="collapsible-header"><i class="material-icons">place</i>{{ rec.title }}, число
-                целей: {{ rec.n_targ }}, дата тестирования: {{ rec.date }}</div>
+            <div class="collapsible-header"><i class="material-icons">place</i>{{ rec.title }}, число целей: {{ rec.n_targ }}, дата тестирования: {{ rec.date }}</div>
             <div class="collapsible-body">
                 <span>Результаты тестирования</span>
                 <script type="text/javascript">
@@ -32,10 +30,7 @@
                     function drawChart() {
                         var arr = []
                         arr.push(['Дистанция', 'Код 0', 'Код 1', 'Код 2', 'Код 4', 'Код 5'])
-                        for (var i = 0; i < {{ rec.dists }}.
-                        length;
-                        ++i
-                    )
+                        for(var i = 0; i < {{ rec.dists }}.length; ++i)
                         {
                             arr.push([{{ rec.dists }}[i], {{ rec.code0 }}[i], {{ rec.code1 }}[i], {{ rec.code2 }}[i], {{ rec.code4 }}[i], {{ rec.code5 }}[i]]);
                         }

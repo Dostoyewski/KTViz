@@ -4,6 +4,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+
     dependencies = [
         ('diagnosis', '0003_alter_testingrecording_file'),
     ]

@@ -3,7 +3,7 @@ import os
 
 from django.db import models
 
-from build_graphs import build_percent_diag
+from .build_graphs import build_percent_diag
 
 
 class TestingRecording(models.Model):

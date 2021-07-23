@@ -24,7 +24,9 @@ def main_view(request):
                       "code2": f(rec.code2.split(sep='::')),
                       "code4": f(rec.code4.split(sep='::')),
                       "code5": f(rec.code5.split(sep='::')),
-                      "dists": f(rec.dists.split(sep='::'))})
+                      "dists": f(rec.dists.split(sep='::')),
+                      "n_targ": rec.n_targets,
+                      "title": rec.title})
     return render(request, 'main.html', context={'data': s_rec})
 
 
@@ -35,6 +37,7 @@ def upload_file(request):
             obj = TestingRecording()
             obj.date = datetime.datetime.now()
             obj.file = form.cleaned_data['file']
+            obj.title = form.cleaned_data['title']
             obj.save()
             return HttpResponseRedirect(reverse('main'))
     else:

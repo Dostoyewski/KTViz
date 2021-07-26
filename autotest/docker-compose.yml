@@ -13,10 +13,10 @@ services:
 #    command: [nginx-debug, '-g', 'daemon off;']
 
   web:
-#    python manage.py collectstatic --noinput &&
 #      python manage.py makemigrations &&
     build: .
     command: sh -c "python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
       gunicorn autotest.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - ./:/code/:rw

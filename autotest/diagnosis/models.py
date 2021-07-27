@@ -50,11 +50,14 @@ class ScenariosSet(models.Model):
     metafile = models.FileField(upload_to='', blank=True)
 
     def save(self, *args, **kwargs):
-        filename = os.path.splitext(os.path.split(self.metafile.path)[1])[0]
-        df = pd.read_csv(filename)
+        super().save(*args, **kwargs)
+        df = pd.read_csv(self.metafile.path)
+        self.n_cases = len(df['datadirs'])
         for name in df['datadirs']:
-            Scenario.objects.create(name=os.path.split(name)[1],
-                                    scenariosSet=self)
+            obj = Scenario()
+            obj.name = os.path.split(name)[1]
+            obj.scenariosSet = self
+            obj.save()
         super().save(*args, **kwargs)
 
 

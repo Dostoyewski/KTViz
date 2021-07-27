@@ -111,6 +111,8 @@ class Scenario(models.Model):
     vel_our = models.FloatField(default=0)
     course1 = models.FloatField(default=0)
     course2 = models.FloatField(default=0)
+    peleng1 = models.FloatField(default=0)
+    peleng2 = models.FloatField(default=0)
     scenariosSet = models.ForeignKey(ScenariosSet, on_delete=models.CASCADE, default=1)
 
     def save(self, *args, **kwargs):

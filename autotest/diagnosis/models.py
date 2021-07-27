@@ -5,6 +5,7 @@ import pandas as pd
 from django.db import models
 
 from .build_graphs import build_percent_diag
+from .decorators import postpone
 
 
 class TestingRecording(models.Model):
@@ -19,20 +20,59 @@ class TestingRecording(models.Model):
     code5 = models.TextField(blank=True, default='', max_length=2000)
     n_targets = models.IntegerField(default=1)
     dists = models.TextField(blank=True, default='', max_length=2000)
+    processed = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        filename = os.path.splitext(os.path.split(self.file.path)[1])[0]
-        self.date = datetime.datetime.strptime(filename.split(sep='_')[1], "%Y-%m-%d").date()
-        codes = build_percent_diag(self.file.path, 12, 4, 0.5, False)
-        self.code0 = process_array(codes[0])
-        self.code1 = process_array(codes[1])
-        self.code2 = process_array(codes[2])
-        self.code4 = process_array(codes[3])
-        self.code5 = process_array(codes[4])
-        self.dists = process_array(codes[5])
-        self.n_targets = codes[6]
-        super().save(*args, **kwargs)
+        if not self.processed:
+            process_graphs(self)
+            create_sc_for_rec(self)
+
+
+@postpone
+def process_graphs(recording):
+    codes = build_percent_diag(recording.file.path, 12, 4, 0.5, False)
+    recording.code0 = process_array(codes[0])
+    recording.code1 = process_array(codes[1])
+    recording.code2 = process_array(codes[2])
+    recording.code4 = process_array(codes[3])
+    recording.code5 = process_array(codes[4])
+    recording.dists = process_array(codes[5])
+    recording.n_targets = codes[6]
+    filename = os.path.splitext(os.path.split(recording.file.path)[1])[0]
+    recording.date = datetime.datetime.strptime(filename.split(sep='_')[1], "%Y-%m-%d").date()
+    recording.processed = True
+    recording.save()
+
+
+# @postpone
+def create_sc_for_rec(recording):
+    df = None
+    try:
+        df = pd.read_excel(recording.file.path, engine='openpyxl')
+    except:
+        df = pd.read_csv(recording.file.path)
+    for index, row in df.iterrows():
+        try:
+            scenario = Scenario.objects.get(name=os.path.split(row['datadir'])[1])
+            obj = ScenarioResult()
+            obj.scenario = scenario
+            obj.pack = recording
+            obj.code = row['code']
+            obj.exec_time = row['exec_time']
+            obj.nav_report = row['nav_report']
+            obj.command = row['command']
+            obj.dist1 = row['dist1']
+            obj.dist2 = row['dist2']
+            obj.course1 = row['course1']
+            obj.course2 = row['course2']
+            obj.peleng1 = row['peleng1']
+            obj.peleng2 = row['peleng2']
+            obj.type1 = row['type1']
+            obj.type2 = row['type2']
+            obj.save()
+        except KeyError:
+            continue
 
 
 def process_array(arr):
@@ -84,6 +124,37 @@ class Scenario(models.Model):
             self.vel_our = names[5]
             self.course1 = names[6]
             self.course2 = names[7]
+            if self.vel2 == self.course2 == 0:
+                self.num_targets = 1
+            else:
+                self.num_targets = 2
         except IndexError:
             pass
         super().save(*args, **kwargs)
+
+
+STATUS = (
+    (0, 'OK'),
+    (1, 'Ok with violations'),
+    (2, 'Not solved'),
+    (3, 'Refuse: too many targets'),
+    (4, 'Undefined scenario for dangerous target'),
+    (5, 'No dangerous vehicles')
+)
+
+
+class ScenarioResult(models.Model):
+    scenario = models.ForeignKey(Scenario, on_delete=models.CASCADE)
+    pack = models.ForeignKey(TestingRecording, on_delete=models.CASCADE)
+    code = models.IntegerField(choices=STATUS, default=0)
+    exec_time = models.FloatField(default=0)
+    nav_report = models.TextField(default='', max_length=3000)
+    command = models.TextField(default='', max_length=3000)
+    dist1 = models.FloatField(default=0)
+    dist2 = models.FloatField(default=0)
+    course1 = models.FloatField(default=0)
+    course2 = models.FloatField(default=0)
+    peleng1 = models.FloatField(default=0)
+    peleng2 = models.FloatField(default=0)
+    type1 = models.TextField(default='', max_length=300)
+    type2 = models.TextField(default='', max_length=300)

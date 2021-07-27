@@ -68,6 +68,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'autotest.urls'
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 15728640
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 409600
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

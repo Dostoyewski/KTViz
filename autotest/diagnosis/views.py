@@ -14,7 +14,7 @@ def main_view(request):
     @param request:
     @return:
     """
-    recordings = TestingRecording.objects.all()
+    recordings = TestingRecording.objects.filter(processed=True)
     s_rec = []
     f = lambda arr: [float(a) for a in arr]
     for rec in recordings:

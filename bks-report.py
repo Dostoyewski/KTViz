@@ -464,6 +464,7 @@ if __name__ == "__main__":
     parser.add_argument("--rvo", action="store_true", help="Run USV with --rvo")
     parser.add_argument("--nopic", action="store_true", help="")
     parser.add_argument("--working_dir", type=str, help="Path to USV executable")
+    parser.add_argument("--report_file", type=str, help="Report file")
     args = parser.parse_args()
 
     use_rvo = None
@@ -479,14 +480,22 @@ if __name__ == "__main__":
     report = ReportGenerator(usv_executable)
     print("Starting converstion...")
     report_out = report.generate(cur_dir, glob=args.glob, rvo=use_rvo, nopic=args.nopic)
+    print(f'Finished in {time.time() - t0} sec')
     # print("Starting saving to HTML")
     # report_out.save_html("report.html")
-    print("Starting saving to EXCEL")
-    name = "./reports/report1_" + str(date.today()) + ".xlsx"
+
+    t_save= time.time()
+    if args.report_file:
+        name = args.report_file
+    else:
+        name = "./reports/report1_" + str(date.today()) + ".xlsx"
+
+    print(f"Starting saving report to '{name}'")
     report_out.save_excel(name)
-    build_percent_diag(name, 12, 4, 0.5)
+    # build_percent_diag(name, 12, 4, 0.5)
     # print("Creating report for danger scenarios")
     # report_d_out = report.generate_for_list(report_out00.get_danger_params([2, 4]))
     # report_d_out.save_html("report_status_2_4_" + str(date.today()) + ".html")
     # report_d_out.save_excel("report_2_4_" + str(date.today()) + ".xlsx")
+    print(f'Save time: {time.time() - t_save}')
     print(f'Total time: {time.time() - t0}')

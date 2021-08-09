@@ -4,7 +4,7 @@ import time
 from math import pi, sin, cos, sqrt, degrees
 from multiprocessing import Pool
 from pathlib import Path
-from random import random
+from random import random, vonmisesvariate
 from shutil import copyfile
 
 import pandas as pd
@@ -43,7 +43,7 @@ def calc_cpa_params(v, v0, R):
 
 
 class Generator(object):
-    def __init__(self, max_dist, min_dist, N_dp, N_rand, safe_div_dist, n_targets=2, foldername="./scenars1",
+    def __init__(self, max_dist, min_dist, N_dp, N_rand, n_tests, safe_div_dist, n_targets=2, foldername="./scenars1",
                  lat=56.6857, lon=19.632, n_stack=3000):
         self.dist = max_dist
         self.min_dist = min_dist
@@ -62,6 +62,7 @@ class Generator(object):
         self.dirlist = None
         self.cwd = os.getcwd()
         self.n_stack = n_stack
+        self.n_tests = n_tests
         self.metainfo = pd.DataFrame(columns=['datadir'])
         N = int((max_dist - min_dist) / 0.5)
         self.dists = [0 for i in range(N + 1)]
@@ -86,7 +87,7 @@ class Generator(object):
         print(f'Total points: {len(self.danger_points)}')
         exec_time1 = time.time()
         print("Start generating tests...")
-        ns = [i for i in range(0, len(self.danger_points), self.boost)]
+        ns = [i for i in range(0, len(self.danger_points))]
         with Pool() as p:
             p.map(self.create_targets, ns)
         print(f'Tests generated.\nTime: {time.time() - exec_time1},\n Total time: {time.time() - exec_time}')
@@ -159,26 +160,25 @@ class Generator(object):
         @return:
         """
         danger_points = []
-        for i in range(self.n_dp):
-            for j in range(self.n_dp):
-                tar_c = -pi + 2 * pi * i / self.n_dp
-                t_c_diff = -pi + 2 * pi * j / self.n_dp
-                [is_dang, v0, vt, CPA, TCPA] = self.dangerous(dist, tar_c, t_c_diff)
-                # Normalized true course difference
-                n_tcd = 0
-                if t_c_diff >= 0:
-                    n_tcd = degrees(t_c_diff)
-                else:
-                    n_tcd = degrees(t_c_diff + 2 * pi)
-                if is_dang:
-                    record = {"course": degrees(tar_c),
-                              "dist": dist,
-                              "c_diff": n_tcd,
-                              "v_our": v0,
-                              "v_target": vt,
-                              "CPA": CPA,
-                              "TCPA": TCPA}
-                    danger_points.append(record)
+        while len(danger_points) < self.n_tests:
+            tar_c = -pi + vonmisesvariate(0, 0)
+            t_c_diff = -pi + vonmisesvariate(0, 0)
+            [is_dang, v0, vt, CPA, TCPA] = self.dangerous(dist, tar_c, t_c_diff)
+            # Normalized true course difference
+            n_tcd = 0
+            if t_c_diff >= 0:
+                n_tcd = degrees(t_c_diff)
+            else:
+                n_tcd = degrees(t_c_diff + 2 * pi)
+            if is_dang:
+                record = {"course": degrees(tar_c),
+                          "dist": dist,
+                          "c_diff": n_tcd,
+                          "v_our": v0,
+                          "v_target": vt,
+                          "CPA": CPA,
+                          "TCPA": TCPA}
+                danger_points.append(record)
         return danger_points
 
     def dangerous(self, dist, course, diff, v1=None):
@@ -465,8 +465,8 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 3.5, 300, 1000, safe_div_dist=1, n_targets=1, foldername="./scenars_div1_1tar", n_stack=1000)
-    # gen.create_tests()
+    gen = Generator(12, 3.5, 300, 1000, safe_div_dist=1, n_tests=10, n_targets=1, foldername="./scenars_div1_1tar", n_stack=1000)
+    gen.create_tests()
     print("Start stacking...")
     gen.stack_1t_scenarios("scenars_div1_2tar_")
     print(len(gen.danger_points))

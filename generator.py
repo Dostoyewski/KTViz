@@ -68,6 +68,9 @@ class Generator(object):
         self.dists = [0 for i in range(N + 1)]
         os.makedirs(self.foldername, exist_ok=True)
         os.chdir(self.foldername)
+        self.df = pd.DataFrame(columns=['datadir', 'dist1', 'course1', 'peleng1', 'speed1',
+                                        'dist2', 'course2', 'peleng2', 'speed2',
+                                        'safe_diverg', 'speed'])
 
     def create_tests(self):
         step = 0.5
@@ -87,9 +90,11 @@ class Generator(object):
         print(f'Total points: {len(self.danger_points)}')
         exec_time1 = time.time()
         print("Start generating tests...")
-        ns = [i for i in range(0, len(self.danger_points))]
-        with Pool() as p:
-            p.map(self.create_targets, ns)
+        #ns = [i for i in range(0, len(self.danger_points))]
+        # with Pool() as p:
+             #p.map(self.create_targets, ns)
+        for i in range(len(self.danger_points)):
+            self.create_targets(i)
         print(f'Tests generated.\nTime: {time.time() - exec_time1},\n Total time: {time.time() - exec_time}')
 
     def create_targets(self, i):
@@ -97,7 +102,7 @@ class Generator(object):
         targets = []
         targets.append(self.danger_points[i])
         if self.n_targets == 2:
-            for j in range(i, len(self.danger_points), self.boost):
+            for j in range(i, len(self.danger_points)):
                 [dang, v1, v2, CPA, TCPA] = self.dangerous(self.danger_points[j]['dist'],
                                                            self.danger_points[j]['course'],
                                                            self.danger_points[j]['c_diff'],
@@ -120,7 +125,8 @@ class Generator(object):
                               str(round(targets[1]['c_diff'], 1)) + "_" + str(round(targets[0]['CPA'], 1)) +
                               "_" + str(round(targets[1]['CPA'], 1)) + "_" + str(round(targets[0]['TCPA'], 1)) +
                               "_" + str(round(targets[1]['TCPA'], 1)))
-                    self.construct_files(f_name, targets)
+                    #self.construct_files(f_name, targets)
+                    self.construct_table(f_name, targets)
                     del targets[1]
         elif self.n_targets == 1:
             f_name = ("./sc_" + str(targets[0]['dist']) + "_0_" +
@@ -128,7 +134,8 @@ class Generator(object):
                       str(round(self.our_vel, 1)) + "_" + str(round(targets[0]['c_diff'], 1)) + "_0_" +
                       str(round(targets[0]['CPA'], 1)) +
                       "_0_" + str(round(targets[0]['TCPA'], 1)) + "_0")
-            self.construct_files(f_name, targets)
+            #self.construct_files(f_name, targets)
+            self.construct_table(f_name, targets)
 
     def construct_files(self, f_name, targets):
         """
@@ -152,6 +159,57 @@ class Generator(object):
             json.dump(self.construct_target_data(targets), fp)
         with open(f_name + '/target-settings.json', "w") as fp:
             json.dump(self.construct_target_settings(), fp)
+
+    def construct_table(self, f_name, targets):
+        """
+        Constructs all xlsx or csv files
+        @param f_name:
+        @param targets:
+        @return:
+        """
+        try:
+            dist1 = targets[0]['dist']
+            course1 = targets[0]['c_diff']
+            peleng1 = targets[0]['course']
+            speed1 = targets[0]['v_target']
+        except IndexError or TypeError:
+            dist1 = 0
+            course1 = 0
+            peleng1 = 0
+            speed1 = 0
+
+        try:
+            dist2 = targets[1]['dist']
+            course2 = targets[1]['c_diff']
+            peleng2 = targets[1]['course']
+            speed2 = targets[1]['v_target']
+        except IndexError or TypeError:
+            dist2 = 0
+            course2 = 0
+            peleng2 = 0
+            speed2 = 0
+
+        if not ((dist1 == dist2) & (course1 == course2) & (peleng1 == peleng2)):
+            times = [f_name,
+                     dist1,
+                     course1,
+                     peleng1,
+                     speed1,
+                     dist2,
+                     course2,
+                     peleng2,
+                     speed2,
+                     self.sdd,
+                     targets[0]['v_our']]
+
+            self.df.loc[len(self.df)] = times
+
+    def create_result_table(self):
+        print(f'{len(self.df)} tests were generated for {self.n_targets} target(s)')
+        try:
+            self.df.to_excel('unresolved_tests.xlsx')
+        except ValueError:
+            self.df.to_csv('unresolved_tests.csv')
 
     def create_danger_points(self, dist):
         """
@@ -465,8 +523,10 @@ class Generator(object):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 3.5, 300, 1000, safe_div_dist=1, n_tests=10, n_targets=1, foldername="./scenars_div1_1tar", n_stack=1000)
+    gen = Generator(12, 3.5, 300, 1000, safe_div_dist=1, n_tests=60, n_targets=2, foldername="./scenars_div1_1tar",
+                    n_stack=1000)
     gen.create_tests()
     print("Start stacking...")
     gen.stack_1t_scenarios("scenars_div1_2tar_")
     print(len(gen.danger_points))
+    gen.create_result_table()

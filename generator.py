@@ -45,11 +45,9 @@ def calc_cpa_params(v, v0, R):
 
 
 class Generator(object):
-    def __init__(self, max_dist, min_dist, N_dp, N_rand, n_tests, safe_div_dist, n_targets=2, foldername="./scenars1",
-                 lat=56.6857, lon=19.632, n_stack=3000):
+    def __init__(self, max_dist, min_dist, N_rand, n_tests, safe_div_dist, n_targets=2, lat=56.6857, lon=19.632):
         self.dist = max_dist
         self.min_dist = min_dist
-        self.n_dp = N_dp
         self.n_rand = N_rand
         self.sdd = safe_div_dist
         self.danger_points = []
@@ -59,24 +57,14 @@ class Generator(object):
         self.frame = Frame(lat, lon)
         self.t2_folder = None
         self.abs_t2_folder = None
-        self.foldername = foldername
-        self.abs_foldername = None
-        self.dirlist = None
-        self.cwd = os.getcwd()
-        self.n_stack = n_stack
         self.n_tests = n_tests
-        self.metainfo = pd.DataFrame(columns=['datadir'])
-        N = int((max_dist - min_dist) / 0.5)
-        self.dists = [0 for i in range(N + 1)]
-        # os.makedirs(self.foldername, exist_ok=True)
-        # os.chdir(self.foldername)
         self.df = pd.DataFrame(columns=['datadir', 'dist1', 'course1', 'peleng1', 'speed1',
                                         'dist2', 'course2', 'peleng2', 'speed2',
                                         'safe_diverg', 'speed'])
 
     def create_tests(self):
         step = 0.5
-        dists = np.arange(self.min_dist, self.dist+step * .5, step)
+        dists = np.arange(self.min_dist, self.dist + step * .5, step)
         # Is used to provide algorithm to work more correctly
         # for i in range(N):
         #     if dists[i] == 12:
@@ -135,31 +123,8 @@ class Generator(object):
                       str(round(self.our_vel, 1)) + "_" + str(round(targets[0]['c_diff'], 1)) + "_0_" +
                       str(round(targets[0]['CPA'], 1)) +
                       "_0_" + str(round(targets[0]['TCPA'], 1)) + "_0")
-            #self.construct_files(f_name, targets)
+            # self.construct_files(f_name, targets)
             self.construct_table(f_name, targets)
-
-    def construct_files(self, f_name, targets):
-        """
-        Constructs all json files
-        @param f_name:
-        @param targets:
-        @return:
-        """
-        os.makedirs(f_name, exist_ok=True)
-        with open(f_name + '/constraints.json', "w") as fp:
-            json.dump(self.construct_constrains(), fp)
-        with open(f_name + '/hmi-data.json', "w") as fp:
-            json.dump(self.construct_hmi_data(), fp)
-        with open(f_name + '/nav-data.json', "w") as fp:
-            json.dump(self.construct_nav_data(), fp)
-        with open(f_name + '/route-data.json', "w") as fp:
-            json.dump(self.construct_route_data(), fp)
-        with open(f_name + '/settings.json', "w") as fp:
-            json.dump(self.construct_settings(), fp)
-        with open(f_name + '/target-data.json', "w") as fp:
-            json.dump(self.construct_target_data(targets), fp)
-        with open(f_name + '/target-settings.json', "w") as fp:
-            json.dump(self.construct_target_settings(), fp)
 
     def construct_table(self, f_name, targets):
         """
@@ -283,6 +248,63 @@ class Generator(object):
             v_target = Vector2(v2 * cos(diff), v2 * sin(diff))
             R = Vector2(dist * cos(course), dist * sin(course))
             return calc_cpa_params(v_target, v_our, R)
+
+    # Files
+
+
+class FilderGenerator:
+
+    def __init__(self, max_dist, min_dist, N_dp, N_rand, n_tests, safe_div_dist, n_targets=2, foldername="./scenars1",
+                 lat=56.6857, lon=19.632, n_stack=3000):
+        self.dist = max_dist
+        self.min_dist = min_dist
+        self.n_dp = N_dp
+        self.n_rand = N_rand
+        self.sdd = safe_div_dist
+        self.danger_points = []
+        self.boost = int(1e2)
+        self.n_targets = n_targets
+        self.our_vel = 0
+        self.frame = Frame(lat, lon)
+        self.t2_folder = None
+        self.abs_t2_folder = None
+        self.foldername = foldername
+        self.abs_foldername = None
+        self.dirlist = None
+        self.cwd = os.getcwd()
+        self.n_stack = n_stack
+        self.n_tests = n_tests
+        self.metainfo = pd.DataFrame(columns=['datadir'])
+        N = int((max_dist - min_dist) / 0.5)
+        self.dists = [0 for i in range(N + 1)]
+        # os.makedirs(self.foldername, exist_ok=True)
+        # os.chdir(self.foldername)
+        self.df = pd.DataFrame(columns=['datadir', 'dist1', 'course1', 'peleng1', 'speed1',
+                                        'dist2', 'course2', 'peleng2', 'speed2',
+                                        'safe_diverg', 'speed'])
+
+    def construct_files(self, f_name, targets):
+        """
+        Constructs all json files
+        @param f_name:
+        @param targets:
+        @return:
+        """
+        os.makedirs(f_name, exist_ok=True)
+        with open(f_name + '/constraints.json', "w") as fp:
+            json.dump(self.construct_constrains(), fp)
+        with open(f_name + '/hmi-data.json', "w") as fp:
+            json.dump(self.construct_hmi_data(), fp)
+        with open(f_name + '/nav-data.json', "w") as fp:
+            json.dump(self.construct_nav_data(), fp)
+        with open(f_name + '/route-data.json', "w") as fp:
+            json.dump(self.construct_route_data(), fp)
+        with open(f_name + '/settings.json', "w") as fp:
+            json.dump(self.construct_settings(), fp)
+        with open(f_name + '/target-data.json', "w") as fp:
+            json.dump(self.construct_target_data(targets), fp)
+        with open(f_name + '/target-settings.json', "w") as fp:
+            json.dump(self.construct_target_settings(), fp)
 
     def construct_target_data(self, targets):
         t_data = []
@@ -440,21 +462,6 @@ class Generator(object):
         }
         return payload
 
-    def stack_1t_scenarios(self, new_foldername):
-        self.t2_folder = new_foldername
-        os.chdir(self.cwd)
-        os.makedirs(self.t2_folder, exist_ok=True)
-        os.chdir(self.foldername)
-        self.abs_foldername = os.path.abspath(os.getcwd())
-        os.chdir(self.cwd)
-        os.chdir(self.t2_folder)
-        self.abs_t2_folder = os.path.abspath(os.getcwd())
-        self.get_dir_list()
-        targets_list = [(self.get_target_data(dir), i) for i, dir in enumerate(self.dirlist)]
-        with Pool() as p:
-            p.map(self.create_2t_scenarios, targets_list)
-        self.metainfo.to_csv('metainfo.csv')
-
     def get_dir_list(self, typo=1):
         directories_list = []
         if typo == 1:
@@ -488,44 +495,9 @@ class Generator(object):
             strs += s + '_'
         return strs[:-1]
 
-    def create_2t_scenarios(self, data):
-        target, n = data[0], data[1]
-        target['id'] = 'target1'
-        # self.get_dir_list(typo=2)
-        for i in range(n, len(self.dirlist), self.boost):
-            dir = self.dirlist[i]
-            with open(dir + '/target-data.json', 'r') as fp:
-                data = json.load(fp)
-                path = Geodesic.WGS84.Inverse(data[0]['lat'], data[0]['lon'], target['lat'], target['lon'])
-                if path['s12'] / 1852 > 8:
-                    data.append(target)
-                    os.chdir(self.cwd)
-                    os.chdir(self.t2_folder)
-                    dname = os.path.split(dir)[1]
-                    dname = self.build_foldername(dname, target)
-                    dist2 = round(self.frame.dist_azi_to_point(data[1]['lat'], data[1]['lon'])[0], 1)
-                    dist1 = round(self.frame.dist_azi_to_point(data[0]['lat'], data[0]['lon'])[0], 1)
-                    ind = round((min(dist1, dist2) - self.min_dist) / 0.5)
-                    if self.dists[ind] < self.n_stack:
-                        self.dists[ind] += 1
-                    else:
-                        continue
-                    try:
-                        os.makedirs(dname)
-                        with open(dname + '/target-data.json', 'w+') as f:
-                            json.dump(data, f)
-                        for name in os.listdir(dir):
-                            if name != 'target-data.json':
-                                copyfile(dir + '/' + name, dname + '/' + name)
-                        self.metainfo.append({'datadir': os.path.join(self.cwd, self.t2_folder, dname)},
-                                             ignore_index=True)
-                    except FileExistsError:
-                        continue
-
 
 if __name__ == "__main__":
-    gen = Generator(12, 3.5, 300, 1000, safe_div_dist=1, n_tests=60, n_targets=2, foldername="./scenars_div1_1tar",
-                    n_stack=1000)
+    gen = Generator(12, 3.5, 1000, safe_div_dist=1, n_tests=5, n_targets=1)
     gen.create_tests()
     print("Start stacking...")
     # gen.stack_1t_scenarios("scenars_div1_2tar_")

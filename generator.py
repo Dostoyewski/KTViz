@@ -58,9 +58,6 @@ class Generator(object):
         self.t2_folder = None
         self.abs_t2_folder = None
         self.n_tests = n_tests
-        self.df = pd.DataFrame(columns=['datadir', 'dist1', 'course1', 'peleng1', 'speed1',
-                                        'dist2', 'course2', 'peleng2', 'speed2',
-                                        'safe_diverg', 'speed'])
 
     def create_tests(self):
         step = 0.5
@@ -82,11 +79,16 @@ class Generator(object):
         # ns = [i for i in range(0, len(self.danger_points))]
         # with Pool() as p:
         # p.map(self.create_targets, ns)
-        for i in range(len(self.danger_points)):
-            self.create_targets(i)
-        print(f'Tests generated.\nTime: {time.time() - exec_time1},\n Total time: {time.time() - exec_time}')
+        table_rows = [self.create_case(i) for i in range(len(self.danger_points))]
+        df = pd.DataFrame(table_rows, columns=['datadir', 'dist1', 'course1', 'peleng1', 'speed1',
+                                               'dist2', 'course2', 'peleng2', 'speed2',
+                                               'safe_diverg', 'speed'])
 
-    def create_targets(self, i):
+        print(f'Tests generated.\nTime: {time.time() - exec_time1},\n Total time: {time.time() - exec_time}')
+        print(f'{len(df)} tests were generated for {self.n_targets} target(s)')
+        return df
+
+    def create_case(self, i):
         self.our_vel = self.danger_points[i]['v_our']
         targets = []
         targets.append(self.danger_points[i])
@@ -115,7 +117,7 @@ class Generator(object):
                               "_" + str(round(targets[1]['CPA'], 1)) + "_" + str(round(targets[0]['TCPA'], 1)) +
                               "_" + str(round(targets[1]['TCPA'], 1)))
                     # self.construct_files(f_name, targets)
-                    self.construct_table(f_name, targets)
+                    return self.construct_table_row(f_name, targets)
                     del targets[1]
         elif self.n_targets == 1:
             f_name = ("sc_" + str(targets[0]['dist']) + "_0_" +
@@ -124,9 +126,9 @@ class Generator(object):
                       str(round(targets[0]['CPA'], 1)) +
                       "_0_" + str(round(targets[0]['TCPA'], 1)) + "_0")
             # self.construct_files(f_name, targets)
-            self.construct_table(f_name, targets)
+            return self.construct_table_row(f_name, targets)
 
-    def construct_table(self, f_name, targets):
+    def construct_table_row(self, f_name, targets):
         """
         Constructs all xlsx or csv files
         @param f_name:
@@ -168,14 +170,9 @@ class Generator(object):
                      self.sdd,
                      targets[0]['v_our']]
 
-            self.df.loc[len(self.df)] = times
-
-    def create_result_table(self, filename):
-        print(f'{len(self.df)} tests were generated for {self.n_targets} target(s)')
-        try:
-            self.df.to_excel(filename)
-        except ValueError:
-            self.df.to_csv(filename)
+            return times
+        else:
+            return None
 
     def create_danger_points(self, dist):
         """
@@ -496,10 +493,12 @@ class FilderGenerator:
         return strs[:-1]
 
 
+def save_table(df, filename):
+    print(f'Tests were saved to {os.path.abspath(filename)}.')
+    df.to_csv(filename)
+
+
 if __name__ == "__main__":
     gen = Generator(12, 3.5, 1000, safe_div_dist=1, n_tests=5, n_targets=1)
-    gen.create_tests()
-    print("Start stacking...")
-    # gen.stack_1t_scenarios("scenars_div1_2tar_")
-    print(len(gen.danger_points))
-    gen.create_result_table('tests.csv')
+    tests_df = gen.create_tests()
+    save_table(tests_df,'tests.csv')

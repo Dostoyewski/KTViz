@@ -76,12 +76,22 @@ class Generator(object):
         print(f'Total points: {len(self.danger_points)}')
         exec_time1 = time.time()
         print("Start generating tests...")
-        # ns = [i for i in range(0, len(self.danger_points))]
-        # with Pool() as p:
-        # p.map(self.create_targets, ns)
-        table_rows = [self.create_case(i) for i in range(len(self.danger_points))]
-        df = pd.DataFrame(table_rows, columns=['datadir', 'dist1', 'course1', 'peleng1', 'speed1',
+        ns = list(range(0, len(self.danger_points)))
+        with Pool() as p:
+            table_rows = list(p.map(self.create_case, ns))
+        #     table_rows = [self.create_case(i) for i in range(len(self.danger_points))]
+
+        def not_none(x):
+            return x is not None
+        res = filter(not_none, table_rows)
+        # for val in table_rows:
+        #     if val != None:
+        #         res.append(val)
+        df = pd.DataFrame(res, columns=['datadir', 'dist1', 'course1', 'peleng1', 'speed1',
                                                'dist2', 'course2', 'peleng2', 'speed2',
+                                               'dist3', 'course3', 'peleng3', 'speed3',
+                                               'dist4', 'course4', 'peleng4', 'speed4',
+                                               'dist5', 'course5', 'peleng5', 'speed5',
                                                'safe_diverg', 'speed'])
 
         print(f'Tests generated.\nTime: {time.time() - exec_time1},\n Total time: {time.time() - exec_time}')
@@ -92,7 +102,27 @@ class Generator(object):
         self.our_vel = self.danger_points[i]['v_our']
         targets = []
         targets.append(self.danger_points[i])
-        if self.n_targets == 2:
+        if self.n_targets == 5:
+            for j in range(i, len(self.danger_points)):
+                [dang, v1, v2, CPA, TCPA] = self.dangerous(self.danger_points[j]['dist'],
+                                                           self.danger_points[j]['course'],
+                                                           self.danger_points[j]['c_diff'],
+                                                           self.our_vel)
+                if not dang:
+                    continue
+                else:
+                    record = {"course": self.danger_points[j]['course'],
+                              "dist": self.danger_points[j]['dist'],
+                              "c_diff": self.danger_points[j]['c_diff'],
+                              "v_our": v1,
+                              "v_target": v2,
+                              "CPA": CPA,
+                              "TCPA": TCPA}
+                    targets.append(record)
+                    f_name = str(random())
+                    # self.construct_files(f_name, targets)
+                    if len(targets) == 5: return self.construct_table_row(f_name, targets)
+        elif self.n_targets == 2:
             for j in range(i, len(self.danger_points)):
                 [dang, v1, v2, CPA, TCPA] = self.dangerous(self.danger_points[j]['dist'],
                                                            self.danger_points[j]['course'],
@@ -157,22 +187,71 @@ class Generator(object):
             peleng2 = 0
             speed2 = 0
 
-        if not ((dist1 == dist2) & (course1 == course2) & (peleng1 == peleng2)):
-            times = [f_name,
-                     dist1,
-                     course1,
-                     peleng1,
-                     speed1,
-                     dist2,
-                     course2,
-                     peleng2,
-                     speed2,
-                     self.sdd,
-                     targets[0]['v_our']]
+        try:
+            dist3 = targets[2]['dist']
+            course3 = targets[2]['c_diff']
+            peleng3 = targets[2]['course']
+            speed3 = targets[2]['v_target']
+        except IndexError or TypeError:
+            dist3 = 0
+            course3 = 0
+            peleng3 = 0
+            speed3 = 0
 
-            return times
-        else:
-            return None
+        try:
+            dist4 = targets[3]['dist']
+            course4 = targets[3]['c_diff']
+            peleng4 = targets[3]['course']
+            speed4 = targets[3]['v_target']
+        except IndexError or TypeError:
+            dist4 = 0
+            course4 = 0
+            peleng4 = 0
+            speed4 = 0
+
+        try:
+            dist5 = targets[4]['dist']
+            course5 = targets[4]['c_diff']
+            peleng5 = targets[4]['course']
+            speed5 = targets[4]['v_target']
+        except IndexError or TypeError:
+            dist5 = 0
+            course5 = 0
+            peleng5 = 0
+            speed5 = 0
+
+        for i in range(4):
+            for j in range(4):
+                if ((targets[i]['dist'] == targets[j]['dist']) &
+                    (targets[i]['c_diff'] == targets[j]['c_diff']) &
+                    (targets[i]['course'] == targets[j]['course']) & (i != j)):
+                    return None
+
+        times = [f_name,
+                 dist1,
+                 course1,
+                 peleng1,
+                 speed1,
+                 dist2,
+                 course2,
+                 peleng2,
+                 speed2,
+                 dist3,
+                 course3,
+                 peleng3,
+                 speed3,
+                 dist4,
+                 course4,
+                 peleng4,
+                 speed4,
+                 dist5,
+                 course5,
+                 peleng5,
+                 speed5,
+                 self.sdd,
+                 targets[0]['v_our']]
+
+        return times
 
     def create_danger_points(self, dist):
         """
@@ -499,6 +578,6 @@ def save_table(df, filename):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 3.5, 1000, safe_div_dist=1, n_tests=5, n_targets=1)
+    gen = Generator(12, 4.5, 1000, safe_div_dist=1, n_tests=50, n_targets=5)
     tests_df = gen.create_tests()
     save_table(tests_df,'tests.csv')

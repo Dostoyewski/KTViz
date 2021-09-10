@@ -14,7 +14,7 @@ from geographiclib.geodesic import Geodesic
 from natsort import natsorted
 
 from konverter import Frame
-from paintall import Vector2
+from vector2 import Vector2
 
 
 # TODO: cythonize it!
@@ -68,7 +68,7 @@ class Generator(object):
         #         dists[i] = 11.9
         print("Start generating danger points...")
         exec_time = time.time()
-        with Pool() as p:
+        with Pool(39) as p:
             res = p.map(self.create_danger_points, dists)
 
         self.danger_points = list(itertools.chain.from_iterable(res))
@@ -77,7 +77,7 @@ class Generator(object):
         exec_time1 = time.time()
         print("Start generating tests...")
         ns = list(range(0, len(self.danger_points)))
-        with Pool() as p:
+        with Pool(39) as p:
             table_rows = list(p.map(self.create_case, ns))
         #     table_rows = [self.create_case(i) for i in range(len(self.danger_points))]
 
@@ -578,6 +578,6 @@ def save_table(df, filename):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 4.5, 1000, safe_div_dist=1, n_tests=50, n_targets=5)
+    gen = Generator(12, 4.5, 1000, safe_div_dist=1, n_tests=1000, n_targets=5)
     tests_df = gen.create_tests()
     save_table(tests_df,'tests.csv')

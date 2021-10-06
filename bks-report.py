@@ -126,23 +126,15 @@ class ReportGenerator:
                     message = template.format(type(ex).__name__, traceback.format_exc())
                     image_data = message
             try:
-                with open("nav-report.json", "r") as f:
+                with open(case_filenames['analyse'], "r") as f:
                     nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
             except FileNotFoundError:
-                try:
-                    with open("nav-data.json", "r") as f:
-                        nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
-                except FileNotFoundError:
-                    pass
+                pass
             try:
-                with open("target-data.json", "r") as f:
+                with open(case_filenames['targets_data'], "r") as f:
                     target_data = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
             except FileNotFoundError:
-                try:
-                    with open("targets.json", "r") as f:
-                        target_data = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
-                except FileNotFoundError:
-                    pass
+                pass
             os.chdir(working_dir)
 
             try:
@@ -155,7 +147,7 @@ class ReportGenerator:
             peleng1, peleng2 = 0, 0
             lat, lon = 0, 0
             try:
-                with open(datadir + "/nav-data.json", "r") as f:
+                with open(datadir + "/" + case_filenames['nav_data'], "r") as f:
                     nav_d = json.loads(f.read())
                     lat, lon = nav_d['lat'], nav_d['lon']
             except FileNotFoundError:
@@ -169,7 +161,7 @@ class ReportGenerator:
             except IndexError or TypeError:
                 dist2, course2, peleng2 = 0, 0, 0
 
-            types, right = self.load_maneuver(datadir)
+            types, right = self.load_maneuver(datadir, case_filenames)
             if len(types) == 1:
                 types.append(None)
 
@@ -197,7 +189,7 @@ class ReportGenerator:
             os.chdir(working_dir)
             target_data = None
             try:
-                with open("target-data.json", "r") as f:
+                with open(case_filenames['targets_data'], "r") as f:
                     target_data = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
             except FileNotFoundError:
                 pass
@@ -208,7 +200,7 @@ class ReportGenerator:
             peleng1, peleng2 = 0, 0
             lat, lon = 0, 0
             try:
-                with open(datadir + "/nav-data.json", "r") as f:
+                with open(datadir + "/" + case_filenames['nav_data'], "r") as f:
                     nav_d = json.loads(f.read())
                     lat, lon = nav_d['lat'], nav_d['lon']
             except FileNotFoundError:
@@ -242,15 +234,16 @@ class ReportGenerator:
                     "type2": None
                     }
 
-    def load_maneuver(self, datadir):
+    def load_maneuver(self, datadir, case_filenames):
         """
         Returns turn direction and scenarios types.
         @param datadir: data directory.
+        @param case_filenames: dict with filenames
         @return: array with target types and turn direction.
         """
+        c_dif = None
         try:
-            c_dif = 0
-            with open(datadir + "/maneuver.json", "r") as f:
+            with open(datadir + "/" + case_filenames['maneuvers'], "r") as f:
                 maneuver = json.loads(f.read())
                 parts = maneuver[0]['path']['items']
                 start_angle = parts[0]['begin_angle']
@@ -260,15 +253,18 @@ class ReportGenerator:
                         break
             #         if c_dif < 0 -> left, else right
             #         right = True
-            types = []
-            with open(datadir + "/nav-report.json", "r") as f:
-                report = json.loads(f.read())
-                targets = report['target_statuses']
-                for target in targets:
-                    types.append(target['scenario_type'])
-            return types, c_dif > 0
         except FileNotFoundError:
-            return [None], None
+            pass
+        types = []
+        with open(datadir + "/" + case_filenames['analyse'], "r") as f:
+            report = json.loads(f.read())
+            targets = report['target_statuses']
+            for target in targets:
+                types.append(target['scenario_type'])
+        try:
+            return types, c_dif > 0
+        except TypeError:
+            return types, None
 
     def get_target_params(self, lat, lon, target_data):
         lat_t, lon_t = target_data["lat"], target_data["lon"]
@@ -495,7 +491,7 @@ if __name__ == "__main__":
     # print("Starting saving to HTML")
     # report_out.save_html("report.html")
 
-    t_save= time.time()
+    t_save = time.time()
     if args.report_file:
         name = args.report_file
     else:

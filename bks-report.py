@@ -16,8 +16,6 @@ import pandas as pd
 from geographiclib.geodesic import Geodesic
 from matplotlib import pyplot as plt
 from natsort import natsorted
-
-from build_graphs import build_percent_diag
 from plot import plot_from_files, Case
 
 
@@ -212,6 +210,8 @@ class ReportGenerator:
                 dist2, course2, peleng2 = self.get_target_params(lat, lon, target_data[1])
             except:
                 dist2, course2, peleng2 = 0, 0, 0
+
+            # TODO: Rewrite pelengs and dists to arrays
 
             return {"datadir": datadir_i,
                     "proc": None,

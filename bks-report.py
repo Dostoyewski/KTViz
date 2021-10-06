@@ -16,6 +16,7 @@ import pandas as pd
 from geographiclib.geodesic import Geodesic
 from matplotlib import pyplot as plt
 from natsort import natsorted
+
 from plot import plot_from_files, Case
 
 
@@ -69,7 +70,9 @@ class ReportGenerator:
         working_dir = os.path.abspath(os.getcwd())
         os.chdir(datadir)
 
-        if os.path.exists(Case.CASE_FILENAMES['nav_data']):
+        if os.path.exists('nav-data.json'):
+            case_filenames = Case.CASE_FILENAMES_VSE
+        elif os.path.exists(Case.CASE_FILENAMES['nav_data']):
             case_filenames = Case.CASE_FILENAMES
         else:
             case_filenames = Case.CASE_FILENAMES_KT
@@ -126,12 +129,20 @@ class ReportGenerator:
                 with open("nav-report.json", "r") as f:
                     nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
             except FileNotFoundError:
-                pass
+                try:
+                    with open("nav-data.json", "r") as f:
+                        nav_report = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
+                except FileNotFoundError:
+                    pass
             try:
                 with open("target-data.json", "r") as f:
                     target_data = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
             except FileNotFoundError:
-                pass
+                try:
+                    with open("targets.json", "r") as f:
+                        target_data = json.dumps(json.loads(f.read()), indent=4, sort_keys=True)
+                except FileNotFoundError:
+                    pass
             os.chdir(working_dir)
 
             try:

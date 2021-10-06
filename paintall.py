@@ -1,8 +1,8 @@
 import json
+import math
 import sys
 import time
 
-import math
 from PIL import ImageGrab
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import *

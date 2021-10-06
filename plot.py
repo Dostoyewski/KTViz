@@ -74,6 +74,18 @@ class Case:
                          'settings': 'settings.json',
                          'hydrometeo': 'hydrometeo.json'}
 
+    CASE_FILENAMES_VSE = {'nav_data': 'nav-data.json',
+                          'maneuvers': 'maneuver.json',
+                          'targets_data': 'targets.json',
+                          'target_settings': 'target-settings.json',
+                          'targets_maneuvers': 'predict.json',
+                          'targets_real': 'real-target-maneuvers.json',
+                          'analyse': 'analyse.json',
+                          'constraints': 'constraints.json',
+                          'route': 'route.json',
+                          'settings': 'settings.json',
+                          'hydrometeo': 'hydrometeo.json'}
+
     def __init__(self, nav_data=None, maneuvers=None, targets_data=None, targets_maneuvers=None, targets_real=None,
                  analyse=None, constraints=None, route=None, settings=None, path=None):
         self.path = path

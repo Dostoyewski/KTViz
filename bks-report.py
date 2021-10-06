@@ -456,6 +456,7 @@ class Report:
             df.to_excel(filename)
         except ValueError:
             df.to_csv(filename)
+        return df
 
     def get_danger_params(self, statuses):
         return [rec['datadir'] for rec in self.cases if rec['code'] in statuses]
@@ -498,7 +499,10 @@ if __name__ == "__main__":
         name = "./reports/report1_" + str(date.today()) + ".xlsx"
 
     print(f"Starting saving report to '{name}'")
-    report_out.save_excel(name)
+    meta_ = report_out.save_excel(name)
+    meta = meta_[['code', 'type1']]
+    meta['datadirs'] = meta_['datadir']
+    meta.to_csv(cur_dir + '/metainfo.csv')
     # build_percent_diag(name, 12, 4, 0.5)
     # print("Creating report for danger scenarios")
     # report_d_out = report.generate_for_list(report_out00.get_danger_params([2, 4]))

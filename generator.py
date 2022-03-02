@@ -6,11 +6,9 @@ from math import pi, sin, cos, sqrt, degrees
 from multiprocessing import Pool
 from pathlib import Path
 from random import random, vonmisesvariate
-from shutil import copyfile
 
 import numpy as np
 import pandas as pd
-from geographiclib.geodesic import Geodesic
 from natsort import natsorted
 
 from konverter import Frame
@@ -499,6 +497,6 @@ def save_table(df, filename):
 
 
 if __name__ == "__main__":
-    gen = Generator(12, 3.5, 1000, safe_div_dist=1, n_tests=5, n_targets=1)
+    gen = Generator(12, 3.5, 1000, safe_div_dist=1, n_tests=200000, n_targets=1)
     tests_df = gen.create_tests()
-    save_table(tests_df,'tests.csv')
+    save_table(tests_df, 'tests.csv')
